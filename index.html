@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- 时空罗盘 · Space-Time Compass -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>时空罗盘 · Space-Time Compass</title>
+    <meta name="description" content="大湾区历史文化百科 —— 历史的蝴蝶效应。A 3D interactive cultural encyclopedia of the Greater Bay Area." />
+
+    <!-- MapLibre GL JS (免 token 的 Mapbox GL 开源兼容分支) -->
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+    <!-- deck.gl (全球影响力连线 ArcLayer · GPU 加速，与 MapLibre 联动) -->
+    <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'compass-bg': '#ece2cb',
+              'compass-ink': '#2b2118',
+              'compass-gold': '#9a7b32',
+              'compass-amber': '#b5762a',
+              'compass-azure': '#3f6f95',
+              'compass-yellow': '#b58a1e',
+              'compass-cyan': '#3f7d6e',
+              'compass-cinnabar': '#b23a2e',
+            },
+            fontFamily: {
+              serif: ['"Playfair Display"', '"Noto Serif SC"', 'Georgia', 'serif'],
+              brush: ['"Ma Shan Zheng"', '"Noto Serif SC"', 'KaiTi', 'serif'],
+              sans: ['Inter', '"Noto Sans SC"', '"Noto Sans JP"', '"Noto Sans KR"', 'system-ui', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- 字体：Ma Shan Zheng(书法) + Playfair(西文衬线) + Inter(UI) + Noto Sans 多语言 fallback -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Inter:wght@300;400;500;600&family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body class="bg-compass-bg font-sans text-[#2b2118]">
+    <!-- 地图容器 -->
+    <div id="map"></div>
+
+    <!-- 主题 overlay 染色层（CSS transition 0.9s 平滑过渡，实现沉浸主题氛围染色） -->
+    <div id="theme-overlay" aria-hidden="true"></div>
+
+    <!-- deck.gl 弧线叠加层容器（覆盖在地图之上、UI 之下） -->
+    <canvas id="deck-canvas"></canvas>
+
+    <!-- 东方纹样底纹遮罩（祥云 / 暗角 / 宣纸纹理） -->
+    <div id="ornament-overlay" aria-hidden="true">
+      <div class="vignette"></div>
+      <div class="cloud-pattern"></div>
+      <div class="paper-grain"></div>
+
+      <!-- 四角古典回纹装饰（纯 SVG） -->
+      <svg class="corner-fret corner-tl" viewBox="0 0 100 100" fill="none" stroke="#7a6a4a" stroke-width="1.4">
+        <path d="M6 6 H46 V18 H18 V46 H6 Z" opacity="0.55" />
+        <path d="M24 24 H40 V40 H30 V34 H34 V30 H24 Z" opacity="0.4" />
+      </svg>
+      <svg class="corner-fret corner-tr" viewBox="0 0 100 100" fill="none" stroke="#7a6a4a" stroke-width="1.4">
+        <path d="M94 6 H54 V18 H82 V46 H94 Z" opacity="0.55" />
+        <path d="M76 24 H60 V40 H70 V34 H66 V30 H76 Z" opacity="0.4" />
+      </svg>
+      <svg class="corner-fret corner-bl" viewBox="0 0 100 100" fill="none" stroke="#7a6a4a" stroke-width="1.4">
+        <path d="M6 94 H46 V82 H18 V54 H6 Z" opacity="0.55" />
+        <path d="M24 76 H40 V60 H30 V66 H34 V70 H24 Z" opacity="0.4" />
+      </svg>
+      <svg class="corner-fret corner-br" viewBox="0 0 100 100" fill="none" stroke="#7a6a4a" stroke-width="1.4">
+        <path d="M94 94 H54 V82 H82 V54 H94 Z" opacity="0.55" />
+        <path d="M76 76 H60 V60 H70 V66 H66 V70 H76 Z" opacity="0.4" />
+      </svg>
+    </div>
+
+    <!-- UI 覆盖层（由 JS 动态渲染） -->
+    <div id="ui-root"></div>
+
+    <!-- 启动加载遮罩：水墨晕染同心圆扩散 -->
+    <div id="loading" class="loading-overlay">
+      <div class="ink-ripple">
+        <span class="ink-ring"></span>
+        <span class="ink-ring"></span>
+        <span class="ink-ring"></span>
+        <span class="ink-core">罗盘</span>
+      </div>
+      <h1 class="loading-title">时空罗盘</h1>
+      <p class="loading-sub">正在校准大湾区坐标…</p>
+    </div>
+
+    <!-- 应用入口（ESM） -->
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
