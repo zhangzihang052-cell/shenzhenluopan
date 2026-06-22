@@ -44,7 +44,7 @@ export const ANCHORS = [
   {
     id: 'P01',
     name: { zh: '罗湖桥', en: 'Luohu Bridge', ja: '羅湖橋', ko: '뤄후 다리', ru: 'Мост Лоху', es: 'Puente Luohu' },
-    coordinates: [114.1162, 22.5315],
+    coordinates: [114.1135371, 22.5300976],
     theme: 'science',
     hero: { zh: '钱学森 / 邓稼先', en: 'Qian Xuesen / Deng Jiaxian', ja: '銭学森 / 鄧稼先', ko: '첸쉐썬 / 덩자셴', ru: 'Цянь Сюэсэнь / Дэн Цзясянь', es: 'Qian Xuesen / Deng Jiaxian' },
     era: '1950s',
@@ -121,7 +121,7 @@ export const ANCHORS = [
   {
     id: 'M01',
     name: { zh: '赤湾天后宫', en: 'Chiwan Tianhou Temple', ja: '赤湾天后宮', ko: '치완 천후궁', ru: 'Храм Тяньхоу в Чивани', es: 'Templo Tianhou de Chiwan' },
-    coordinates: [113.8703, 22.4795],
+    coordinates: [113.8873278, 22.4810239],
     theme: 'navigation',
     hero: { zh: '郑和', en: 'Zheng He', ja: '鄭和', ko: '정화', ru: 'Чжэн Хэ', es: 'Zheng He' },
     era: '1405–1433',
@@ -216,7 +216,7 @@ export const ANCHORS = [
   {
     id: 'M03',
     name: { zh: '南头古城', en: 'Nantou Ancient City', ja: '南頭古城', ko: '난터우 고성', ru: 'Древний город Наньтоу', es: 'Ciudad antigua de Nantou' },
-    coordinates: [113.927, 22.541],
+    coordinates: [113.9194304, 22.5403527],
     theme: 'civilization',
     hero: { zh: '东官郡', en: 'The Dongguan Prefecture', ja: '東官郡', ko: '둥관군', ru: 'Префектура Дунгуань', es: 'Prefectura de Dongguan' },
     era: '331 AD',
@@ -239,7 +239,7 @@ export const ANCHORS = [
   {
     id: 'M04',
     name: { zh: '大鹏所城', en: 'Dapeng Fortress', ja: '大鵬所城', ko: '다펑 요새', ru: 'Крепость Дапэн', es: 'Fortaleza de Dapeng' },
-    coordinates: [114.496, 22.596],
+    coordinates: [114.507692, 22.5978742],
     theme: 'awakening',
     hero: { zh: '赖恩爵', en: 'Lai Enjue', ja: '頼恩爵', ko: '라이언줴', ru: 'Лай Эньцзюэ', es: 'Lai Enjue' },
     era: '1839',
@@ -262,7 +262,7 @@ export const ANCHORS = [
   {
     id: 'M05',
     name: { zh: '中英街', en: 'Zhongying Street', ja: '中英街', ko: '중영가', ru: 'Улица Чжунъин', es: 'Calle Zhongying' },
-    coordinates: [114.237, 22.543],
+    coordinates: [114.2264134, 22.5467728],
     theme: 'awakening',
     hero: { zh: '历史界碑', en: 'The Boundary Stones', ja: '歴史の境界碑', ko: '역사 경계비', ru: 'Пограничные камни', es: 'Las piedras fronterizas' },
     era: '1898',
@@ -491,7 +491,7 @@ export const ANCHORS = [
   {
     id: 'N-CV01',
     name: { zh: '东莞可园', en: 'Keyuan Garden', ja: '可園', ko: '커위안 가든', ru: 'Сад Кэюань', es: 'Jardín Keyuan' },
-    coordinates: [113.749, 23.022],
+    coordinates: [113.7381239, 23.0452844],
     theme: 'civilization',
     era: '1850s',
     worldImpact: false,
@@ -510,7 +510,7 @@ export const ANCHORS = [
   {
     id: 'N-CV02',
     name: { zh: '南越王宫博物馆', en: 'Nanyue Palace Museum', ja: '南越王宮博物館', ko: '남월왕궁 박물관', ru: 'Музей дворца Наньюэ', es: 'Museo del Palacio Nanyue' },
-    coordinates: [113.265, 23.135],
+    coordinates: [113.2644092, 23.1296296],
     theme: 'civilization',
     era: '206 BC',
     worldImpact: true,
@@ -615,7 +615,7 @@ export const ANCHORS = [
   {
     id: 'N-EG02',
     name: { zh: '深圳证券交易所', en: 'Shenzhen Stock Exchange', ja: '深セン証券取引所', ko: '선전 증권거래소', ru: 'Шэньчжэньская фондовая биржа', es: 'Bolsa de Valores de Shenzhen' },
-    coordinates: [114.057, 22.538],
+    coordinates: [114.0488149, 22.5441447],
     theme: 'engineering',
     era: '1990–Now',
     worldImpact: true,
@@ -740,7 +740,7 @@ export const ANCHORS = [
   {
     id: 'N-SC03',
     name: { zh: '大疆天空之城', en: 'DJI Sky City HQ', ja: 'DJIスカイシティ本社', ko: 'DJI 스카이시티 본사', ru: 'Штаб-квартира DJI Sky City', es: 'Sede DJI Sky City' },
-    coordinates: [114.023, 22.547],
+    coordinates: [113.9379775, 22.5803844],
     theme: 'science',
     era: '2006–Now',
     worldImpact: true,
