@@ -84,9 +84,51 @@ async function fetchTencent(path, params) {
     const data = await response.json();
     if (data.status !== 0) throw new Error(data.message || `tencent-${data.status}`);
     return data;
+  } catch (error) {
+    // WebService supports JSONP. This keeps the static preview working when a browser
+    // blocks direct fetch requests to the Tencent API because of CORS policy.
+    return fetchTencentJsonp(path, params, key);
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function fetchTencentJsonp(path, params, key) {
+  if (typeof document === 'undefined') return Promise.reject(new Error('tencent-request-failed'));
+  return new Promise((resolve, reject) => {
+    const callback = `__tencentMapCallback${Date.now()}${Math.floor(Math.random() * 100000)}`;
+    const query = new URLSearchParams({ ...params, key, output: 'json', callback });
+    const script = document.createElement('script');
+    const timer = setTimeout(() => finish(new Error('tencent-timeout')), TIMEOUT_MS);
+
+    function cleanup() {
+      clearTimeout(timer);
+      script.remove();
+      try {
+        delete window[callback];
+      } catch (error) {
+        window[callback] = undefined;
+      }
+    }
+
+    function finish(error, data) {
+      cleanup();
+      if (error) reject(error);
+      else resolve(data);
+    }
+
+    window[callback] = (data) => {
+      if (!data || data.status !== 0) {
+        finish(new Error((data && data.message) || `tencent-${data && data.status}`));
+        return;
+      }
+      finish(null, data);
+    };
+    script.async = true;
+    script.src = `${API_ROOT}${path}?${query.toString()}`;
+    script.onerror = () => finish(new Error('tencent-request-failed'));
+    document.head.appendChild(script);
+  });
 }
 
 function decodePolyline(polyline) {
