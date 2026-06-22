@@ -3,6 +3,7 @@
 
 const API_ROOT = 'https://apis.map.qq.com/ws';
 const CALIBRATION_CACHE_KEY = 'space-time-compass.tencent-poi.v1';
+const QUOTA_EXHAUSTED_KEY = 'space-time-compass.tencent-quota-exhausted.v1';
 const TIMEOUT_MS = 12000;
 const MAX_DRIVING_STOPS = 16;
 
@@ -16,6 +17,23 @@ function runtimeConfig() {
 
 export function isTencentConfigured() {
   return Boolean(runtimeConfig().key);
+}
+
+function isQuotaExhaustedToday() {
+  try {
+    const record = JSON.parse(sessionStorage.getItem(QUOTA_EXHAUSTED_KEY) || 'null');
+    return record && record.day === new Date().toISOString().slice(0, 10);
+  } catch (error) {
+    return false;
+  }
+}
+
+function rememberQuotaExhausted() {
+  try {
+    sessionStorage.setItem(QUOTA_EXHAUSTED_KEY, JSON.stringify({ day: new Date().toISOString().slice(0, 10) }));
+  } catch (error) {
+    // Session storage may be unavailable in a restrictive browser mode.
+  }
 }
 
 function outsideChina(lng, lat) {
@@ -75,6 +93,9 @@ function asTencentLatLng(coord) {
 async function fetchTencent(path, params) {
   const { key } = runtimeConfig();
   if (!key) throw new Error('missing-key');
+  // Static browser previews use JSONP directly. Trying fetch first can still consume
+  // a WebService request before CORS blocks its response, effectively double-counting.
+  if (typeof document !== 'undefined') return fetchTencentJsonp(path, params, key);
   const query = new URLSearchParams({ ...params, key, output: 'json' });
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -84,10 +105,6 @@ async function fetchTencent(path, params) {
     const data = await response.json();
     if (data.status !== 0) throw new Error(data.message || `tencent-${data.status}`);
     return data;
-  } catch (error) {
-    // WebService supports JSONP. This keeps the static preview working when a browser
-    // blocks direct fetch requests to the Tencent API because of CORS policy.
-    return fetchTencentJsonp(path, params, key);
   } finally {
     clearTimeout(timeout);
   }
@@ -119,6 +136,7 @@ function fetchTencentJsonp(path, params, key) {
 
     window[callback] = (data) => {
       if (!data || data.status !== 0) {
+        if (data && data.status === 121) rememberQuotaExhausted();
         finish(new Error((data && data.message) || `tencent-${data && data.status}`));
         return;
       }
@@ -252,6 +270,7 @@ async function planSegmentedRoute(start, anchors, modeKey) {
 
 export async function planTencentRoute({ start, anchors, modeKey }) {
   if (!anchors || !anchors.length) throw new Error('empty-selection');
+  if (isQuotaExhaustedToday()) throw new Error('tencent-quota-exhausted');
   if (modeKey !== 'drive') return planSegmentedRoute(start, anchors, 'walking');
   if (anchors.length > MAX_DRIVING_STOPS) throw new Error('too-many-stops');
 

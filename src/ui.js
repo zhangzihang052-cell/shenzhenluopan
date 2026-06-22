@@ -1121,7 +1121,15 @@ function renderItineraryInto(box, itinerary, themeKey) {
       <div class="route-card-head">
         <span class="rc-title font-brush">${esc(getText('route.title'))}</span>
         <span class="rc-source ${itinerary.straight ? 'straight' : 'real'}">${esc(
-          getText(itinerary.straight ? 'route.straight' : itinerary.source === 'tencent' ? 'route.tencent' : 'route.real_road')
+          getText(
+            itinerary.straight
+              ? 'route.straight'
+              : itinerary.source === 'tencent'
+                ? 'route.tencent'
+                : itinerary.source === 'osrm'
+                  ? 'route.osrm'
+                  : 'route.real_road'
+          )
         )}</span>
       </div>
       <div class="route-stat">

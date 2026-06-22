@@ -708,7 +708,7 @@ export const ANCHORS = [
   {
     id: 'N-SC02',
     name: { zh: '腾讯滨海大厦', en: 'Tencent Seafront Towers', ja: 'テンセント海岸ビル', ko: '텐센트 씨프런트 타워', ru: 'Башни Tencent у моря', es: 'Torres costeras de Tencent' },
-    coordinates: [113.951, 22.531],
+    coordinates: [113.9304075, 22.5258747],
     theme: 'science',
     era: '1998–Now',
     worldImpact: true,

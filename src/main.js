@@ -4,6 +4,7 @@ import { ANCHORS } from './data/anchors.js';
 import { THEME_ORDER, THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
 import { getText, pick } from './i18n.js';
 import { getEpisode, hasEpisode } from './data/episodes.js';
+import { planOSRMRoute } from './route.js';
 import {
   applyCachedTencentCoordinates,
   calibrateTencentAnchors,
@@ -438,21 +439,28 @@ function boot() {
       showToast(getText('route.no_selection'));
       return;
     }
-    if (!isTencentConfigured()) {
-      showToast(getText('route.service_missing'));
-      return;
-    }
     const routeRequestId = ++state.routeRequestId;
     setCompassPlanning(true);
     const accent =
       themeKey === 'all' ? OVERVIEW_MODE.color : (THEMES[themeKey] || OVERVIEW_MODE).color;
-    let planned;
-    try {
-      planned = await planTencentRoute({ start, anchors: pool, modeKey });
-    } catch (error) {
-      setCompassPlanning(false);
-      showToast(getTencentErrorText(error));
-      return;
+    let planned = null;
+    let tencentError = null;
+    if (isTencentConfigured()) {
+      try {
+        planned = await planTencentRoute({ start, anchors: pool, modeKey });
+      } catch (error) {
+        tencentError = error;
+      }
+    }
+    if (!planned) {
+      try {
+        planned = await planOSRMRoute({ start, anchors: pool, modeKey });
+        if (tencentError) showToast(getText('route.osrm_fallback'));
+      } catch (osrmError) {
+        setCompassPlanning(false);
+        showToast(tencentError ? getTencentErrorText(tencentError) : getText('route.failed'));
+        return;
+      }
     }
 
     if (routeRequestId !== state.routeRequestId || !isCompassOpen()) {
