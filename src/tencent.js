@@ -248,6 +248,27 @@ function normalizedName(value) {
   return String(value || '').replace(/[·・\\s()（）]/g, '').toLowerCase();
 }
 
+function distanceKm(a, b) {
+  const radians = (value) => (value * Math.PI) / 180;
+  const dLat = radians(b[1] - a[1]);
+  const dLng = radians(b[0] - a[0]);
+  const value =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(radians(a[1])) * Math.cos(radians(b[1])) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+}
+
+async function geocodeTencentAnchor(anchor) {
+  const response = await fetchTencent('/geocoder/v1/', {
+    address: anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id,
+  });
+  const location = response.result && response.result.location;
+  if (!location || !Number.isFinite(Number(location.lng)) || !Number.isFinite(Number(location.lat))) return null;
+  const coordinate = fromTencentCoord([Number(location.lng), Number(location.lat)]);
+  // Avoid replacing a known Greater Bay Area anchor with a same-name result from another city.
+  return distanceKm(anchor.coordinates, coordinate) <= 60 ? coordinate : null;
+}
+
 function readCalibrationCache() {
   try {
     return JSON.parse(localStorage.getItem(CALIBRATION_CACHE_KEY) || '{}');
@@ -290,10 +311,18 @@ export async function calibrateTencentAnchors(anchors) {
         const candidate = normalizedName(item.title);
         return candidate === targetName || candidate.includes(targetName) || targetName.includes(candidate);
       });
-      if (!match || !match.location || !Number.isFinite(Number(match.location.lng)) || !Number.isFinite(Number(match.location.lat))) continue;
-      const coordinate = fromTencentCoord([Number(match.location.lng), Number(match.location.lat)]);
+      let coordinate = null;
+      let title = '';
+      if (match && match.location && Number.isFinite(Number(match.location.lng)) && Number.isFinite(Number(match.location.lat))) {
+        coordinate = fromTencentCoord([Number(match.location.lng), Number(match.location.lat)]);
+        title = match.title;
+      } else {
+        coordinate = await geocodeTencentAnchor(anchor);
+        title = anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id;
+      }
+      if (!coordinate) continue;
       anchor.coordinates = coordinate;
-      cache[anchor.id] = { coordinates: coordinate, title: match.title, updatedAt: new Date().toISOString() };
+      cache[anchor.id] = { coordinates: coordinate, title, updatedAt: new Date().toISOString() };
       calibrated += 1;
     } catch (error) {
       // One ambiguous or unavailable POI must not discard the rest of the calibration batch.
