@@ -417,6 +417,16 @@ function boot() {
   }
 
   // ===== 腾讯地图路线规划（用户勾选锚点 + 实际道路 + 驾车智能排序）=====
+  function getTencentErrorText(error) {
+    const message = String((error && error.message) || '');
+    if (message === 'missing-key') return getText('route.service_missing');
+    if (message === 'too-many-stops') return getText('route.too_many');
+    if (message.includes('121') || message.includes('每日调用量已达到上限')) {
+      return getText('route.quota_exhausted');
+    }
+    return getText('route.failed');
+  }
+
   async function handlePlanRoute(themeKey, modeKey, selectedIds = []) {
     const start = controller.getUserPosition() || state.userPos;
     if (!start) {
@@ -441,7 +451,7 @@ function boot() {
       planned = await planTencentRoute({ start, anchors: pool, modeKey });
     } catch (error) {
       setCompassPlanning(false);
-      showToast(getText(error && error.message === 'too-many-stops' ? 'route.too_many' : 'route.failed'));
+      showToast(getTencentErrorText(error));
       return;
     }
 
@@ -476,7 +486,7 @@ function boot() {
           : getText('route.calibration_no_match')
       );
     } catch (error) {
-      showToast(getText('route.failed'));
+      showToast(getTencentErrorText(error));
     }
   }
 
