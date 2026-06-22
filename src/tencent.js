@@ -300,9 +300,22 @@ function distanceKm(a, b) {
   return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
 }
 
+function cityHint([lng, lat]) {
+  if (lat >= 23.08 && lng < 113.55) return '广州市';
+  if (lat >= 22.78 && lng < 113.55) return '佛山市';
+  if (lng < 113.1) return '江门市';
+  if (lng < 113.72 && lat < 22.55) return '珠海市';
+  if (lat > 23.12 && lng >= 113.55) return '惠州市';
+  if (lat > 22.9 && lng >= 113.55 && lng < 114.0) return '东莞市';
+  if (lat < 22.46 && lng > 113.9) return '香港特别行政区';
+  if (lng > 114.12 && lat < 22.58) return '香港特别行政区';
+  return '深圳市';
+}
+
 async function geocodeTencentAnchor(anchor) {
+  const name = anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id;
   const response = await fetchTencent('/geocoder/v1/', {
-    address: anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id,
+    address: `${cityHint(anchor.coordinates)}${name}`,
   });
   const location = response.result && response.result.location;
   if (!location || !Number.isFinite(Number(location.lng)) || !Number.isFinite(Number(location.lat))) return null;
