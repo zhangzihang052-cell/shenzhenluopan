@@ -801,6 +801,12 @@ function buildController(ctx) {
       return ctx.getUserPos();
     },
 
+    /** 腾讯 POI 校准后刷新锚点数据源，保留当前地图交互状态。 */
+    refreshAnchors() {
+      const source = map.getSource(SOURCE_ID);
+      if (source) source.setData(anchorsToGeoJSON());
+    },
+
     /**
      * 绘制一键主题路线：深墨底衬 + 主题色主线 + 白色流动虚线动画。
      * @param {[number,number][]} coords 起点 + 各站点经纬度序列

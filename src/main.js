@@ -4,7 +4,12 @@ import { ANCHORS } from './data/anchors.js';
 import { THEME_ORDER, THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
 import { getText, pick } from './i18n.js';
 import { getEpisode, hasEpisode } from './data/episodes.js';
-import { buildItinerary, itineraryCoords, fetchOSRMRoute } from './route.js';
+import {
+  applyCachedTencentCoordinates,
+  calibrateTencentAnchors,
+  isTencentConfigured,
+  planTencentRoute,
+} from './tencent.js';
 import {
   getCompletedIds,
   renderEpisodeLayer,
@@ -99,6 +104,7 @@ function boot() {
     return;
   }
 
+  applyCachedTencentCoordinates(ANCHORS);
   const uiRoot = document.getElementById('ui-root');
   const geoSupported = 'geolocation' in navigator;
 
@@ -165,6 +171,7 @@ function boot() {
   renderCompassPanel(uiRoot, {
     onAnchorClick: handleSelect,
     onPlanRoute: handlePlanRoute,
+    onCalibrateAnchors: handleCalibrateAnchors,
     onClearRoute: handleClearRoute,
     onClose: handleClearRoute,
     onLeaveRoute: handleClearRoute,
@@ -409,30 +416,33 @@ function boot() {
     );
   }
 
-  // ===== 一键主题路线（最近邻贪心 + 直线即时 + OSRM 真实道路增强）=====
-  async function handlePlanRoute(themeKey, modeKey) {
+  // ===== 腾讯地图路线规划（用户勾选锚点 + 实际道路 + 驾车智能排序）=====
+  async function handlePlanRoute(themeKey, modeKey, selectedIds = []) {
     const start = controller.getUserPosition() || state.userPos;
     if (!start) {
       showToast(getText('compass.locating'));
       return;
     }
-    const pool = themeKey === 'all' ? ANCHORS : ANCHORS.filter((a) => a.theme === themeKey);
-    if (!pool.length) return;
+    const pool = ANCHORS.filter((anchor) => selectedIds.includes(anchor.id));
+    if (!pool.length) {
+      showToast(getText('route.no_selection'));
+      return;
+    }
+    if (!isTencentConfigured()) {
+      showToast(getText('route.service_missing'));
+      return;
+    }
     const routeRequestId = ++state.routeRequestId;
     setCompassPlanning(true);
-
-    // 1) 直线估算（即时可用，保证离线 / 无 key 也能跑）
-    const itinerary = buildItinerary(start, pool, modeKey);
     const accent =
       themeKey === 'all' ? OVERVIEW_MODE.color : (THEMES[themeKey] || OVERVIEW_MODE).color;
-    const coords = itineraryCoords(start, itinerary);
-
-    // 2) 尝试 OSRM 真实道路（失败 / 超时 / 离线 → 保持直线）
-    let drawCoords = coords;
-    const osrm = await fetchOSRMRoute(coords, 'driving');
-    if (osrm && osrm.geometry && osrm.geometry.length > 1) {
-      itinerary.straight = false;
-      drawCoords = osrm.geometry;
+    let planned;
+    try {
+      planned = await planTencentRoute({ start, anchors: pool, modeKey });
+    } catch (error) {
+      setCompassPlanning(false);
+      showToast(getText(error && error.message === 'too-many-stops' ? 'route.too_many' : 'route.failed'));
+      return;
     }
 
     if (routeRequestId !== state.routeRequestId || !isCompassOpen()) {
@@ -441,9 +451,33 @@ function boot() {
     }
 
     setCompassPlanning(false);
-    showItinerary(itinerary, themeKey);
-    controller.drawRoute(drawCoords, accent);
+    showItinerary(planned.itinerary, themeKey);
+    controller.drawRoute(planned.geometry, accent);
     state.routeDrawn = true;
+  }
+
+  async function handleCalibrateAnchors(selectedIds = []) {
+    if (!selectedIds.length) {
+      showToast(getText('route.no_selection'));
+      return;
+    }
+    if (!isTencentConfigured()) {
+      showToast(getText('route.service_missing'));
+      return;
+    }
+    try {
+      const selected = ANCHORS.filter((anchor) => selectedIds.includes(anchor.id));
+      const calibrated = await calibrateTencentAnchors(selected);
+      controller.refreshAnchors();
+      controller.markCompleted(ANCHORS, getCompletedIds());
+      showToast(
+        calibrated
+          ? getText('route.calibrated', { count: calibrated })
+          : getText('route.calibration_no_match')
+      );
+    } catch (error) {
+      showToast(getText('route.failed'));
+    }
   }
 
   function handleClearRoute() {

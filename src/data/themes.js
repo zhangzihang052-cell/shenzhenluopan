@@ -196,25 +196,20 @@ export const DEFAULT_LOCATION = {
 };
 
 /**
- * 出行方式（一键主题路线的时长估算 + OSRM profile）
- * speedKmh：直线降级时的均速估算；osrmProfile：真实道路导航的路由档案。
+ * 出行方式（离线估算兜底 + 腾讯地图道路规划）。
+ * speedKmh 仅用于本地估算；真实道路距离和时长由腾讯位置服务返回。
  */
 export const TRAVEL_MODES = {
   walk: {
     key: 'walk',
     icon: '🚶',
     speedKmh: 5,
-    osrmProfile: 'foot',
     label: { zh: '步行', en: 'Walking', ja: '徒歩', ko: '도보', ru: 'Пешком', es: 'A pie' },
   },
   drive: {
     key: 'drive',
     icon: '🚗',
     speedKmh: 30,
-    osrmProfile: 'driving',
     label: { zh: '驾车', en: 'Driving', ja: '運転', ko: '운전', ru: 'Авто', es: 'En coche' },
   },
 };
-
-/** OSRM 公共 demo 路由服务（无 key；不可用时自动降级为直线串点）*/
-export const OSRM_BASE = 'https://router.project-osrm.org/route/v1';

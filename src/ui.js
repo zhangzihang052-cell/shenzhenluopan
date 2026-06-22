@@ -841,6 +841,7 @@ let compassState = {
   routeMode: 'walk',
   itinerary: null,
   itineraryTheme: null,
+  routeSelectedIds: new Set(),
   handlers: {},
   nearbyN: 8,
 };
@@ -957,6 +958,10 @@ function renderNearbyTab(box) {
 }
 
 function renderRouteTab(box) {
+  const availableAnchors = ANCHORS.filter(
+    (anchor) => compassState.routeTheme === 'all' || anchor.theme === compassState.routeTheme
+  );
+  const selectedAnchors = ANCHORS.filter((anchor) => compassState.routeSelectedIds.has(anchor.id));
   const themeChips = [OVERVIEW_MODE.key, ...THEME_ORDER]
     .map((k) => {
       const meta = k === 'all' ? OVERVIEW_MODE : THEMES[k];
@@ -971,6 +976,17 @@ function renderRouteTab(box) {
       return `<button class="rt-mode ${active ? 'active' : ''}" data-mode="${m.key}">${m.icon} ${esc(pick(m.label))}</button>`;
     })
     .join('');
+  const anchorOptions = availableAnchors
+    .map((anchor) => {
+      const active = compassState.routeSelectedIds.has(anchor.id);
+      const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
+      return `<button class="route-anchor-option ${active ? 'active' : ''}" data-id="${anchor.id}" role="checkbox" aria-checked="${active}">
+        <span class="rao-check" aria-hidden="true">${active ? '✓' : ''}</span>
+        <span class="rao-dot" style="background:${theme.color}"></span>
+        <span class="rao-name">${esc(pick(anchor.name))}</span>
+      </button>`;
+    })
+    .join('');
 
   box.innerHTML = `
     <div class="route-form">
@@ -978,8 +994,20 @@ function renderRouteTab(box) {
       <div class="rt-chips">${themeChips}</div>
       <div class="rt-label">${esc(getText('compass.mode_label'))}</div>
       <div class="rt-modes">${modeBtns}</div>
+      <div class="rt-anchor-head">
+        <span class="rt-label">${esc(getText('route.anchor_label'))}</span>
+        <span class="rt-selected-count">${esc(getText('route.selected', { count: selectedAnchors.length }))}</span>
+      </div>
+      <div class="rt-selection-actions">
+        <button class="rt-select-action" id="route-select-theme">${esc(getText('route.select_all'))}</button>
+        <button class="rt-select-action" id="route-clear-selection">${esc(getText('route.clear_selected'))}</button>
+      </div>
+      <div class="route-anchor-list">${anchorOptions}</div>
       <button class="rt-plan-btn" id="compass-plan-btn">
         <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
+      </button>
+      <button class="rt-calibrate-btn" id="route-calibrate-btn" ${selectedAnchors.length ? '' : 'disabled'}>
+        ${esc(getText('route.calibrate'))}
       </button>
     </div>
     <div class="route-card-wrap" id="compass-itinerary"></div>`;
@@ -987,7 +1015,7 @@ function renderRouteTab(box) {
   box.querySelectorAll('.rt-chip').forEach((c) => {
     c.addEventListener('click', () => {
       compassState.routeTheme = c.dataset.theme;
-      box.querySelectorAll('.rt-chip').forEach((x) => x.classList.toggle('active', x === c));
+      renderRouteTab(box);
     });
   });
   box.querySelectorAll('.rt-mode').forEach((m) => {
@@ -996,9 +1024,35 @@ function renderRouteTab(box) {
       box.querySelectorAll('.rt-mode').forEach((x) => x.classList.toggle('active', x === m));
     });
   });
+  box.querySelectorAll('.route-anchor-option').forEach((option) => {
+    option.addEventListener('click', () => {
+      const id = option.dataset.id;
+      if (compassState.routeSelectedIds.has(id)) compassState.routeSelectedIds.delete(id);
+      else compassState.routeSelectedIds.add(id);
+      renderRouteTab(box);
+    });
+  });
+  box.querySelector('#route-select-theme').addEventListener('click', () => {
+    availableAnchors.forEach((anchor) => compassState.routeSelectedIds.add(anchor.id));
+    renderRouteTab(box);
+  });
+  box.querySelector('#route-clear-selection').addEventListener('click', () => {
+    compassState.routeSelectedIds.clear();
+    renderRouteTab(box);
+  });
   box.querySelector('#compass-plan-btn').addEventListener('click', () => {
     if (compassState.handlers.onPlanRoute) {
-      compassState.handlers.onPlanRoute(compassState.routeTheme, compassState.routeMode);
+      compassState.handlers.onPlanRoute(compassState.routeTheme, compassState.routeMode, selectedAnchors.map((anchor) => anchor.id));
+    }
+  });
+  box.querySelector('#route-calibrate-btn').addEventListener('click', async (event) => {
+    if (!selectedAnchors.length || !compassState.handlers.onCalibrateAnchors) return;
+    const button = event.currentTarget;
+    button.disabled = true;
+    try {
+      await compassState.handlers.onCalibrateAnchors(selectedAnchors.map((anchor) => anchor.id));
+    } finally {
+      if (button.isConnected) button.disabled = false;
     }
   });
 
@@ -1067,7 +1121,7 @@ function renderItineraryInto(box, itinerary, themeKey) {
       <div class="route-card-head">
         <span class="rc-title font-brush">${esc(getText('route.title'))}</span>
         <span class="rc-source ${itinerary.straight ? 'straight' : 'real'}">${esc(
-          getText(itinerary.straight ? 'route.straight' : 'route.real_road')
+          getText(itinerary.straight ? 'route.straight' : itinerary.source === 'tencent' ? 'route.tencent' : 'route.real_road')
         )}</span>
       </div>
       <div class="route-stat">

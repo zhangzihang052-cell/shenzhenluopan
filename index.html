@@ -7,7 +7,7 @@
     <title>时空罗盘 · Space-Time Compass</title>
     <meta name="description" content="大湾区历史文化百科 —— 历史的蝴蝶效应。A 3D interactive cultural encyclopedia of the Greater Bay Area." />
 
-    <!-- MapLibre GL JS (免 token 的 Mapbox GL 开源兼容分支) -->
+    <!-- MapLibre GL JS：负责现有的叙事地图渲染。路线与地点校准由腾讯位置服务提供。 -->
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
@@ -99,6 +99,9 @@
       <h1 class="loading-title">时空罗盘</h1>
       <p class="loading-sub">正在校准大湾区坐标…</p>
     </div>
+
+    <!-- 本机腾讯地图密钥配置：该文件被 git 忽略，缺失时会显示服务未配置提示。 -->
+    <script src="./public/tencent-map.config.js"></script>
 
     <!-- 应用入口（ESM） -->
     <script type="module" src="./src/main.js"></script>

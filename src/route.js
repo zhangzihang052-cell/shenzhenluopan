@@ -1,7 +1,7 @@
-// 路线规划模块：最近邻贪心排序 + 行程时长估算 + OSRM 真实道路 + 直线降级
+// 路线规划模块：离线直线估算。真实道路规划由 tencent.js 提供。
 // 纯数据计算，无 DOM 依赖。供 main.js 调用后交由 map.js 绘制、ui.js 渲染卡片。
 // build: 2026-06-18
-import { TRAVEL_MODES, OSRM_BASE } from './data/themes.js';
+import { TRAVEL_MODES } from './data/themes.js';
 
 /** Haversine 球面距离（公里）——route 模块内置，避免与 map.js 耦合 */
 export function haversineKm(lng1, lat1, lng2, lat2) {
@@ -68,44 +68,13 @@ export function buildItinerary(startCoord, anchors, modeKey) {
     stops,
     totalKm: cumKm,
     totalMin: (cumKm / mode.speedKmh) * 60,
-    straight: true, // 直线估算标记；OSRM 增强成功后置 false
+    straight: true,
   };
 }
 
-/** 行程经过的坐标序列（起点 + 各站点），用于绘制连线与请求 OSRM */
+/** 行程经过的坐标序列（起点 + 各站点），用于离线连线绘制。 */
 export function itineraryCoords(startCoord, itinerary) {
   return [startCoord, ...itinerary.stops.map((s) => s.anchor.coordinates)];
-}
-
-/**
- * 请求 OSRM 公共 demo 获取真实道路路径。
- * 注意：公共 demo 仅稳定支持 driving；故统一用 driving 几何贴合道路，
- * 时长仍按所选出行方式估算。失败 / 超时 / 离线 → 返回 null（调用方降级直线）。
- * @param {[number,number][]} coords
- * @param {string} profile osrm profile（driving）
- * @returns {Promise<{geometry:[number,number][], distanceKm:number}|null>}
- */
-export async function fetchOSRMRoute(coords, profile = 'driving') {
-  if (!coords || coords.length < 2) return null;
-  try {
-    const path = coords.map((c) => `${c[0]},${c[1]}`).join(';');
-    const url = `${OSRM_BASE}/${profile}/${path}?overview=full&geometries=geojson`;
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 6000);
-    const res = await fetch(url, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data.routes || !data.routes.length) return null;
-    const r = data.routes[0];
-    if (!r.geometry || !r.geometry.coordinates) return null;
-    return {
-      geometry: r.geometry.coordinates,
-      distanceKm: r.distance / 1000,
-    };
-  } catch (e) {
-    return null; // 离线 / 跨域 / 超时 → 降级
-  }
 }
 
 /**
