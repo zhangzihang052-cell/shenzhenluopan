@@ -378,6 +378,22 @@ export function openInfoPanel(anchor, handlers = {}) {
         </div>`
       : '';
 
+  const location = anchor.location;
+  const locationHtml = location
+    ? `<div class="mt-4 rounded-xl border border-[#9a7b32]/20 bg-[#fffcf4]/45 px-4 py-3 fade-in-up" style="animation-delay:.66s">
+        <span class="block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(
+          getText(location.kind === 'poi' ? 'panel.verified_poi' : 'panel.verified_reference')
+        )}</span>
+        <span class="mt-1 block text-sm font-semibold text-[#47351f]">${esc(pick(location.visitPoint))}</span>
+        <span class="mt-1 block text-xs leading-relaxed text-[#6b5d48]">${esc(pick(location.address))}</span>
+        <a class="mt-2 inline-block text-[10px] tracking-[0.12em] text-compass-amber underline underline-offset-2" href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(
+          location.coordinates[1]
+        )}&mlon=${encodeURIComponent(location.coordinates[0])}#map=18/${encodeURIComponent(location.coordinates[1])}/${encodeURIComponent(location.coordinates[0])}" target="_blank" rel="noreferrer">${esc(
+          getText('panel.location_source')
+        )}</a>
+      </div>`
+    : '';
+
   // 人物 / 地点配图（优先 heroImage，其次 placeImage）；加载失败自动降级隐藏整块
   const imgSrc = anchor.heroImage || anchor.placeImage || '';
   const imageHtml = imgSrc
@@ -422,6 +438,7 @@ export function openInfoPanel(anchor, handlers = {}) {
 
     ${linksHtml}
     ${metaHtml}
+    ${locationHtml}
 
     ${
       anchor.worldImpact
@@ -1006,9 +1023,6 @@ function renderRouteTab(box) {
       <button class="rt-plan-btn" id="compass-plan-btn">
         <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
       </button>
-      <button class="rt-calibrate-btn" id="route-calibrate-btn" ${selectedAnchors.length ? '' : 'disabled'}>
-        ${esc(getText('route.calibrate'))}
-      </button>
     </div>
     <div class="route-card-wrap" id="compass-itinerary"></div>`;
 
@@ -1045,17 +1059,6 @@ function renderRouteTab(box) {
       compassState.handlers.onPlanRoute(compassState.routeTheme, compassState.routeMode, selectedAnchors.map((anchor) => anchor.id));
     }
   });
-  box.querySelector('#route-calibrate-btn').addEventListener('click', async (event) => {
-    if (!selectedAnchors.length || !compassState.handlers.onCalibrateAnchors) return;
-    const button = event.currentTarget;
-    button.disabled = true;
-    try {
-      await compassState.handlers.onCalibrateAnchors(selectedAnchors.map((anchor) => anchor.id));
-    } finally {
-      if (button.isConnected) button.disabled = false;
-    }
-  });
-
   if (compassState.itinerary) {
     renderItineraryInto(
       document.getElementById('compass-itinerary'),

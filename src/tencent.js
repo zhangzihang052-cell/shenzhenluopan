@@ -1,8 +1,7 @@
-// Tencent Location Service adapter: POI calibration + real-road routing.
+// Tencent Location Service adapter: real-road routing only.
 // MapLibre renders in WGS-84, while Tencent Location Service normally returns GCJ-02.
 
 const API_ROOT = 'https://apis.map.qq.com/ws';
-const CALIBRATION_CACHE_KEY = 'space-time-compass.tencent-poi.v1';
 const QUOTA_EXHAUSTED_KEY = 'space-time-compass.tencent-quota-exhausted.v1';
 const TIMEOUT_MS = 12000;
 const MAX_DRIVING_STOPS = 16;
@@ -303,105 +302,4 @@ export async function planTencentRoute({ start, anchors, modeKey }) {
     itinerary: itineraryFromRoute(route, anchors, finalOrder),
     geometry: decodePolyline(route.polyline),
   };
-}
-
-function normalizedName(value) {
-  return String(value || '').replace(/[·・\\s()（）]/g, '').toLowerCase();
-}
-
-function distanceKm(a, b) {
-  const radians = (value) => (value * Math.PI) / 180;
-  const dLat = radians(b[1] - a[1]);
-  const dLng = radians(b[0] - a[0]);
-  const value =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(radians(a[1])) * Math.cos(radians(b[1])) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
-}
-
-function cityHint([lng, lat]) {
-  if (lat >= 23.08 && lng < 113.55) return '广州市';
-  if (lat >= 22.78 && lng < 113.55) return '佛山市';
-  if (lng < 113.1) return '江门市';
-  if (lng < 113.72 && lat < 22.55) return '珠海市';
-  if (lat > 23.12 && lng >= 113.55) return '惠州市';
-  if (lat > 22.9 && lng >= 113.55 && lng < 114.0) return '东莞市';
-  if (lat < 22.46 && lng > 113.9) return '香港特别行政区';
-  if (lng > 114.12 && lat < 22.58) return '香港特别行政区';
-  return '深圳市';
-}
-
-async function geocodeTencentAnchor(anchor) {
-  const name = anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id;
-  const response = await fetchTencent('/geocoder/v1/', {
-    address: `${cityHint(anchor.coordinates)}${name}`,
-  });
-  const location = response.result && response.result.location;
-  if (!location || !Number.isFinite(Number(location.lng)) || !Number.isFinite(Number(location.lat))) return null;
-  const coordinate = fromTencentCoord([Number(location.lng), Number(location.lat)]);
-  // Avoid replacing a known Greater Bay Area anchor with a same-name result from another city.
-  return distanceKm(anchor.coordinates, coordinate) <= 60 ? coordinate : null;
-}
-
-function readCalibrationCache() {
-  try {
-    return JSON.parse(localStorage.getItem(CALIBRATION_CACHE_KEY) || '{}');
-  } catch (error) {
-    return {};
-  }
-}
-
-function writeCalibrationCache(cache) {
-  localStorage.setItem(CALIBRATION_CACHE_KEY, JSON.stringify(cache));
-}
-
-export function applyCachedTencentCoordinates(anchors) {
-  const cache = readCalibrationCache();
-  let applied = 0;
-  anchors.forEach((anchor) => {
-    const cached = cache[anchor.id];
-    if (!cached || !Array.isArray(cached.coordinates) || cached.coordinates.length !== 2) return;
-    anchor.coordinates = cached.coordinates;
-    applied += 1;
-  });
-  return applied;
-}
-
-export async function calibrateTencentAnchors(anchors) {
-  const cache = readCalibrationCache();
-  let calibrated = 0;
-  for (const anchor of anchors) {
-    try {
-      const [lng, lat] = toTencentCoord(anchor.coordinates);
-      const offset = 0.18;
-      const response = await fetchTencent('/place/v1/search', {
-        keyword: anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id,
-        boundary: `rectangle(${(lat - offset).toFixed(6)},${(lng - offset).toFixed(6)},${(lat + offset).toFixed(6)},${(lng + offset).toFixed(6)})`,
-        page_size: '10',
-        page_index: '1',
-      });
-      const targetName = normalizedName(anchor.name && anchor.name.zh);
-      const match = (response.data || []).find((item) => {
-        const candidate = normalizedName(item.title);
-        return candidate === targetName || candidate.includes(targetName) || targetName.includes(candidate);
-      });
-      let coordinate = null;
-      let title = '';
-      if (match && match.location && Number.isFinite(Number(match.location.lng)) && Number.isFinite(Number(match.location.lat))) {
-        coordinate = fromTencentCoord([Number(match.location.lng), Number(match.location.lat)]);
-        title = match.title;
-      } else {
-        coordinate = await geocodeTencentAnchor(anchor);
-        title = anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id;
-      }
-      if (!coordinate) continue;
-      anchor.coordinates = coordinate;
-      cache[anchor.id] = { coordinates: coordinate, title, updatedAt: new Date().toISOString() };
-      calibrated += 1;
-    } catch (error) {
-      // One ambiguous or unavailable POI must not discard the rest of the calibration batch.
-    }
-  }
-  writeCalibrationCache(cache);
-  return calibrated;
 }

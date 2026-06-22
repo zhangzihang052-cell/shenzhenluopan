@@ -37,6 +37,11 @@
  * @property {string} [placeImage]  地点图片 URL
  * @property {string} [imageCaption] 图片说明文字
  * @property {string} [imageLicense] 版权说明
+ * @property {Object} [location] 已核验的路线访问点
+ * @property {Object} location.visitPoint 路线落点名称（多语对象）
+ * @property {Object} location.address 访问地址（多语对象）
+ * @property {'poi'|'reference'} location.kind 实体地点或叙事代表访问点
+ * @property {'OpenStreetMap'} location.source 坐标核验来源
  */
 
 /** @type {CulturalAnchor[]} */
@@ -1013,3 +1018,50 @@ export const ANCHORS = [
     ],
   },
 ];
+
+// Route coordinates must always name a real, reachable visitor point. Historical
+// areas such as a harbour, a district, or a sea battle use a clearly labeled
+// representative point instead of pretending that a narrative area has one address.
+export const LOCATION_AUDIT = Object.freeze({
+  P01: { coordinates: [114.1135371, 22.5300976], visitPoint: { zh: '罗湖口岸通道', en: 'Luohu Port crossing' }, address: { zh: '深圳市罗湖区罗湖口岸通道', en: 'Luohu Port, Luohu District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  P02: { coordinates: [114.1121107, 22.5344874], visitPoint: { zh: '深圳站（广九铁路深圳段南端）', en: 'Shenzhen Railway Station, KCR southern terminus' }, address: { zh: '深圳市罗湖区南湖街道深圳站', en: 'Shenzhen Railway Station, Nanhu, Luohu District' }, kind: 'reference', source: 'OpenStreetMap' },
+  M01: { coordinates: [113.8873278, 22.4810239], visitPoint: { zh: '赤湾天后宫', en: 'Chiwan Tianhou Temple' }, address: { zh: '深圳市南山区赤湾六路9号', en: '9 Chiwan 6th Road, Nanshan District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  M02: { coordinates: [114.0585385, 23.2668211], visitPoint: { zh: '冲虚古观（罗浮山）', en: 'Chongxu Ancient Temple, Mount Luofu' }, address: { zh: '惠州市博罗县罗浮大道冲虚古观', en: 'Chongxu Ancient Temple, Luofu Avenue, Boluo County, Huizhou' }, kind: 'poi', source: 'OpenStreetMap' },
+  M03: { coordinates: [113.9194304, 22.5403527], visitPoint: { zh: '南头古城', en: 'Nantou Ancient City' }, address: { zh: '深圳市南山区南头街道南头古城', en: 'Nantou Ancient City, Nanshan District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  M04: { coordinates: [114.507692, 22.5978742], visitPoint: { zh: '大鹏所城', en: 'Dapeng Fortress' }, address: { zh: '深圳市大鹏新区大鹏街道鹏城社区大鹏所城', en: 'Dapeng Fortress, Pengcheng Community, Dapeng New District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  M05: { coordinates: [114.2264134, 22.5467728], visitPoint: { zh: '中英街', en: 'Zhongying Street' }, address: { zh: '深圳市盐田区沙头角街道中英街', en: 'Zhongying Street, Shatoujiao, Yantian District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  M06: { coordinates: [113.9092055, 22.4800094], visitPoint: { zh: '蛇口工业区大厦', en: 'Shekou Industrial Zone Building' }, address: { zh: '深圳市南山区招商街道望海路蛇口工业区大厦', en: 'Shekou Industrial Zone Building, Wanghai Road, Nanshan District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  M07: { coordinates: [114.0347317, 22.5118181], visitPoint: { zh: '福田红树林生态公园', en: 'Futian Mangrove Ecological Park' }, address: { zh: '深圳市福田区沙头街道福田红树林生态公园', en: 'Futian Mangrove Ecological Park, Futian District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  M08: { coordinates: [113.8847574, 22.5291392], visitPoint: { zh: '前海石公园', en: 'Qianhai Stone Park' }, address: { zh: '深圳市南山区前海合作区前海石公园', en: 'Qianhai Stone Park, Qianhai Cooperation Zone, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  M09: { coordinates: [114.0596364, 22.7237695], visitPoint: { zh: '松元厦文氏聚居片区', en: 'Songyuanxia Wen lineage area' }, address: { zh: '深圳市龙华区观澜街道松元厦', en: 'Songyuanxia, Guanlan, Longhua District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  M10: { coordinates: [114.0862419, 22.7439124], visitPoint: { zh: '观澜版画村', en: 'Guanlan Printmaking Village' }, address: { zh: '深圳市龙华区观澜街道版画路观澜版画村', en: 'Guanlan Printmaking Village, Printmaking Road, Longhua District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  M11: { coordinates: [114.0532386, 22.5566275], visitPoint: { zh: '莲花山公园（邓小平铜像参观区）', en: 'Lianhuashan Park, Deng Xiaoping statue area' }, address: { zh: '深圳市福田区红荔路6030号莲花山公园', en: 'Lianhuashan Park, 6030 Hongli Road, Futian District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  M12: { coordinates: [114.3020948, 22.5943462], visitPoint: { zh: '大梅沙海滨公园', en: 'Dameisha Seaside Park' }, address: { zh: '深圳市盐田区大梅沙社区盐梅路33号', en: 'Dameisha Seaside Park, 33 Yanmei Road, Yantian District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-CV01': { coordinates: [113.7381239, 23.0452844], visitPoint: { zh: '东莞可园', en: 'Keyuan Garden' }, address: { zh: '东莞市莞城区可园路32号', en: '32 Keyuan Road, Guancheng District, Dongguan' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-CV02': { coordinates: [113.2644092, 23.1296296], visitPoint: { zh: '南越王宫博物馆', en: 'Nanyue King Palace Museum' }, address: { zh: '广州市越秀区中山四路316号', en: '316 Zhongshan 4th Road, Yuexiu District, Guangzhou' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-CV03': { coordinates: [114.2610725, 22.730885], visitPoint: { zh: '鹤湖新居', en: 'Hekou New Residence' }, address: { zh: '深圳市龙岗区龙岗街道南联社区鹤湖新居', en: 'Hekou New Residence, Nanlian Community, Longgang District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-CV04': { coordinates: [112.5748069, 22.3768638], visitPoint: { zh: '自力村碉楼与村落', en: 'Zili Village Diaolou and Villages' }, address: { zh: '江门市开平市塘口镇自力村', en: 'Zili Village, Tangkou Town, Kaiping, Jiangmen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-EG01': { coordinates: [114.1146607, 22.5432074], visitPoint: { zh: '国贸大厦', en: 'International Trade Centre' }, address: { zh: '深圳市罗湖区人民南路3002号', en: '3002 Renmin South Road, Luohu District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-EG02': { coordinates: [114.0488149, 22.5441447], visitPoint: { zh: '深圳证券交易所', en: 'Shenzhen Stock Exchange' }, address: { zh: '深圳市福田区深南大道2012号', en: '2012 Shennan Avenue, Futian District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-EG03': { coordinates: [113.5889291, 22.2155289], visitPoint: { zh: '港珠澳大桥珠海公路口岸', en: 'HZMB Zhuhai Port' }, address: { zh: '珠海市香洲区拱北街道港珠澳大桥珠海公路口岸', en: 'HZMB Zhuhai Port, Gongbei, Xiangzhou District, Zhuhai' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-EG04': { coordinates: [114.1494645, 22.569871], visitPoint: { zh: '东深供水纪念碑', en: 'Dongjiang Water Supply Memorial' }, address: { zh: '深圳市罗湖区黄贝街道东深供水纪念碑', en: 'Dongjiang Water Supply Memorial, Huangbei, Luohu District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-SC01': { coordinates: [114.0815422, 22.5448183], visitPoint: { zh: '华强北商圈', en: 'Huaqiangbei commercial area' }, address: { zh: '深圳市福田区华强北街道华强北商圈', en: 'Huaqiangbei, Futian District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-SC02': { coordinates: [113.9304075, 22.5258747], visitPoint: { zh: '腾讯滨海大厦', en: 'Tencent Binhai Building' }, address: { zh: '深圳市南山区粤海街道海天二路33号', en: '33 Haitian 2nd Road, Nanshan District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-SC03': { coordinates: [113.9379775, 22.5803844], visitPoint: { zh: '大疆天空之城', en: 'DJI Sky City' }, address: { zh: '深圳市南山区留仙大道55号', en: '55 Liuxian Avenue, Nanshan District, Shenzhen' }, kind: 'poi', source: 'OpenStreetMap' },
+  'N-SC04': { coordinates: [113.9597942, 22.8125516], visitPoint: { zh: '光明科学城启动区', en: 'Guangming Science City Launch Area' }, address: { zh: '深圳市光明区新湖街道新塘光明科学城启动区', en: 'Guangming Science City Launch Area, Xinhu, Guangming District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-AW01': { coordinates: [113.8169935, 22.7502822], visitPoint: { zh: '蚝乡湖公园文化展览馆', en: 'Haoxiang Lake Park Cultural Exhibition Hall' }, address: { zh: '深圳市宝安区沙井街道大浦路蚝乡湖公园文化展览馆', en: 'Haoxiang Lake Park Cultural Exhibition Hall, Dapu Road, Baoan District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-AW02': { coordinates: [114.0597802, 22.3676522], visitPoint: { zh: '深井（烧鹅文化代表点）', en: 'Sham Tseng, roast goose reference point' }, address: { zh: '香港新界荃湾区深井', en: 'Sham Tseng, Tsuen Wan District, New Territories, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-AW03': { coordinates: [113.2498286, 22.8383866], visitPoint: { zh: '清晖园（顺德美食文化代表点）', en: 'Qinghui Garden, Shunde cuisine reference point' }, address: { zh: '佛山市顺德区大良街道清晖园', en: 'Qinghui Garden, Daliang, Shunde District, Foshan' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-AW04': { coordinates: [114.0102302, 22.4456916], visitPoint: { zh: '香港屏山邓族文物馆', en: 'Ping Shan Tang Clan Gallery' }, address: { zh: '香港元朗区屏山竹林路香港屏山邓族文物馆', en: 'Ping Shan Tang Clan Gallery, Chuk Lam Road, Yuen Long, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-NA01': { coordinates: [113.9593525, 22.3917663], visitPoint: { zh: '青山寺（屯门古港叙事访问点）', en: 'Tsing Shan Monastery, Tuen Mun port reference point' }, address: { zh: '香港屯门区青山寺径青山寺', en: 'Tsing Shan Monastery, Tsing Shan Monastery Path, Tuen Mun, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-NA02': { coordinates: [113.6545574, 22.8281413], visitPoint: { zh: '鸦片战争博物馆（伶仃洋叙事访问点）', en: 'Opium War Museum, Lingdingyang reference point' }, address: { zh: '东莞市虎门镇解放路鸦片战争博物馆', en: 'Opium War Museum, Jiefang Road, Humen, Dongguan' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-NA03': { coordinates: [114.1691581, 22.2944414], visitPoint: { zh: '尖沙咀天星码头（维港访问点）', en: 'Tsim Sha Tsui Star Ferry Pier, Victoria Harbour access point' }, address: { zh: '香港九龙尖沙咀梳士巴利道天星码头', en: 'Star Ferry Pier, Salisbury Road, Tsim Sha Tsui, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-NA04': { coordinates: [113.3955986, 23.0956398], visitPoint: { zh: '黄埔古港', en: 'Huangpu Ancient Port' }, address: { zh: '广州市海珠区琶洲街道黄埔古港', en: 'Huangpu Ancient Port, Pazhou, Haizhu District, Guangzhou' }, kind: 'poi', source: 'OpenStreetMap' },
+});
+
+ANCHORS.forEach((anchor) => {
+  const location = LOCATION_AUDIT[anchor.id];
+  if (!location) throw new Error(`Missing verified route location for anchor: ${anchor.id}`);
+  anchor.coordinates = [...location.coordinates];
+  anchor.location = location;
+});

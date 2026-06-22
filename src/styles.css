@@ -1711,8 +1711,7 @@ body {
   gap: 8px;
   margin: 8px 0;
 }
-.rt-select-action,
-.rt-calibrate-btn {
+.rt-select-action {
   border: 1px solid rgba(154, 123, 50, 0.3);
   background: rgba(255, 252, 244, 0.5);
   color: #6b5d48;
@@ -1724,8 +1723,7 @@ body {
   padding: 5px 9px;
   border-radius: 7px;
 }
-.rt-select-action:hover,
-.rt-calibrate-btn:hover:not(:disabled) {
+.rt-select-action:hover {
   border-color: rgba(178, 58, 46, 0.5);
   color: #b23a2e;
 }
@@ -1781,14 +1779,6 @@ body {
   white-space: nowrap;
   font-size: 11px;
 }
-.rt-calibrate-btn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-}
-.rt-calibrate-btn:disabled { cursor: not-allowed; opacity: 0.48; }
-
 /* —— 行程卡片 —— */
 .route-card {
   margin-top: 16px;

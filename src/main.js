@@ -6,8 +6,6 @@ import { getText, pick } from './i18n.js';
 import { getEpisode, hasEpisode } from './data/episodes.js';
 import { planOSRMRoute } from './route.js';
 import {
-  applyCachedTencentCoordinates,
-  calibrateTencentAnchors,
   isTencentConfigured,
   planTencentRoute,
 } from './tencent.js';
@@ -105,7 +103,6 @@ function boot() {
     return;
   }
 
-  applyCachedTencentCoordinates(ANCHORS);
   const uiRoot = document.getElementById('ui-root');
   const geoSupported = 'geolocation' in navigator;
 
@@ -172,7 +169,6 @@ function boot() {
   renderCompassPanel(uiRoot, {
     onAnchorClick: handleSelect,
     onPlanRoute: handlePlanRoute,
-    onCalibrateAnchors: handleCalibrateAnchors,
     onClearRoute: handleClearRoute,
     onClose: handleClearRoute,
     onLeaveRoute: handleClearRoute,
@@ -472,30 +468,6 @@ function boot() {
     showItinerary(planned.itinerary, themeKey);
     controller.drawRoute(planned.geometry, accent);
     state.routeDrawn = true;
-  }
-
-  async function handleCalibrateAnchors(selectedIds = []) {
-    if (!selectedIds.length) {
-      showToast(getText('route.no_selection'));
-      return;
-    }
-    if (!isTencentConfigured()) {
-      showToast(getText('route.service_missing'));
-      return;
-    }
-    try {
-      const selected = ANCHORS.filter((anchor) => selectedIds.includes(anchor.id));
-      const calibrated = await calibrateTencentAnchors(selected);
-      controller.refreshAnchors();
-      controller.markCompleted(ANCHORS, getCompletedIds());
-      showToast(
-        calibrated
-          ? getText('route.calibrated', { count: calibrated })
-          : getText('route.calibration_no_match')
-      );
-    } catch (error) {
-      showToast(getTencentErrorText(error));
-    }
   }
 
   function handleClearRoute() {
