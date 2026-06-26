@@ -1,10 +1,10 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
-import { createMap, haversineKm } from './map.js';
-import { ANCHORS } from './data/anchors.js';
+import { createMap, haversineKm } from './map.js?rev=interaction-layout';
+import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
 import { THEME_ORDER, THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
-import { getText, pick } from './i18n.js';
-import { getEpisode, hasEpisode } from './data/episodes.js';
-import { planOSRMRoute } from './route.js';
+import { getText, pick } from './i18n.js?rev=stamp-focus-1';
+import { getEpisode, hasEpisode } from './data/episodes.js?rev=episodes-depth-1';
+import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js';
 import {
   isTencentConfigured,
   planTencentRoute,
@@ -22,7 +22,7 @@ import {
   refreshStampBadge,
   showAchievementCard,
   handleGeofence,
-} from './game.js';
+} from './game.js?rev=stamp-focus-1';
 import {
   renderHeader,
   refreshHeader,
@@ -40,7 +40,6 @@ import {
   closeInfoPanel,
   isPanelOpen,
   getCurrentAnchor,
-  renderFooter,
   computeCounts,
   updateVisibleCount,
   renderNearbyDrawer,
@@ -65,7 +64,7 @@ import {
   showItinerary,
   clearItinerary,
   refreshCompassTexts,
-} from './ui.js';
+} from './ui.js?rev=stamp-focus-1';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {
@@ -119,29 +118,6 @@ function boot() {
       ? ANCHORS.length
       : ANCHORS.filter((a) => a.theme === state.activeTheme).length;
 
-  // ---- 轻量颜色 Tween（替代 GSAP：rAF + easeInOut，0 依赖）----
-  function hexToRgb(hex) {
-    const c = hex.replace('#', '');
-    return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
-  }
-  function lerpColor(fromHex, toHex, t) {
-    const a = hexToRgb(fromHex), b = hexToRgb(toHex);
-    return '#' + [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t).toString(16).padStart(2, '0')).join('');
-  }
-  function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
-  let accentTweenId = null;
-  function tweenAccent(fromHex, toHex, duration) {
-    if (accentTweenId) cancelAnimationFrame(accentTweenId);
-    const start = performance.now();
-    const step = (now) => {
-      const t = Math.min((now - start) / duration, 1);
-      document.documentElement.style.setProperty('--theme-accent', lerpColor(fromHex, toHex, easeInOut(t)));
-      if (t < 1) accentTweenId = requestAnimationFrame(step);
-      else accentTweenId = null;
-    };
-    accentTweenId = requestAnimationFrame(step);
-  }
-
   // 注入 Haversine 给 UI 的附近计算
   setHaversine(haversineKm);
 
@@ -170,12 +146,10 @@ function boot() {
     onAnchorClick: handleSelect,
     onPlanRoute: handlePlanRoute,
     onClearRoute: handleClearRoute,
-    onClose: handleClearRoute,
-    onLeaveRoute: handleClearRoute,
+    onClose: () => {},
   });
   renderEpisodeLayer(uiRoot);
   renderStampBook(uiRoot, { onPickAnchor: handleSelect });
-  renderFooter(uiRoot);
   refreshStampBadge();
 
   // 附近列表变化 → 地图高亮
@@ -267,8 +241,6 @@ function boot() {
   }
 
   function applyTheme(themeKey) {
-    const prev = state.activeTheme === 'all' ? OVERVIEW_MODE : THEMES[state.activeTheme];
-    const next = themeKey === 'all' ? OVERVIEW_MODE : THEMES[themeKey];
     state.activeTheme = themeKey;
 
     // 若选中锚点不属于新主题，关闭面板
@@ -276,16 +248,16 @@ function boot() {
       handleClose();
     }
 
-    // 1. 地图底图色调：CSS filter transition（0.9s 由 CSS 处理）
+    // 1. 叙事图层沿用总览底图色调，不因筛选主题而换色。
     const mapEl = document.getElementById('map');
-    if (mapEl) mapEl.style.filter = next.mapFilter;
+    if (mapEl) mapEl.style.filter = OVERVIEW_MODE.mapFilter;
 
-    // 2. 主题 overlay 染色：CSS transition（0.9s 由 CSS 处理）
+    // 2. 保持总览无叠色状态。
     const overlayEl = document.getElementById('theme-overlay');
-    if (overlayEl) overlayEl.style.backgroundColor = next.overlay;
+    if (overlayEl) overlayEl.style.backgroundColor = OVERVIEW_MODE.overlay;
 
-    // 3. UI 强调色：JS Tween（0.9s easeInOut，逐帧更新 CSS var）
-    tweenAccent(prev.accentColor, next.accentColor, 900);
+    // 3. 图层控件也维持总览强调色。
+    document.documentElement.style.setProperty('--theme-accent', OVERVIEW_MODE.accentColor);
 
     // 4. 锚点显隐过滤（MapLibre filter，淡出非本主题锚点）
     controller.setThemeFilter(themeKey);
@@ -296,15 +268,8 @@ function boot() {
     // 6. 更新页头计数器
     updateHeaderDisplay();
 
-    // 7. 相机飞行：延迟 150ms 让过渡先行
-    if (themeKey !== 'all') {
-      const themeAnchors = ANCHORS.filter((a) => a.theme === themeKey);
-      if (themeAnchors.length > 0) {
-        setTimeout(() => controller.flyToThemeBounds(themeAnchors), 150);
-      }
-    } else {
-      controller.reset();
-    }
+    // 7. 所有叙事图层复用总览相机视角，不再按主题锚点自动缩放。
+    controller.reset();
   }
 
   /** 更新页头计数与主题标签（总览模式/主题模式均适用）*/
@@ -453,9 +418,12 @@ function boot() {
         planned = await planOSRMRoute({ start, anchors: pool, modeKey });
         if (tencentError) showToast(getText('route.osrm_fallback'));
       } catch (osrmError) {
-        setCompassPlanning(false);
-        showToast(tencentError ? getTencentErrorText(tencentError) : getText('route.failed'));
-        return;
+        const itinerary = buildItinerary(start, pool, modeKey);
+        planned = {
+          itinerary,
+          geometry: itineraryCoords(start, itinerary),
+        };
+        showToast(getText('route.straight_fallback'));
       }
     }
 
@@ -494,8 +462,11 @@ function boot() {
           setTimeout(() => showAchievementCard(res.achievementUnlocked), 420);
         }
       },
-      onOpenStampBook: () => {
-        openStampBook();
+      onOpenStampBook: (a, res = {}) => {
+        openStampBook({
+          focusAnchorId: a && a.id,
+          focusLabel: getText(res.newlyCompleted ? 'stamp.just_earned' : 'stamp.current_stamp'),
+        });
       },
       onClose: () => {},
     });

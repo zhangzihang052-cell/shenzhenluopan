@@ -1,11 +1,10 @@
 // UI 模块 v2：标题栏 / 语言下拉 / GPS / 图层 / 附近抽屉 / 面包屑 / 信息面板 / 降级弹窗
 // build: 2026-06-18
 import { THEMES, THEME_ORDER, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
-import { ANCHORS } from './data/anchors.js';
-import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js';
-import { hasEpisode } from './data/episodes.js';
-import { isCompleted } from './game.js';
-import { getMascot } from './data/mascots.js';
+import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
+import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=compass-tabs-routes-1';
+import { hasEpisode } from './data/episodes.js?rev=episodes-depth-1';
+import { isCompleted } from './game.js?rev=stamp-focus-1';
 
 /** HTML 转义 */
 function esc(str) {
@@ -85,12 +84,21 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
       ).join('')}
     </div>`;
 
-  // 罗盘探索按钮（◎）——新玩法主入口
+  // 罗盘探索按钮独立置于右侧中段，作为主行动。
   const compassBtn = document.createElement('button');
-  compassBtn.className = 'tool-btn tool-btn-accent';
+  compassBtn.className = 'explore-launcher';
   compassBtn.id = 'compass-btn';
   compassBtn.title = getText('compass.title');
-  compassBtn.innerHTML = `<span class="tool-ico">◎</span><span>${esc(getText('compass.btn'))}</span>`;
+  compassBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('compass.btn'))}</span>`;
+  compassBtn.addEventListener('pointerdown', (event) => {
+    const rect = compassBtn.getBoundingClientRect();
+    compassBtn.style.setProperty('--ripple-x', `${event.clientX - rect.left}px`);
+    compassBtn.style.setProperty('--ripple-y', `${event.clientY - rect.top}px`);
+    compassBtn.classList.remove('is-pressing', 'is-rippling');
+    void compassBtn.offsetWidth;
+    compassBtn.classList.add('is-pressing', 'is-rippling');
+    window.setTimeout(() => compassBtn.classList.remove('is-pressing', 'is-rippling'), 600);
+  });
 
   // 印章册按钮（印）
   const stampBtn = document.createElement('button');
@@ -100,9 +108,9 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
   stampBtn.innerHTML = `<span class="tool-ico">📜</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
 
   el.appendChild(langWrap);
-  el.appendChild(compassBtn);
   el.appendChild(stampBtn);
   root.appendChild(el);
+  root.appendChild(compassBtn);
 
   // 交互：语言菜单开合
   const trigger = langWrap.querySelector('#lang-trigger');
@@ -141,7 +149,7 @@ export function refreshToolCluster() {
   const compassBtn = document.getElementById('compass-btn');
   if (compassBtn) {
     compassBtn.title = getText('compass.title');
-    compassBtn.innerHTML = `<span class="tool-ico">◎</span><span>${esc(getText('compass.btn'))}</span>`;
+    compassBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('compass.btn'))}</span>`;
   }
   // 印章册按钮（重渲染文案时保留进度角标内容）
   const stampBtn = document.getElementById('stampbook-btn');
@@ -220,11 +228,17 @@ export function closeGeoModal() {
 export function renderLayerControl(root, { counts, activeTheme, onSwitchTheme }) {
   const el = document.createElement('div');
   el.id = 'layer-control';
-  el.className = 'layer-control panel-enter-left';
+  el.className = 'layer-control';
   el.dataset.activeTheme = activeTheme;
   el.innerHTML = layerControlInner(counts, activeTheme);
 
   el.addEventListener('click', (e) => {
+    if (e.target.closest('.layer-trigger')) {
+      const expanded = !el.classList.contains('open');
+      el.classList.toggle('open', expanded);
+      e.target.closest('.layer-trigger').setAttribute('aria-expanded', String(expanded));
+      return;
+    }
     const btn = e.target.closest('.layer-item');
     if (!btn) return;
     const key = btn.dataset.theme;
@@ -232,6 +246,8 @@ export function renderLayerControl(root, { counts, activeTheme, onSwitchTheme })
     const current = el.dataset.activeTheme;
     const nextKey = key === current ? 'all' : key;
     onSwitchTheme(nextKey);
+    el.classList.remove('open');
+    el.querySelector('.layer-trigger').setAttribute('aria-expanded', 'false');
   });
 
   root.appendChild(el);
@@ -268,17 +284,18 @@ function layerControlInner(counts, activeTheme) {
   }).join('');
 
   return `
-    <h2 class="mb-3 text-[10px] font-semibold tracking-[0.2em] text-[#6b5d48]">
-      ${esc(getText('layers.heading'))}
-    </h2>
-    <div class="flex flex-col gap-1">
-      ${overviewBtn}
-      <div class="layer-divider"></div>
-      ${items}
-    </div>
-    <p class="mt-3 border-t border-[#9a7b32]/20 pt-2 text-[10px] leading-relaxed text-[#8a7a62]">
-      ${esc(getText('layers.hint'))}
-    </p>`;
+    <button class="layer-trigger" aria-expanded="false">
+      <span class="layer-trigger-icon">📖</span>
+      <span>${esc(getText('layers.heading'))}</span>
+      <span class="layer-trigger-arrow">⌄</span>
+    </button>
+    <div class="layer-menu">
+      <div class="flex flex-col gap-1">
+        ${overviewBtn}
+        <div class="layer-divider"></div>
+        ${items}
+      </div>
+    </div>`;
 }
 
 export function refreshLayerControl(counts, activeTheme) {
@@ -331,6 +348,12 @@ export function openInfoPanel(anchor, handlers = {}) {
   const card = document.getElementById('glass-card');
   if (!panel || !card) return;
   const theme = THEMES[anchor.theme];
+  const subjectLabelKey =
+    anchor.contentType === 'theme'
+      ? 'panel.theme'
+      : anchor.contentType === 'landmark'
+        ? 'panel.landmark'
+        : 'panel.figure';
 
   // 切换锚点前彻底停止上一轮打字机（等价 React 卸载 + 清除所有定时器）
   stopTypewriter();
@@ -358,41 +381,18 @@ export function openInfoPanel(anchor, handlers = {}) {
     </div>`
       : '';
 
-  // 打卡 / 参观信息
+  // 实用参观信息：仅保留到访决策所需的开放时间与参观建议。
   const metaParts = [];
   if (anchor.openHours)
-    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.hours'))}：</b>${esc(anchor.openHours)}</div>`);
+    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.hours'))}：</b><span>${esc(anchor.openHours)}</span></div>`);
   if (anchor.visitTips)
-    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.visit'))}：</b>${esc(anchor.visitTips)}</div>`);
-  let tagsHtml = '';
-  if (anchor.checkinTag) {
-    const tags = anchor.checkinTag.split(/\s+/).filter(Boolean);
-    tagsHtml = `<div class="panel-tags">${tags
-      .map((t) => `<span class="panel-tag">${esc(t)}</span>`)
-      .join('')}</div>`;
-  }
+    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.visit'))}：</b><span>${esc(anchor.visitTips)}</span></div>`);
   const metaHtml =
-    metaParts.length || tagsHtml
-      ? `<div class="mt-6 rounded-2xl border border-[#9a7b32]/20 bg-[#fffcf4]/40 px-4 py-3 fade-in-up" style="animation-delay:.7s">
-          ${metaParts.join('')}${tagsHtml}
-        </div>`
+    metaParts.length
+      ? `<section class="panel-visit-card fade-in-up" style="animation-delay:.7s">
+          ${metaParts.join('')}
+        </section>`
       : '';
-
-  const location = anchor.location;
-  const locationHtml = location
-    ? `<div class="mt-4 rounded-xl border border-[#9a7b32]/20 bg-[#fffcf4]/45 px-4 py-3 fade-in-up" style="animation-delay:.66s">
-        <span class="block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(
-          getText(location.kind === 'poi' ? 'panel.verified_poi' : 'panel.verified_reference')
-        )}</span>
-        <span class="mt-1 block text-sm font-semibold text-[#47351f]">${esc(pick(location.visitPoint))}</span>
-        <span class="mt-1 block text-xs leading-relaxed text-[#6b5d48]">${esc(pick(location.address))}</span>
-        <a class="mt-2 inline-block text-[10px] tracking-[0.12em] text-compass-amber underline underline-offset-2" href="https://www.openstreetmap.org/?mlat=${encodeURIComponent(
-          location.coordinates[1]
-        )}&mlon=${encodeURIComponent(location.coordinates[0])}#map=18/${encodeURIComponent(location.coordinates[1])}/${encodeURIComponent(location.coordinates[0])}" target="_blank" rel="noreferrer">${esc(
-          getText('panel.location_source')
-        )}</a>
-      </div>`
-    : '';
 
   // 人物 / 地点配图（优先 heroImage，其次 placeImage）；加载失败自动降级隐藏整块
   const imgSrc = anchor.heroImage || anchor.placeImage || '';
@@ -425,70 +425,33 @@ export function openInfoPanel(anchor, handlers = {}) {
     <p class="panel-story-title font-brush fade-in-up" style="animation-delay:.32s">${esc(pick(anchor.title))}</p>
 
     <div class="mt-6 rounded-2xl border border-[#9a7b32]/20 bg-[#fffcf4]/45 px-4 py-3 fade-in-up" style="animation-delay:.42s">
-      <span class="block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText('panel.figure'))}</span>
+      <span class="block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText(subjectLabelKey))}</span>
       <span class="mt-1 block font-brush text-xl text-compass-amber">${esc(pick(anchor.hero))}</span>
     </div>
 
     ${imageHtml}
 
     <div class="mt-6 fade-in-up" style="animation-delay:.52s">
-      <span class="mb-2 block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText('panel.ripple'))}</span>
-      <p class="font-serif text-[17px] leading-relaxed text-[#2b2118]"><span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span></p>
+      <span class="mb-3 block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText('panel.ripple'))}</span>
+      <p class="panel-description font-serif text-[17px] text-[#2b2118]"><span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span></p>
     </div>
 
     ${linksHtml}
     ${metaHtml}
-    ${locationHtml}
-
-    ${
-      anchor.worldImpact
-        ? `<div class="mt-6 flex items-center gap-2 fade-in-up" id="impact-badge" style="animation-delay:.8s">
-            <span class="text-base">🌏</span>
-            <span class="text-[11px] tracking-[0.16em] text-compass-gold">${esc(getText('panel.impact'))}</span>
-          </div>`
-        : ''
-    }
 
     <div class="panel-quest-card fade-in-up" style="--ep-accent:${theme.color};animation-delay:.85s">
       ${
         hasEpisode(anchor.id)
-          ? `<div class="quest-main">
-              <div class="quest-label">
-                <span class="quest-dot"></span>
-                <span>${esc(getText('episode.quest_title'))}</span>
-              </div>
-              <button class="episode-enter-btn ${isCompleted(anchor.id) ? 'completed' : ''}"
-                  id="episode-enter">
-                <span class="ee-ico">${isCompleted(anchor.id) ? '✓' : '▶'}</span>
-                <span class="ee-copy">
-                  <span class="ee-text">${esc(getText(isCompleted(anchor.id) ? 'episode.replay' : 'episode.enter'))}</span>
-                  <span class="ee-hint">${esc(getText(isCompleted(anchor.id) ? 'episode.quest_replay_hint' : 'episode.quest_hint'))}</span>
-                </span>
-                ${isCompleted(anchor.id) ? `<span class="ee-done">${esc(getText('episode.completed'))}</span>` : ''}
-              </button>
-            </div>`
+          ? `<button class="episode-enter-btn ${isCompleted(anchor.id) ? 'completed' : ''}" id="episode-enter">
+              <span class="ee-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false"><path d="M6 5h12v14H6z"/><path d="M4 5h16M4 19h16M9 9h6M9 13h4"/></svg>
+              </span>
+              <span class="ee-copy">${esc(getText(isCompleted(anchor.id) ? 'episode.replay_cta' : 'episode.cta'))}</span>
+              <span class="ee-arrow" aria-hidden="true">→</span>
+            </button>`
           : ''
       }
-      <div class="panel-mascot-slot"></div>
     </div>`;
-
-  // 注入主题吉祥物（作为剧情副本入口旁的 NPC 提示）
-  (() => {
-    const mascot = getMascot(anchor.theme);
-    const mGreeting = esc(mascot.greeting);
-    const mImg = esc(mascot.img);
-    const mName = esc(pick(mascot.name));
-    const mRole = esc(pick(mascot.role));
-    const pmEl = document.createElement('div');
-    pmEl.className = 'panel-mascot fade-in-up';
-    pmEl.style.animationDelay = '1s';
-    pmEl.innerHTML =
-      `<div class="pm-bubble">${mGreeting}</div>` +
-      `<img class="pm-img" src="${mImg}" alt="${mName}" onerror="this.closest('.panel-mascot').style.display='none'" />` +
-      `<div class="pm-name">${mName}<span class="pm-role">${mRole}</span></div>`;
-    const mascotSlot = card.querySelector('.panel-mascot-slot');
-    if (mascotSlot) mascotSlot.appendChild(pmEl);
-  })();
 
   const closeBtn = document.getElementById('panel-close');
   if (closeBtn) closeBtn.addEventListener('click', onClose);
@@ -543,7 +506,7 @@ export function openForeignPanel(link, handlers = {}) {
     <p class="mt-2 text-sm text-[#5a4d3c] fade-in-up" style="animation-delay:.32s">${esc(pick(link.eventName))}</p>
 
     <div class="mt-6 fade-in-up" style="animation-delay:.45s">
-      <p class="font-serif text-[17px] leading-relaxed text-[#2b2118]"><span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span></p>
+      <p class="panel-description font-serif text-[17px] text-[#2b2118]"><span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span></p>
     </div>
 
     <div class="panel-stamp" style="background:linear-gradient(145deg,#cf3f39,#a82d28)"><span>四海<br/>同辉</span></div>`;
@@ -815,14 +778,6 @@ export function getBreadcrumbTrail() {
   return breadcrumbTrail;
 }
 
-/* ============ 页脚签名 ============ */
-export function renderFooter(root) {
-  const el = document.createElement('footer');
-  el.className = 'footer-sign';
-  el.innerHTML = `<p>由 <a href="https://with.woa.com/" target="_blank" rel="noreferrer">With</a> 通过自然语言生成</p>`;
-  root.appendChild(el);
-}
-
 /* ============ 计算各主题计数 ============ */
 export function computeCounts() {
   const counts = {};
@@ -851,17 +806,42 @@ function fmtDuration(min) {
 }
 
 let compassState = {
-  tab: 'nearby',
   userPos: null,
   simulated: false,
-  routeTheme: 'all',
+  activeRouteTab: 'diy',
   routeMode: 'walk',
   itinerary: null,
   itineraryTheme: null,
   routeSelectedIds: new Set(),
   handlers: {},
-  nearbyN: 8,
 };
+
+const RECOMMENDED_ROUTES = [
+  {
+    id: 'sz-speed',
+    icon: '🏙️',
+    theme: 'engineering',
+    title: { zh: '深圳速度半日线', en: 'Shenzhen Speed Half-Day Route' },
+    desc: { zh: '从国贸到莲花山，再看资本市场与硬件街区。', en: 'From Guomao to Lianhua Mountain, capital markets and hardware streets.' },
+    ids: ['N-EG01', 'M11', 'N-EG02', 'N-SC01'],
+  },
+  {
+    id: 'tech-bay',
+    icon: '🧪',
+    theme: 'science',
+    title: { zh: '南山科技创新线', en: 'Nanshan Tech Innovation Route' },
+    desc: { zh: '腾讯、大疆、蛇口与前海，串起深圳创新走廊。', en: 'Tencent, DJI, Shekou and Qianhai connect Shenzhen’s innovation corridor.' },
+    ids: ['N-SC02', 'N-SC03', 'M06', 'M08'],
+  },
+  {
+    id: 'sea-silk',
+    icon: '🧭',
+    theme: 'navigation',
+    title: { zh: '海上丝路记忆线', en: 'Maritime Silk Road Memory Route' },
+    desc: { zh: '从赤湾祈风到深圳湾，再把视线推向古代海路。', en: 'From Chiwan prayers to Shenzhen Bay and ancient maritime routes.' },
+    ids: ['M01', 'M07', 'M12', 'N-NA01'],
+  },
+];
 
 export function renderCompassPanel(root, handlers = {}) {
   compassState.handlers = handlers;
@@ -874,25 +854,10 @@ export function renderCompassPanel(root, handlers = {}) {
         <button class="close-btn" id="compass-close" style="position:static;width:30px;height:30px">✕</button>
       </div>
       <div class="compass-loc" id="compass-loc"></div>
-      <div class="compass-tabs">
-        <button class="compass-tab active" data-tab="nearby">${esc(getText('compass.nearby_tab'))}</button>
-        <button class="compass-tab" data-tab="route">${esc(getText('compass.route_tab'))}</button>
-      </div>
       <div class="compass-content" id="compass-content"></div>
     </div>`;
   root.appendChild(el);
   el.querySelector('#compass-close').addEventListener('click', closeCompassPanel);
-  el.querySelectorAll('.compass-tab').forEach((t) => {
-    t.addEventListener('click', () => {
-      const prevTab = compassState.tab;
-      compassState.tab = t.dataset.tab;
-      if (prevTab === 'route' && compassState.tab !== 'route' && compassState.handlers.onLeaveRoute) {
-        compassState.handlers.onLeaveRoute();
-      }
-      el.querySelectorAll('.compass-tab').forEach((x) => x.classList.toggle('active', x === t));
-      renderCompassContent();
-    });
-  });
 }
 
 export function openCompassPanel() {
@@ -927,11 +892,6 @@ export function setCompassLocation({ lng, lat, simulated }) {
 function renderCompassContent() {
   const box = document.getElementById('compass-content');
   if (!box) return;
-  if (compassState.tab === 'nearby') renderNearbyTab(box);
-  else renderRouteTab(box);
-}
-
-function renderNearbyTab(box) {
   if (!compassState.userPos || !_haversine) {
     box.innerHTML = `<div class="compass-hint">${esc(getText('compass.locating'))}</div>`;
     return;
@@ -941,123 +901,147 @@ function renderNearbyTab(box) {
     anchor: a,
     dist: _haversine(ulng, ulat, a.coordinates[0], a.coordinates[1]),
   }))
-    .sort((x, y) => x.dist - y.dist)
-    .slice(0, compassState.nearbyN);
+    .sort((x, y) => x.dist - y.dist);
+  const selectedAnchors = ANCHORS.filter((anchor) => compassState.routeSelectedIds.has(anchor.id));
+  const modeBtns = Object.values(TRAVEL_MODES)
+    .map((mode) => {
+      const active = compassState.routeMode === mode.key;
+      return `<button class="rt-mode ${active ? 'active' : ''}" data-mode="${mode.key}">${mode.icon} ${esc(pick(mode.label))}</button>`;
+    })
+    .join('');
+  const tabBtns = [
+    ['diy', getText('compass.diy_tab')],
+    ['recommended', getText('compass.recommend_tab')],
+  ]
+    .map(
+      ([key, label]) =>
+        `<button class="compass-tab ${compassState.activeRouteTab === key ? 'active' : ''}" data-tab="${key}">${esc(label)}</button>`
+    )
+    .join('');
+  const itineraryHtml = `<div class="route-card-wrap" id="compass-itinerary"></div>`;
 
-  box.innerHTML = `
-    <div class="compass-near-title">${esc(getText('compass.nearby_title'))}</div>
-    <div class="compass-near-list">
+  const routeBar = `
+    <div class="compass-route-bar">
+      <div class="compass-tabs">${tabBtns}</div>
+      <div class="compass-route-mode">
+        <span class="rt-mini-label">${esc(getText('compass.mode_label'))}</span>
+        <div class="rt-modes">${modeBtns}</div>
+      </div>
+    </div>`;
+
+  const diyContent = `
+    <section class="compass-diy-panel">
+      <div class="compass-near-title">${esc(getText('compass.diy_title'))}</div>
+      <div class="compass-route-hint">${esc(getText('compass.select_hint'))}</div>
+      <div class="rt-anchor-head">
+        <span class="rt-selected-count">${esc(getText('route.selected', { count: selectedAnchors.length }))}</span>
+        <button class="rt-select-action" id="route-clear-selection">${esc(getText('route.clear_selected'))}</button>
+      </div>
+      <button class="rt-plan-btn" id="compass-plan-btn" ${selectedAnchors.length ? '' : 'disabled'}>
+        <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
+      </button>
+    </section>
+    <div class="compass-near-list compass-anchor-list">
       ${items
-        .map(({ anchor, dist }, i) => {
+        .map(({ anchor, dist }) => {
           const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
+          const active = compassState.routeSelectedIds.has(anchor.id);
           return `
-          <button class="compass-near-item" data-id="${anchor.id}">
-            <span class="cn-rank">${i + 1}</span>
-            <span class="cn-body">
-              <span class="cn-top">
-                <span class="cn-dot" style="background:${theme.color};box-shadow:0 0 6px ${theme.color}"></span>
-                <span class="cn-name">${esc(pick(anchor.name))}</span>
-                <span class="cn-dist">${fmtDist(dist)}</span>
+          <article class="compass-near-item ${active ? 'selected' : ''}">
+            <button class="compass-anchor-info" data-id="${anchor.id}">
+              <span class="cn-body">
+                <span class="cn-top">
+                  <span class="cn-dot" style="background:${theme.color};box-shadow:0 0 6px ${theme.color}"></span>
+                  <span class="cn-name">${esc(pick(anchor.name))}</span>
+                  <span class="cn-dist">${fmtDist(dist)}</span>
+                </span>
+                <span class="cn-title">${esc(pick(anchor.title))}</span>
               </span>
-              <span class="cn-hero">${esc(pick(anchor.hero))}</span>
-              <span class="cn-title">${esc(pick(anchor.title))}</span>
-            </span>
-          </button>`;
+            </button>
+            <button class="compass-anchor-select" data-id="${anchor.id}" role="checkbox" aria-checked="${active}" aria-label="${esc(pick(anchor.name))}">
+              ${active ? '✓' : ''}
+            </button>
+          </article>`;
         })
         .join('')}
     </div>`;
-  box.querySelectorAll('.compass-near-item').forEach((btn) => {
+
+  const recommendedContent = `
+    <section class="compass-rec-panel">
+      <div class="compass-near-title">${esc(getText('compass.recommend_title'))}</div>
+      <div class="compass-route-hint">${esc(getText('compass.recommend_hint'))}</div>
+      <div class="compass-rec-list">
+        ${RECOMMENDED_ROUTES.map((route) => {
+          const theme = THEMES[route.theme] || OVERVIEW_MODE;
+          const anchors = route.ids.map((id) => ANCHORS.find((anchor) => anchor.id === id)).filter(Boolean);
+          const stopNames = anchors.map((anchor) => pick(anchor.name)).join(' · ');
+          return `
+            <article class="rec-route-card" style="--rr-accent:${theme.color}">
+              <div class="rr-head">
+                <span class="rr-icon">${route.icon}</span>
+                <span class="rr-title">${esc(pick(route.title))}</span>
+                <span class="rr-count">${anchors.length} ${esc(getText('route.stops'))}</span>
+              </div>
+              <p class="rr-desc">${esc(pick(route.desc))}</p>
+              <div class="rr-stops">${esc(stopNames)}</div>
+              <button class="rec-plan-btn" data-route-id="${route.id}">
+                <span>${esc(getText('compass.recommend_use'))}</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>`;
+
+  box.innerHTML = `
+    ${routeBar}
+    ${itineraryHtml}
+    ${compassState.activeRouteTab === 'recommended' ? recommendedContent : diyContent}`;
+
+  box.querySelectorAll('.compass-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      compassState.activeRouteTab = tab.dataset.tab || 'diy';
+      renderCompassContent();
+    });
+  });
+  box.querySelectorAll('.compass-anchor-info').forEach((btn) => {
     btn.addEventListener('click', () => {
       const a = ANCHORS.find((x) => x.id === btn.dataset.id);
       if (a && compassState.handlers.onAnchorClick) compassState.handlers.onAnchorClick(a);
     });
   });
-}
-
-function renderRouteTab(box) {
-  const availableAnchors = ANCHORS.filter(
-    (anchor) => compassState.routeTheme === 'all' || anchor.theme === compassState.routeTheme
-  );
-  const selectedAnchors = ANCHORS.filter((anchor) => compassState.routeSelectedIds.has(anchor.id));
-  const themeChips = [OVERVIEW_MODE.key, ...THEME_ORDER]
-    .map((k) => {
-      const meta = k === 'all' ? OVERVIEW_MODE : THEMES[k];
-      const active = compassState.routeTheme === k;
-      return `<button class="rt-chip ${active ? 'active' : ''}" data-theme="${k}">
-        <span class="rt-chip-dot" style="background:${meta.color}"></span>${esc(pick(meta.shortName))}</button>`;
-    })
-    .join('');
-  const modeBtns = Object.values(TRAVEL_MODES)
-    .map((m) => {
-      const active = compassState.routeMode === m.key;
-      return `<button class="rt-mode ${active ? 'active' : ''}" data-mode="${m.key}">${m.icon} ${esc(pick(m.label))}</button>`;
-    })
-    .join('');
-  const anchorOptions = availableAnchors
-    .map((anchor) => {
-      const active = compassState.routeSelectedIds.has(anchor.id);
-      const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
-      return `<button class="route-anchor-option ${active ? 'active' : ''}" data-id="${anchor.id}" role="checkbox" aria-checked="${active}">
-        <span class="rao-check" aria-hidden="true">${active ? '✓' : ''}</span>
-        <span class="rao-dot" style="background:${theme.color}"></span>
-        <span class="rao-name">${esc(pick(anchor.name))}</span>
-      </button>`;
-    })
-    .join('');
-
-  box.innerHTML = `
-    <div class="route-form">
-      <div class="rt-label">${esc(getText('compass.theme_label'))}</div>
-      <div class="rt-chips">${themeChips}</div>
-      <div class="rt-label">${esc(getText('compass.mode_label'))}</div>
-      <div class="rt-modes">${modeBtns}</div>
-      <div class="rt-anchor-head">
-        <span class="rt-label">${esc(getText('route.anchor_label'))}</span>
-        <span class="rt-selected-count">${esc(getText('route.selected', { count: selectedAnchors.length }))}</span>
-      </div>
-      <div class="rt-selection-actions">
-        <button class="rt-select-action" id="route-select-theme">${esc(getText('route.select_all'))}</button>
-        <button class="rt-select-action" id="route-clear-selection">${esc(getText('route.clear_selected'))}</button>
-      </div>
-      <div class="route-anchor-list">${anchorOptions}</div>
-      <button class="rt-plan-btn" id="compass-plan-btn">
-        <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
-      </button>
-    </div>
-    <div class="route-card-wrap" id="compass-itinerary"></div>`;
-
-  box.querySelectorAll('.rt-chip').forEach((c) => {
-    c.addEventListener('click', () => {
-      compassState.routeTheme = c.dataset.theme;
-      renderRouteTab(box);
-    });
-  });
   box.querySelectorAll('.rt-mode').forEach((m) => {
     m.addEventListener('click', () => {
       compassState.routeMode = m.dataset.mode;
-      box.querySelectorAll('.rt-mode').forEach((x) => x.classList.toggle('active', x === m));
+      renderCompassContent();
     });
   });
-  box.querySelectorAll('.route-anchor-option').forEach((option) => {
+  box.querySelectorAll('.compass-anchor-select').forEach((option) => {
     option.addEventListener('click', () => {
       const id = option.dataset.id;
       if (compassState.routeSelectedIds.has(id)) compassState.routeSelectedIds.delete(id);
       else compassState.routeSelectedIds.add(id);
-      renderRouteTab(box);
+      renderCompassContent();
     });
   });
-  box.querySelector('#route-select-theme').addEventListener('click', () => {
-    availableAnchors.forEach((anchor) => compassState.routeSelectedIds.add(anchor.id));
-    renderRouteTab(box);
-  });
-  box.querySelector('#route-clear-selection').addEventListener('click', () => {
+  const clearSelection = box.querySelector('#route-clear-selection');
+  if (clearSelection) clearSelection.addEventListener('click', () => {
     compassState.routeSelectedIds.clear();
-    renderRouteTab(box);
+    renderCompassContent();
   });
-  box.querySelector('#compass-plan-btn').addEventListener('click', () => {
+  const planBtn = box.querySelector('#compass-plan-btn');
+  if (planBtn) planBtn.addEventListener('click', () => {
     if (compassState.handlers.onPlanRoute) {
-      compassState.handlers.onPlanRoute(compassState.routeTheme, compassState.routeMode, selectedAnchors.map((anchor) => anchor.id));
+      compassState.handlers.onPlanRoute('all', compassState.routeMode, selectedAnchors.map((anchor) => anchor.id));
     }
+  });
+  box.querySelectorAll('.rec-plan-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const route = RECOMMENDED_ROUTES.find((item) => item.id === btn.dataset.routeId);
+      if (!route || !compassState.handlers.onPlanRoute) return;
+      const ids = route.ids.filter((id) => ANCHORS.some((anchor) => anchor.id === id));
+      compassState.handlers.onPlanRoute(route.theme || 'all', compassState.routeMode, ids, { presetId: route.id });
+    });
   });
   if (compassState.itinerary) {
     renderItineraryInto(
@@ -1070,11 +1054,14 @@ function renderRouteTab(box) {
 
 /** 路线规划 loading 态 */
 export function setCompassPlanning(loading) {
-  const btn = document.getElementById('compass-plan-btn');
-  if (!btn) return;
-  btn.classList.toggle('loading', !!loading);
-  btn.disabled = !!loading;
-  const label = btn.querySelector('.cp-label');
+  const buttons = document.querySelectorAll('#compass-panel .rt-plan-btn, #compass-panel .rec-plan-btn');
+  buttons.forEach((btn) => {
+    btn.classList.toggle('loading', !!loading);
+    if (loading) btn.disabled = true;
+    else if (btn.id === 'compass-plan-btn') btn.disabled = compassState.routeSelectedIds.size === 0;
+    else btn.disabled = false;
+  });
+  const label = document.querySelector('#compass-plan-btn .cp-label');
   if (label) label.textContent = getText(loading ? 'compass.planning' : 'compass.plan_btn');
 }
 
@@ -1082,13 +1069,6 @@ export function setCompassPlanning(loading) {
 export function showItinerary(itinerary, themeKey) {
   compassState.itinerary = itinerary;
   compassState.itineraryTheme = themeKey;
-  compassState.tab = 'route';
-  const panel = document.getElementById('compass-panel');
-  if (panel) {
-    panel.querySelectorAll('.compass-tab').forEach((x) =>
-      x.classList.toggle('active', x.dataset.tab === 'route')
-    );
-  }
   renderCompassContent();
 }
 
@@ -1096,12 +1076,12 @@ export function showItinerary(itinerary, themeKey) {
 export function clearItinerary() {
   compassState.itinerary = null;
   compassState.itineraryTheme = null;
-  if (compassState.tab === 'route') renderCompassContent();
+  if (isCompassOpen()) renderCompassContent();
 }
 
 function renderItineraryInto(box, itinerary, themeKey) {
   if (!box || !itinerary) return;
-  const meta = themeKey === 'all' || !themeKey ? OVERVIEW_MODE : THEMES[themeKey];
+  const meta = themeKey === 'all' || !themeKey ? OVERVIEW_MODE : (THEMES[themeKey] || OVERVIEW_MODE);
   if (!itinerary.stops.length) {
     box.innerHTML = `<div class="compass-hint">${esc(getText('route.empty'))}</div>`;
     return;
@@ -1148,7 +1128,11 @@ function renderItineraryInto(box, itinerary, themeKey) {
       </div>
       <div class="route-start">📍 ${esc(getText('route.start'))}</div>
       <div class="route-stops">${stops}</div>
-      <button class="route-clear" id="route-clear">${esc(getText('route.clear'))}</button>
+      <p class="route-nav-hint">${esc(getText('route.nav_hint'))}</p>
+      <div class="route-actions">
+        <button class="route-nav" id="route-open-tencent">${esc(getText('route.open_tencent'))}</button>
+        <button class="route-clear" id="route-clear">${esc(getText('route.clear'))}</button>
+      </div>
     </div>`;
   box.querySelectorAll('.route-stop').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1161,6 +1145,29 @@ function renderItineraryInto(box, itinerary, themeKey) {
     clr.addEventListener('click', () => {
       if (compassState.handlers.onClearRoute) compassState.handlers.onClearRoute();
     });
+  const nav = box.querySelector('#route-open-tencent');
+  if (nav)
+    nav.addEventListener('click', () => {
+      const url = buildTencentRouteUrl(itinerary);
+      if (url) window.open(url, '_blank', 'noopener');
+    });
+}
+
+function buildTencentRouteUrl(itinerary) {
+  const lastStop = itinerary && itinerary.stops && itinerary.stops[itinerary.stops.length - 1];
+  if (!compassState.userPos || !lastStop) return '';
+  const [fromLng, fromLat] = compassState.userPos;
+  const [toLng, toLat] = lastStop.anchor.coordinates;
+  const params = new URLSearchParams({
+    type: itinerary.modeKey === 'drive' ? 'drive' : 'walk',
+    from: getText('route.start_short'),
+    fromcoord: `${fromLat.toFixed(6)},${fromLng.toFixed(6)}`,
+    to: pick(lastStop.anchor.name),
+    tocoord: `${toLat.toFixed(6)},${toLng.toFixed(6)}`,
+    referer: 'shikongluopan',
+  });
+  if (itinerary.modeKey === 'drive') params.set('policy', '0');
+  return `https://apis.map.qq.com/uri/v1/routeplan?${params.toString()}`;
 }
 
 /** 语言切换时刷新罗盘面板文案 */
@@ -1169,9 +1176,6 @@ export function refreshCompassTexts() {
   if (!panel) return;
   const title = panel.querySelector('.compass-title');
   if (title) title.innerHTML = `◎ ${esc(getText('compass.title'))}`;
-  panel.querySelectorAll('.compass-tab').forEach((t) => {
-    t.textContent = getText(t.dataset.tab === 'nearby' ? 'compass.nearby_tab' : 'compass.route_tab');
-  });
   if (compassState.userPos) {
     setCompassLocation({
       lng: compassState.userPos[0],

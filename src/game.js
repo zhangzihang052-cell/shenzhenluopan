@@ -1,10 +1,10 @@
 // 锚点剧情副本 · 游戏模块：localStorage 进度 + 剧情状态机 UI + 印章册 + 成就 + 地理围栏提示
 // build: 2026-06-18
-import { EPISODES } from './data/episodes.js';
+import { EPISODES } from './data/episodes.js?rev=episodes-depth-1';
 import { getMascot } from './data/mascots.js';
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js';
-import { ANCHORS } from './data/anchors.js';
-import { getText, pick } from './i18n.js';
+import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
+import { getText, pick } from './i18n.js?rev=stamp-focus-1';
 
 const STORAGE_KEY = 'stc_progress';
 
@@ -370,7 +370,7 @@ function renderEpisodePhase() {
   if (phase === 'reward') {
     const r = episode.reward;
     // 通关落库
-    const { achievementUnlocked } = markComplete(anchor.id, { onsite: episodeState.onsite });
+    const { newlyCompleted, achievementUnlocked } = markComplete(anchor.id, { onsite: episodeState.onsite });
     const theme3 = THEMES[anchor.theme] || OVERVIEW_MODE;
     body.innerHTML = `
       <div class="ep-reward">
@@ -405,19 +405,19 @@ function renderEpisodePhase() {
       const a = episodeState.anchor;
       const onsite = episodeState.onsite;
       closeEpisode();
-      if (h && h.onComplete) h.onComplete(a, { onsite, achievementUnlocked });
+      if (h && h.onComplete) h.onComplete(a, { onsite, newlyCompleted, achievementUnlocked });
     });
     body.querySelector('#ep-stamps').addEventListener('click', () => {
       const h = episodeState.handlers;
       const a = episodeState.anchor;
       const onsite = episodeState.onsite;
       closeEpisode();
-      if (h && h.onComplete) h.onComplete(a, { onsite, achievementUnlocked });
-      if (h && h.onOpenStampBook) h.onOpenStampBook(a, { onsite, achievementUnlocked });
+      if (h && h.onComplete) h.onComplete(a, { onsite, newlyCompleted, achievementUnlocked });
+      if (h && h.onOpenStampBook) h.onOpenStampBook(a, { onsite, newlyCompleted, achievementUnlocked });
     });
     // 通关即时回调（点亮地图印章），成就在关闭时再弹
     const h = episodeState.handlers;
-    if (h && h.onReward) h.onReward(anchor, { onsite: episodeState.onsite, achievementUnlocked });
+    if (h && h.onReward) h.onReward(anchor, { onsite: episodeState.onsite, newlyCompleted, achievementUnlocked });
     return;
   }
 }
@@ -441,11 +441,15 @@ export function renderStampBook(root, handlers = {}) {
   });
 }
 
-/** 打开印章册（每次打开都按最新进度重渲染）*/
-export function openStampBook() {
+/** 打开印章册（每次打开都按最新进度重渲染）
+ * @param {{focusAnchorId?:string}|string} opts
+ */
+export function openStampBook(opts = {}) {
   const modal = document.getElementById('stamp-modal');
   const card = document.getElementById('stamp-card');
   if (!modal || !card) return;
+  const focusAnchorId = typeof opts === 'string' ? opts : opts.focusAnchorId;
+  const focusLabel = typeof opts === 'string' ? getText('stamp.current_stamp') : opts.focusLabel || getText('stamp.current_stamp');
   const total = getTotalProgress();
   const themeProgress = getThemeProgress();
   const completed = getCompletedIds();
@@ -471,8 +475,10 @@ export function openStampBook() {
           const done = completed.has(id);
           const rec = loadProgress().completed[id];
           const onsite = rec && rec.onsite;
+          const focused = id === focusAnchorId;
           return `
-          <button class="stamp-cell ${done ? 'earned' : 'locked'}" data-anchor="${id}" title="${esc(pick(a.name))}">
+          <button class="stamp-cell ${done ? 'earned' : 'locked'} ${focused ? 'just-earned' : ''}" data-anchor="${id}" title="${esc(pick(a.name))}">
+            ${focused ? `<span class="stamp-new-label">${esc(focusLabel)}</span>` : ''}
             <span class="stamp-cell-badge" style="--cell-accent:${meta.color}">
               ${done ? renderBadgeArt(ep.reward, 'stamp-badge-art') : '<span class="stamp-lock">🔒</span>'}
               ${onsite ? '<span class="stamp-onsite">📍</span>' : ''}
@@ -529,6 +535,17 @@ export function openStampBook() {
       }
     });
   });
+
+  if (focusAnchorId) {
+    const target = Array.from(card.querySelectorAll('.stamp-cell')).find((cell) => cell.dataset.anchor === focusAnchorId);
+    if (target) {
+      requestAnimationFrame(() => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        target.focus({ preventScroll: true });
+        window.setTimeout(() => target.classList.add('focus-settled'), 1200);
+      });
+    }
+  }
 }
 
 /** 关闭印章册 */

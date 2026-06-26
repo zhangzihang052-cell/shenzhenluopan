@@ -12,9 +12,11 @@ import {
 } from './data/themes.js';
 
 const SOURCE_ID = 'anchors';
+const HOVER_SOURCE_ID = 'anchor-hover';
 const GLOW_LAYER = 'anchor-glow';
 const PULSE_LAYER = 'anchor-pulse';
 const CORE_LAYER = 'anchor-core';
+const HOVER_CORE_LAYER = 'anchor-hover-core';
 
 // 路线图层（一键主题路线）：底衬线 + 流动主线
 const ROUTE_SOURCE = 'theme-route';
@@ -58,6 +60,7 @@ function anchorsToGeoJSON() {
     type: 'FeatureCollection',
     features: ANCHORS.map((a) => ({
       type: 'Feature',
+      id: a.id,
       geometry: { type: 'Point', coordinates: a.coordinates },
       properties: {
         id: a.id,
@@ -216,6 +219,8 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
   let pulseT = 0;
   let rafId = 0;
   let selectedId = null;
+  let hoveredAnchorId = null;
+  let coreUsesSymbol = false;
   let userMarker = null;
   let foreignMarkers = [];
   let deckOverlay = null;
@@ -268,8 +273,13 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
     }
 
     map.addSource(SOURCE_ID, { type: 'geojson', data: anchorsToGeoJSON() });
+    map.addSource(HOVER_SOURCE_ID, {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    const hoveredFeature = ['boolean', ['feature-state', 'hover'], false];
 
-    // 1) 外层柔光（呼吸光晕）
+    // 1) 轻量柔光：只辅助识别，不与主探索入口争夺焦点。
     map.addLayer({
       id: GLOW_LAYER,
       type: 'circle',
@@ -277,8 +287,8 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
       paint: {
         'circle-color': ['get', 'color'],
         'circle-blur': 1,
-        'circle-opacity': 0.45,
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 12, 14, 30],
+        'circle-opacity': ['case', hoveredFeature, 1, 0.2],
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['case', hoveredFeature, 18, 8], 14, ['case', hoveredFeature, 36, 18]],
       },
     });
 
@@ -290,14 +300,15 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
       paint: {
         'circle-color': 'rgba(0,0,0,0)',
         'circle-stroke-color': '#2B1C0E',
-        'circle-stroke-width': 1.6,
-        'circle-stroke-opacity': 0.5,
-        'circle-radius': 6,
+        'circle-stroke-width': 1,
+        'circle-stroke-opacity': ['case', hoveredFeature, 1, 0.36],
+        'circle-radius': ['case', hoveredFeature, 16, 6],
       },
     });
 
     // 3) 核心：菱形符号（图标可用）+ 兜底圆点
     if (map.hasImage('diamond-core')) {
+      coreUsesSymbol = true;
       map.addLayer({
         id: CORE_LAYER,
         type: 'symbol',
@@ -310,6 +321,9 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
           'icon-allow-overlap': true,
           'icon-rotate': 0,
         },
+        paint: {
+          'icon-opacity': ['case', hoveredFeature, 1, 0.86],
+        },
       });
     } else {
       map.addLayer({
@@ -320,17 +334,59 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
           'circle-color': ['get', 'color'],
           'circle-stroke-color': '#2B1C0E',
           'circle-stroke-width': 2,
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8],
+          'circle-opacity': ['case', hoveredFeature, 1, 0.86],
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, ['case', hoveredFeature, 5, 4], 14, ['case', hoveredFeature, 10, 8]],
         },
       });
     }
 
-    // hover 光标
+    // Symbol 布局不支持 feature-state 尺寸；用单独的悬停图层只放大当前菱形。
+    if (coreUsesSymbol) {
+      map.addLayer({
+        id: HOVER_CORE_LAYER,
+        type: 'symbol',
+        source: HOVER_SOURCE_ID,
+        layout: {
+          'icon-image': ['concat', 'diamond-', ['get', 'theme']],
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.72, 14, 1.37],
+          'icon-allow-overlap': true,
+        },
+        paint: { 'icon-opacity': 1 },
+      });
+    }
+
+    function setHoveredAnchor(nextId) {
+      if (hoveredAnchorId === nextId) return;
+      if (hoveredAnchorId != null) map.setFeatureState({ source: SOURCE_ID, id: hoveredAnchorId }, { hover: false });
+      hoveredAnchorId = nextId;
+      if (hoveredAnchorId != null) map.setFeatureState({ source: SOURCE_ID, id: hoveredAnchorId }, { hover: true });
+      if (coreUsesSymbol) {
+        const anchor = ANCHORS.find((item) => item.id === hoveredAnchorId);
+        const source = map.getSource(HOVER_SOURCE_ID);
+        if (source) {
+          source.setData({
+            type: 'FeatureCollection',
+            features: anchor
+              ? [{
+                  type: 'Feature',
+                  geometry: { type: 'Point', coordinates: anchor.coordinates },
+                  properties: { theme: anchor.theme },
+                }]
+              : [],
+          });
+        }
+      }
+    }
+
+    // Hover 用同一份 feature-state 同时放大菱形、柔光与脉冲环。
     [CORE_LAYER, GLOW_LAYER].forEach((layer) => {
-      map.on('mouseenter', layer, () => {
+      map.on('mousemove', layer, (e) => {
+        const feature = e.features && e.features[0];
+        if (feature) setHoveredAnchor(feature.id || feature.properties.id);
         map.getCanvas().style.cursor = 'pointer';
       });
       map.on('mouseleave', layer, () => {
+        setHoveredAnchor(null);
         map.getCanvas().style.cursor = '';
       });
     });
@@ -345,18 +401,19 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
     map.on('click', CORE_LAYER, handleClick);
     map.on('click', GLOW_LAYER, handleClick);
 
-    // 呼吸动画（光晕 scale 0.8→1.2，opacity 随主题模式自适应）
-    // 总览模式：0.40 → 0.90；主题模式：0.68 → 1.00（最低亮度更高，穿透 overlay 叠色）
+    // 柔和的向外波纹：核心和底光保持稳定，避免整颗锚点明暗闪烁。
     const animate = () => {
-      pulseT += 0.02;
-      const t = (Math.sin(pulseT) + 1) / 2; // 0..1
-      if (map.getLayer(PULSE_LAYER)) {
-        map.setPaintProperty(PULSE_LAYER, 'circle-radius', 8 + t * 16);
-        map.setPaintProperty(PULSE_LAYER, 'circle-stroke-opacity', 0.55 * (1 - t));
-        // 主题模式：提升最低亮度，让锚点在 overlay 叠色下依然清晰可见
-        const minOp = themeBoostActive ? 0.68 : 0.40;
-        const rng   = themeBoostActive ? 0.32 : 0.50;
-        map.setPaintProperty(GLOW_LAYER, 'circle-opacity', minOp + t * rng);
+      pulseT += 0.028;
+      const t = (pulseT % (Math.PI * 2)) / (Math.PI * 2); // 0..1，单向外扩
+      if (map.getLayer(PULSE_LAYER) && map.getLayer(GLOW_LAYER) && map.getLayer(CORE_LAYER)) {
+        // 克制的向外波纹：保持可感知，但不抢占锚点本身的视觉焦点。
+        const rippleRadius = 6 + t * 11;
+        // 起点和终点均淡出，半径重置发生在不可见状态，避免视觉上像快速回缩。
+        const rippleOpacity = 0.36 * Math.sin(Math.PI * t);
+        map.setPaintProperty(PULSE_LAYER, 'circle-radius', rippleRadius);
+        map.setPaintProperty(PULSE_LAYER, 'circle-stroke-opacity', ['case', hoveredFeature, 1, rippleOpacity]);
+        map.setPaintProperty(GLOW_LAYER, 'circle-opacity', ['case', hoveredFeature, 1, 0.2]);
+        map.setPaintProperty(CORE_LAYER, coreUsesSymbol ? 'icon-opacity' : 'circle-opacity', ['case', hoveredFeature, 1, 0.86]);
       }
       rafId = requestAnimationFrame(animate);
     };
@@ -543,35 +600,8 @@ function buildController(ctx) {
         if (map.getLayer(layer)) map.setFilter(layer, filter);
       });
 
-      // 主题模式：放大光晕半径 + 降低模糊度，让锚点在 overlay 叠色下清晰突出
-      const boosting = themeKey !== 'all';
-      ctx.setThemeBoost(boosting);
-
-      if (map.getLayer(GLOW_LAYER)) {
-        map.setPaintProperty(GLOW_LAYER, 'circle-radius',
-          boosting
-            ? ['interpolate', ['linear'], ['zoom'], 8, 22, 14, 52]
-            : ['interpolate', ['linear'], ['zoom'], 8, 12, 14, 30]);
-        map.setPaintProperty(GLOW_LAYER, 'circle-blur', boosting ? 0.6 : 1);
-      }
-
-      if (map.getLayer(CORE_LAYER)) {
-        const coreType = map.getLayer(CORE_LAYER).type;
-        if (coreType === 'symbol') {
-          // 菱形图标放大 ~25%，视觉上更醒目
-          map.setLayoutProperty(CORE_LAYER, 'icon-size',
-            boosting
-              ? ['interpolate', ['linear'], ['zoom'], 8, 0.75, 14, 1.38]
-              : ['interpolate', ['linear'], ['zoom'], 8, 0.55, 14, 1.05]);
-        } else {
-          // 圆点兜底也同步放大
-          map.setPaintProperty(CORE_LAYER, 'circle-radius',
-            boosting
-              ? ['interpolate', ['linear'], ['zoom'], 8, 6, 14, 12]
-              : ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8]);
-          map.setPaintProperty(CORE_LAYER, 'circle-stroke-width', boosting ? 2.5 : 2);
-        }
-      }
+      // 叙事图层只负责筛选，不改变总览中锚点的尺寸、光晕或色彩表现。
+      ctx.setThemeBoost(false);
     },
 
     /**

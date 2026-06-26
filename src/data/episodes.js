@@ -1,3 +1,5 @@
+import { EPISODE_SCENE_EXPANSIONS } from './episode-expansions.js?rev=episodes-depth-1';
+
 // 锚点剧情副本数据集（v3 · 全锚点覆盖 · 含角色头像）
 // 为所有锚点扩展 episode 字段，以「锚点 id」为键。
 // episode 结构：
@@ -995,7 +997,292 @@ export const EPISODES = {
     ],
     reward: { badge: '🍵', badgeIcon: 'canton-tea', badgeName: { zh: '茶瓷通商印', en: 'Seal of Tea and Porcelain Trade' }, insight: { zh: '黄埔古港让一杯茶、一只瓷碗成为世界贸易的主角,也让岭南海岸写进全球日常生活。', en: 'Huangpu made tea and porcelain protagonists of world trade, writing the Lingnan coast into global daily life.' } },
   },
+
+  // ============ 新增锚点 · 千年文脉 ============
+  'N-CV05': {
+    characters: [{ name: { zh: '岭南匠师', en: 'Lingnan Artisan' }, role: { zh: '陈家祠装饰工艺讲述者', en: 'Craft narrator of Chen Clan Hall' }, portrait: '' }],
+    intro: { zh: '你走进陈家祠,屋脊陶塑、木雕梁架和石雕门罩层层展开。这里像一本立体书,把宗族、教育与工艺写在建筑表面。', en: 'You enter Chen Clan Ancestral Hall. Roof ceramics, wood beams and stone carvings unfold like a 3D book of clans, education and craft.' },
+    scenes: [{ speaker: 0, q: { zh: '陈家祠最适合作为哪类大湾区文化锚点?', en: 'What kind of Bay Area anchor is Chen Clan Hall?' }, options: [
+      { text: { zh: '岭南工艺、宗族教育与公共美学的汇合点', en: 'A meeting point of craft, clan education and public aesthetics' }, correct: true, feedback: { zh: '正是。陈家祠的价值不只在“好看”,而在它把岭南社会如何组织教育、身份与审美都留在建筑上。', en: 'Yes. Its value is not only beauty, but how Lingnan society recorded education, identity and aesthetics in architecture.' } },
+      { text: { zh: '单纯的近代商业写字楼', en: 'Only a modern commercial office building' }, correct: false, feedback: { zh: '不对。陈家祠是祠堂与书院系统,核心是宗族文化与工艺表达。', en: 'No. It is an ancestral hall and academy system centered on clan culture and craft.' } },
+    ] }],
+    reward: { badge: '🎨', badgeName: { zh: '岭南工艺印', en: 'Seal of Lingnan Craft' }, insight: { zh: '陈家祠证明:一座建筑可以成为地方社会、教育和手工业的共同档案。', en: 'Chen Clan Hall proves a building can archive society, education and craft together.' } },
+  },
+  'N-CV06': {
+    characters: [{ name: { zh: '祖庙司祝', en: 'Temple Keeper' }, role: { zh: '佛山城市记忆守望者', en: 'Keeper of Foshan memory' }, portrait: '' }],
+    intro: { zh: '你站在佛山祖庙前,香火、粤剧锣鼓、武术传说与陶塑屋脊交叠。城市的工商业精神,在这里有了可触摸的炉火。', en: 'Before Foshan Ancestral Temple, incense, opera drums, martial legends and ceramic ridges overlap. The city spirit becomes tangible.' },
+    scenes: [{ speaker: 0, q: { zh: '祖庙如何解释佛山的城市性格?', en: 'How does the temple explain Foshan as a city?' }, options: [
+      { text: { zh: '它把信仰、行会、工艺和市井生活凝聚在一起', en: 'It gathers belief, guilds, craft and everyday commerce' }, correct: true, feedback: { zh: '没错。佛山不只是制造之城,也是庙宇、行会和手工业共同塑造的岭南城市。', en: 'Correct. Foshan was shaped by temples, guilds and crafts as much as manufacturing.' } },
+      { text: { zh: '它与城市产业和民俗没有关系', en: 'It has no relation to industry or folk life' }, correct: false, feedback: { zh: '恰恰相反。祖庙是理解佛山民俗、工艺和城市商业精神的入口。', en: 'The opposite. It is an entry point to Foshan folk life, craft and commerce.' } },
+    ] }],
+    reward: { badge: '🔥', badgeName: { zh: '祖庙炉火印', en: 'Seal of the Temple Hearth' }, insight: { zh: '佛山祖庙让一座工商业城市拥有了精神中心。', en: 'Foshan Ancestral Temple gives an industrial city a spiritual center.' } },
+  },
+  'N-CV07': {
+    characters: [{ name: { zh: '题刻旅人', en: 'Inscription Traveler' }, role: { zh: '七星岩山水记录者', en: 'Recorder of Seven Star Crags' }, portrait: '' }],
+    intro: { zh: '你沿七星岩湖岸慢行,岩壁上历代题刻像一层层时间纹理。山水没有说话,石头却记住了人如何观看岭南。', en: 'You walk along Seven Star Crags. Inscriptions on the cliffs hold layers of time, recording how people saw Lingnan.' },
+    scenes: [{ speaker: 0, q: { zh: '七星岩摩崖石刻的核心价值是什么?', en: 'What is the core value of the Seven Star Crags inscriptions?' }, options: [
+      { text: { zh: '它把旅行、诗文、官员治理和山水审美刻进同一处空间', en: 'It carves travel, poetry, governance and landscape aesthetics into one place' }, correct: true, feedback: { zh: '准确。七星岩让大湾区叙事向更深的山水文脉延伸。', en: 'Exactly. It extends the Bay Area story into older landscape culture.' } },
+      { text: { zh: '它只是现代游客随手涂鸦', en: 'It is only modern tourist graffiti' }, correct: false, feedback: { zh: '不是。许多题刻跨越唐宋明清,是重要的历史文化记录。', en: 'No. Many inscriptions span dynasties and preserve cultural memory.' } },
+    ] }],
+    reward: { badge: '⛰️', badgeName: { zh: '山水题刻印', en: 'Seal of Landscape Inscriptions' }, insight: { zh: '七星岩说明:城市记忆有时不在街巷,而在山水与石壁之间。', en: 'Seven Star Crags shows that memory can live in landscape and stone.' } },
+  },
+  'N-CV08': {
+    characters: [{ name: { zh: '澳门石匠', en: 'Macau Mason' }, role: { zh: '大三巴立面见证者', en: 'Witness of the St. Paul facade' }, portrait: '' }],
+    intro: { zh: '你抬头看见大三巴牌坊,西方宗教图像与东方纹样并置在石面上。澳门的混血身份,浓缩成这一面立面。', en: 'You look up at the Ruins of St. Pauls, where Western religious imagery and Eastern motifs share one stone facade.' },
+    scenes: [{ speaker: 0, q: { zh: '大三巴为什么不只是旅游符号?', en: 'Why is St. Pauls more than a tourist icon?' }, options: [
+      { text: { zh: '它记录早期全球化中宗教、港口与地方工艺的互译', en: 'It records translation among religion, port trade and local craft' }, correct: true, feedback: { zh: '正是。大三巴是一座港口城市如何吸收、翻译并重组世界元素的证据。', en: 'Yes. It proves how a port city absorbed, translated and recomposed world elements.' } },
+      { text: { zh: '因为它完全与澳门港口史无关', en: 'Because it has nothing to do with Macau port history' }, correct: false, feedback: { zh: '不对。它正是澳门作为世界港口和宗教交流节点的重要象征。', en: 'No. It is a key symbol of Macau as a world port and religious contact zone.' } },
+    ] }],
+    reward: { badge: '⛪', badgeName: { zh: '东西石门印', en: 'Seal of the East-West Facade' }, insight: { zh: '大三巴把澳门的世界性写在一面石头立面上。', en: 'St. Pauls writes Macaus global identity onto stone.' } },
+  },
+  'N-CV09': {
+    characters: [{ name: { zh: '东坡行者', en: 'Su Shi Walker' }, role: { zh: '惠州西湖记忆讲述者', en: 'Narrator of Huizhou West Lake' }, portrait: '' }],
+    intro: { zh: '你在惠州西湖边行走,湖光让贬谪故事变得柔和。苏轼留下的不只是诗,也是岭南城市对逆境的温度。', en: 'You walk by Huizhou West Lake. Su Shi left not only poems, but a warm way for Lingnan cities to face hardship.' },
+    scenes: [{ speaker: 0, q: { zh: '惠州西湖补充了大湾区哪种叙事?', en: 'What story does Huizhou West Lake add to the Bay Area?' }, options: [
+      { text: { zh: '诗人、贬谪、民生与城市温度', en: 'Poets, exile, public life and urban warmth' }, correct: true, feedback: { zh: '没错。湾区不只有速度和港口,也有慢下来的文化韧性。', en: 'Correct. The Bay Area is not only speed and ports, but also cultural resilience.' } },
+      { text: { zh: '只代表现代金融交易', en: 'Only modern financial trading' }, correct: false, feedback: { zh: '不对。惠州西湖的核心是山水、诗文与岭南贬谪文化。', en: 'No. Its core is landscape, poetry and Lingnan exile culture.' } },
+    ] }],
+    reward: { badge: '🌙', badgeName: { zh: '东坡湖光印', en: 'Seal of Su Shi Lake Light' }, insight: { zh: '惠州西湖提醒我们:文化的力量,常常来自人在逆境中保留的温柔。', en: 'Huizhou West Lake reminds us that culture often grows from tenderness in hardship.' } },
+  },
+  'N-CV10': {
+    characters: [{ name: { zh: '南社族老', en: 'Nanshe Elder' }, role: { zh: '明清村落守望者', en: 'Keeper of the Ming-Qing village' }, portrait: '' }],
+    intro: { zh: '你走进南社古村,祠堂、书院、水塘和巷道组织出一套旧日秩序。制造业城市的背后,仍能看见宗族社会的骨架。', en: 'You enter Nanshe village, where halls, academies, ponds and lanes form an old order beneath modern manufacturing.' },
+    scenes: [{ speaker: 0, q: { zh: '南社古村为什么适合放进湾区地图?', en: 'Why does Nanshe belong on the Bay Area map?' }, options: [
+      { text: { zh: '它展示珠三角乡村如何通过宗族、教育和水网协作组织生活', en: 'It shows how clan, education and water networks organized Pearl Delta village life' }, correct: true, feedback: { zh: '正是。现代湾区效率的深层,有很长的乡村协作传统。', en: 'Yes. Beneath modern efficiency lies a long tradition of village cooperation.' } },
+      { text: { zh: '它只是一处与地方社会无关的空景', en: 'It is only scenery unrelated to local society' }, correct: false, feedback: { zh: '不对。南社的空间本身就是地方社会结构的可视化。', en: 'No. Nanshe makes local social structure visible.' } },
+    ] }],
+    reward: { badge: '🏘️', badgeName: { zh: '宗族水乡印', en: 'Seal of the Clan Water Village' }, insight: { zh: '南社古村让我们看见珠三角现代化之前的社会组织能力。', en: 'Nanshe reveals the social organization beneath Pearl Delta modernization.' } },
+  },
+
+  // ============ 新增锚点 · 近代化与超级工程 ============
+  'N-EG05': {
+    characters: [{ name: { zh: '桥梁工程师', en: 'Bridge Engineer' }, role: { zh: '虎门大桥建设见证者', en: 'Witness of Humen Bridge' }, portrait: '' }],
+    intro: { zh: '你站在珠江口风里,看见虎门大桥横跨东西两岸。它像一条先行的缝线,把湾区日后的跨海时代提前预告。', en: 'At the Pearl River mouth, Humen Bridge stitches the banks together and foreshadows the Bay Areas cross-sea age.' },
+    scenes: [{ speaker: 0, q: { zh: '虎门大桥的历史意义是什么?', en: 'What is the historical meaning of Humen Bridge?' }, options: [
+      { text: { zh: '它是珠江口跨海交通一体化的重要先声', en: 'It was an early signal of Pearl River estuary integration' }, correct: true, feedback: { zh: '准确。它为后来的港珠澳大桥、深中通道等超级工程铺垫了想象力。', en: 'Correct. It prepared the imagination for later mega-crossings.' } },
+      { text: { zh: '它让珠江口两岸联系变弱', en: 'It weakened links across the estuary' }, correct: false, feedback: { zh: '恰恰相反。它压缩了东西两岸的经济距离。', en: 'The opposite. It compressed economic distance across the estuary.' } },
+    ] }],
+    reward: { badge: '🌁', badgeName: { zh: '虎门跨海印', en: 'Seal of the Humen Crossing' }, insight: { zh: '虎门大桥是湾区跨海工程谱系中的早期关键笔画。', en: 'Humen Bridge is an early key stroke in the Bay Areas cross-sea engineering lineage.' } },
+  },
+  'N-EG06': {
+    characters: [{ name: { zh: '港口调度员', en: 'Port Dispatcher' }, role: { zh: '南沙港物流观察者', en: 'Observer of Nansha logistics' }, portrait: '' }],
+    intro: { zh: '集装箱在南沙港起落,吊机像巨大的笔在海边写字。广州重新面向外海,这一次靠的是现代物流系统。', en: 'Containers rise and fall at Nansha Port. Guangzhou faces the sea again through modern logistics.' },
+    scenes: [{ speaker: 0, q: { zh: '南沙港代表了什么样的新海上丝路?', en: 'What kind of new maritime route does Nansha Port represent?' }, options: [
+      { text: { zh: '由深水泊位、集装箱、冷链和海关系统构成的供应链网络', en: 'A supply-chain network of berths, containers, cold chains and customs systems' }, correct: true, feedback: { zh: '没错。现代港口的力量来自系统协同,不只是码头本身。', en: 'Yes. Modern port power comes from systems, not docks alone.' } },
+      { text: { zh: '只靠古代帆船和市集', en: 'Only ancient sails and markets' }, correct: false, feedback: { zh: '不对。南沙港的关键词是现代物流与全球供应链。', en: 'No. Nansha is about modern logistics and global supply chains.' } },
+    ] }],
+    reward: { badge: '📦', badgeName: { zh: '集装箱航路印', en: 'Seal of Container Routes' }, insight: { zh: '南沙港说明:今天的海上丝路是一套精密运转的物流基础设施。', en: 'Nansha Port shows that todays maritime route is precision logistics infrastructure.' } },
+  },
+  'N-EG07': {
+    characters: [{ name: { zh: '横琴规划师', en: 'Hengqin Planner' }, role: { zh: '制度工程观察者', en: 'Observer of institutional engineering' }, portrait: '' }],
+    intro: { zh: '你站在横琴,澳门近在咫尺。这里的工程不只在地面,更在规则、空间和产业如何重新组合。', en: 'In Hengqin, Macao is close. The project is not only on the ground, but in rules, space and industries recombined.' },
+    scenes: [{ speaker: 0, q: { zh: '横琴最像哪一种工程?', en: 'What kind of project is Hengqin most like?' }, options: [
+      { text: { zh: '制度工程:让空间、产业和治理方式重新组合', en: 'Institutional engineering that recombines space, industry and governance' }, correct: true, feedback: { zh: '正是。横琴让大湾区从地理连接走向治理实验。', en: 'Exactly. Hengqin moves the Bay Area from geographic connection to governance experiment.' } },
+      { text: { zh: '单纯一座观光塔', en: 'Only a sightseeing tower' }, correct: false, feedback: { zh: '不对。横琴的核心是粤澳协同和制度创新。', en: 'No. Hengqin centers on Guangdong-Macao collaboration and institutional innovation.' } },
+    ] }],
+    reward: { badge: '🧩', badgeName: { zh: '横琴协同印', en: 'Seal of Hengqin Collaboration' }, insight: { zh: '横琴提醒我们:最难的工程,有时不是建桥,而是重组规则。', en: 'Hengqin reminds us that the hardest engineering can be reorganizing rules.' } },
+  },
+  'N-EG08': {
+    characters: [{ name: { zh: '城市结构师', en: 'Urban Structuralist' }, role: { zh: '广州塔天际线讲述者', en: 'Narrator of Canton Tower skyline' }, portrait: '' }],
+    intro: { zh: '珠江夜色中,广州塔像一道扭转的光。它让工程结构变成城市名片,也让广州拥有新的世界识别度。', en: 'At night, Canton Tower twists in light. Structural engineering becomes a city calling card.' },
+    scenes: [{ speaker: 0, q: { zh: '广州塔的意义不只在高度,还在什么?', en: 'Beyond height, what matters about Canton Tower?' }, options: [
+      { text: { zh: '它把工程、城市品牌和珠江新城天际线绑定在一起', en: 'It binds engineering, city branding and the Zhujiang skyline' }, correct: true, feedback: { zh: '准确。超级工程也可以是一座城市向世界介绍自己的方式。', en: 'Correct. Mega-engineering can be how a city introduces itself.' } },
+      { text: { zh: '它完全不影响城市形象', en: 'It has no impact on city identity' }, correct: false, feedback: { zh: '不对。广州塔已经成为广州最强识别符号之一。', en: 'No. Canton Tower is one of Guangzhous strongest symbols.' } },
+    ] }],
+    reward: { badge: '🗼', badgeName: { zh: '羊城天际印', en: 'Seal of the Canton Skyline' }, insight: { zh: '广州塔让结构工程进入城市形象与公共记忆。', en: 'Canton Tower turns structural engineering into urban memory.' } },
+  },
+  'N-EG09': {
+    characters: [{ name: { zh: '高铁乘务员', en: 'High-Speed Rail Attendant' }, role: { zh: '西九龙连接见证者', en: 'Witness of West Kowloon connection' }, portrait: '' }],
+    intro: { zh: '列车驶入西九龙站,城市边界被压缩成换乘时间。香港由此接入更大的高铁网络,湾区日常协作变得可操作。', en: 'A train enters West Kowloon. Urban borders shrink into transfer time as Hong Kong connects to the high-speed network.' },
+    scenes: [{ speaker: 0, q: { zh: '西九龙站对大湾区最重要的影响是什么?', en: 'What is West Kowloons key impact on the Bay Area?' }, options: [
+      { text: { zh: '把香港纳入高铁生活圈,提升跨城协作效率', en: 'It brings Hong Kong into the high-speed living circle and improves collaboration' }, correct: true, feedback: { zh: '没错。一小时生活圈不是口号,而是由车站、线路和制度共同完成的体验。', en: 'Yes. The one-hour circle is built from stations, lines and systems.' } },
+      { text: { zh: '让香港与内地交通完全断开', en: 'It disconnects Hong Kong from mainland transport' }, correct: false, feedback: { zh: '恰恰相反。西九龙站强化了香港与内地城市的连接。', en: 'The opposite. West Kowloon strengthens connection.' } },
+    ] }],
+    reward: { badge: '🚄', badgeName: { zh: '高铁连城印', en: 'Seal of High-Speed Connection' }, insight: { zh: '西九龙站让大湾区的一小时生活圈变得可感知。', en: 'West Kowloon makes the Bay Area one-hour circle tangible.' } },
+  },
+  'N-EG10': {
+    characters: [{ name: { zh: '跨海测量员', en: 'Cross-Sea Surveyor' }, role: { zh: '深中通道路线观察者', en: 'Observer of the Shenzhen-Zhongshan Link' }, portrait: '' }],
+    intro: { zh: '你在珠江口远眺深中通道,海面不再只是阻隔,而成为城市重新排列的界面。深圳与中山被折叠到更近。', en: 'Looking at the Shenzhen-Zhongshan Link, the sea becomes an interface that rearranges cities.' },
+    scenes: [{ speaker: 0, q: { zh: '深中通道改变的不只是车程,还是什么?', en: 'Beyond travel time, what does the link change?' }, options: [
+      { text: { zh: '产业链、通勤、旅游和东西两岸的心理距离', en: 'Supply chains, commuting, tourism and mental distance between banks' }, correct: true, feedback: { zh: '正是。跨海通道改变的是城市之间的组织方式。', en: 'Exactly. A cross-sea link changes how cities organize relations.' } },
+      { text: { zh: '只是一条与区域无关的小路', en: 'Only a small road unrelated to the region' }, correct: false, feedback: { zh: '不对。它是珠江口通道网络成型的重要节点。', en: 'No. It is a key node in the estuary corridor network.' } },
+    ] }],
+    reward: { badge: '🌉', badgeName: { zh: '深中折叠印', en: 'Seal of the Folded Estuary' }, insight: { zh: '深中通道让珠江口东西两岸重新进入同一张生活地图。', en: 'The link brings both banks into one living map.' } },
+  },
+
+  // ============ 新增锚点 · 科学星火 ============
+  'N-SC05': {
+    characters: [{ name: { zh: '清水湾研究员', en: 'Clear Water Bay Researcher' }, role: { zh: '香港科大科研讲述者', en: 'HKUST research narrator' }, portrait: '' }],
+    intro: { zh: '山海之间的香港科大,把国际科研、创业教育和湾区产业连接起来。知识在这里并不抽象,它会走向实验室和公司。', en: 'HKUST connects global research, entrepreneurship and Bay Area industry between mountain and sea.' },
+    scenes: [{ speaker: 0, q: { zh: '香港科大补足了湾区创新的哪一环?', en: 'What does HKUST add to Bay Area innovation?' }, options: [
+      { text: { zh: '国际化科研、人才培养与创业机制', en: 'Global research, talent training and startup mechanisms' }, correct: true, feedback: { zh: '没错。创新不只靠硬件市场,也靠大学和科研共同体。', en: 'Yes. Innovation needs universities and research communities, not hardware markets alone.' } },
+      { text: { zh: '完全不参与知识生产', en: 'It does not produce knowledge' }, correct: false, feedback: { zh: '不对。香港科大是大湾区重要研究型大学。', en: 'No. HKUST is a major research university in the Bay Area.' } },
+    ] }],
+    reward: { badge: '🎓', badgeName: { zh: '清水湾科研印', en: 'Seal of Clear Water Bay Research' }, insight: { zh: '香港科大让湾区创新拥有国际学术接口。', en: 'HKUST gives Bay Area innovation a global academic interface.' } },
+  },
+  'N-SC06': {
+    characters: [{ name: { zh: '康乐园学人', en: 'Kangle Scholar' }, role: { zh: '中山大学南校园讲述者', en: 'Narrator of SYSU South Campus' }, portrait: '' }],
+    intro: { zh: '你走进中山大学南校园,近代校园建筑与榕树一起沉默。这里生产的不是短期热度,而是长期人才和知识。', en: 'You enter SYSU South Campus, where old buildings and banyans speak of long-term talent and knowledge.' },
+    scenes: [{ speaker: 0, q: { zh: '中山大学南校园代表哪种生产力?', en: 'What productivity does SYSU South Campus represent?' }, options: [
+      { text: { zh: '长期积累的人才、医学、海洋与人文研究', en: 'Long-term talent, medicine, ocean studies and humanities' }, correct: true, feedback: { zh: '准确。大湾区不只需要速度,也需要大学提供深层知识土壤。', en: 'Correct. The Bay Area needs deep knowledge soil from universities.' } },
+      { text: { zh: '只代表短期消费热点', en: 'Only a short-term consumption trend' }, correct: false, feedback: { zh: '不对。它代表现代高等教育在岭南扎根。', en: 'No. It represents modern higher education rooted in Lingnan.' } },
+    ] }],
+    reward: { badge: '📚', badgeName: { zh: '康乐学脉印', en: 'Seal of Kangle Scholarship' }, insight: { zh: '中山大学南校园让湾区创新拥有厚重的人才根系。', en: 'SYSU gives Bay Area innovation deep talent roots.' } },
+  },
+  'N-SC07': {
+    characters: [{ name: { zh: '科普导师', en: 'Science Mentor' }, role: { zh: '广东科学中心讲解员', en: 'Guide of Guangdong Science Center' }, portrait: '' }],
+    intro: { zh: '展厅里的孩子按下按钮,光、电、力和生命科学变得可触摸。科学从实验室走向周末,创新才有下一代。', en: 'Children press buttons in the hall; science becomes touchable. Innovation needs science in public life.' },
+    scenes: [{ speaker: 0, q: { zh: '广东科学中心的重要性在哪里?', en: 'Why is Guangdong Science Center important?' }, options: [
+      { text: { zh: '把科学翻译给公众,培养未来工程师和好奇心', en: 'It translates science to the public and grows future engineers' }, correct: true, feedback: { zh: '正是。科普是创新生态的底层土壤。', en: 'Yes. Science education is basic soil for innovation.' } },
+      { text: { zh: '科普与创新完全无关', en: 'Science education has nothing to do with innovation' }, correct: false, feedback: { zh: '不对。没有公众理解和下一代好奇心,创新很难持续。', en: 'No. Innovation needs public understanding and curiosity.' } },
+    ] }],
+    reward: { badge: '🧪', badgeName: { zh: '科普星火印', en: 'Seal of Public Science' }, insight: { zh: '广东科学中心让科学成为大众可以亲近的公共体验。', en: 'Guangdong Science Center makes science a public experience.' } },
+  },
+  'N-SC08': {
+    characters: [{ name: { zh: '中子束线科学家', en: 'Neutron Beam Scientist' }, role: { zh: '散裂中子源研究者', en: 'CSNS researcher' }, portrait: '' }],
+    intro: { zh: '松山湖深处,中子束穿透材料内部。大湾区从制造产品走向理解材料,背后离不开这种大科学装置。', en: 'In Songshan Lake, neutron beams look inside materials. Manufacturing moves toward understanding matter.' },
+    scenes: [{ speaker: 0, q: { zh: '中国散裂中子源为什么重要?', en: 'Why is CSNS important?' }, options: [
+      { text: { zh: '它帮助研究材料内部结构,支撑物理、生命科学和工程升级', en: 'It studies internal material structure and supports science and engineering upgrades' }, correct: true, feedback: { zh: '没错。许多产业突破,先发生在看不见的材料结构里。', en: 'Correct. Many industrial breakthroughs begin inside invisible material structures.' } },
+      { text: { zh: '它只是一座普通商场', en: 'It is only a shopping mall' }, correct: false, feedback: { zh: '不对。它是国家级大科学装置。', en: 'No. It is a national big-science facility.' } },
+    ] }],
+    reward: { badge: '⚛️', badgeName: { zh: '中子探微印', en: 'Seal of Neutron Insight' }, insight: { zh: '散裂中子源让湾区制造业拥有理解材料的深层眼睛。', en: 'CSNS gives Bay Area manufacturing deep eyes into materials.' } },
+  },
+  'N-SC09': {
+    characters: [{ name: { zh: '数码港创业者', en: 'Cyberport Founder' }, role: { zh: '香港数字经济观察者', en: 'Observer of Hong Kong digital economy' }, portrait: '' }],
+    intro: { zh: '你走在数码港海边,创业公司、资本和国际市场在这里相遇。香港的数字化不是复制深圳,而是补上金融与软件接口。', en: 'At Cyberport, startups, capital and global markets meet. Hong Kong adds software and finance interfaces.' },
+    scenes: [{ speaker: 0, q: { zh: '数码港对湾区创新的补充是什么?', en: 'What does Cyberport add to Bay Area innovation?' }, options: [
+      { text: { zh: '金融科技、数字内容、资本与国际服务网络', en: 'Fintech, digital content, capital and global service networks' }, correct: true, feedback: { zh: '对。它让硬件创新之外的软件、金融和国际市场接口更完整。', en: 'Yes. It complements hardware with software, finance and global market interfaces.' } },
+      { text: { zh: '只生产传统农业工具', en: 'It only produces traditional farm tools' }, correct: false, feedback: { zh: '不对。数码港的关键词是数字经济和创业生态。', en: 'No. Cyberport is about digital economy and startups.' } },
+    ] }],
+    reward: { badge: '💻', badgeName: { zh: '数码创业印', en: 'Seal of Digital Startups' }, insight: { zh: '数码港让香港把金融城市能力延展到数字经济。', en: 'Cyberport extends Hong Kongs financial-city strengths into digital economy.' } },
+  },
+  'N-SC10': {
+    characters: [{ name: { zh: '横琴学生', en: 'Hengqin Student' }, role: { zh: '澳门大学校园观察者', en: 'Observer of University of Macau' }, portrait: '' }],
+    intro: { zh: '澳门大学横琴校区像一座跨过边界的知识岛。学生、实验室与制度安排每天一起运转,融合变得具体。', en: 'The University of Macau Hengqin Campus is a knowledge island across boundaries, where students, labs and systems work daily.' },
+    scenes: [{ speaker: 0, q: { zh: '澳门大学横琴校区象征什么?', en: 'What does the UM Hengqin campus symbolize?' }, options: [
+      { text: { zh: '教育空间、制度安排和湾区融合的日常化', en: 'Education space, institutional arrangement and daily integration' }, correct: true, feedback: { zh: '没错。它把融合从宏大词汇变成了校园生活。', en: 'Yes. It turns integration from a grand phrase into campus life.' } },
+      { text: { zh: '它与教育和湾区合作无关', en: 'It has nothing to do with education or cooperation' }, correct: false, feedback: { zh: '不对。它正是澳门高等教育与横琴空间协同的代表。', en: 'No. It represents Macao higher education working with Hengqin space.' } },
+    ] }],
+    reward: { badge: '🏫', badgeName: { zh: '横琴学岛印', en: 'Seal of the Hengqin Campus' }, insight: { zh: '澳门大学横琴校区让知识成为大湾区融合的温和力量。', en: 'The UM Hengqin campus makes knowledge a quiet force of integration.' } },
+  },
+
+  // ============ 新增锚点 · 湾区风味 ============
+  'N-AW05': {
+    characters: [{ name: { zh: '西关街坊', en: 'Xiguan Neighbor' }, role: { zh: '永庆坊生活讲述者', en: 'Narrator of Yongqing Fang life' }, portrait: '' }],
+    intro: { zh: '你走入永庆坊,骑楼、粤剧、早茶和新店铺挤在同一条街上。老城更新不是静态保存,而是让生活继续发生。', en: 'In Yongqing Fang, arcades, opera, tea and new shops share one street. Renewal means life continues.' },
+    scenes: [{ speaker: 0, q: { zh: '永庆坊最好的理解方式是什么?', en: 'How should Yongqing Fang be understood?' }, options: [
+      { text: { zh: '老城烟火、非遗与新消费共存的更新样本', en: 'A renewal sample where old-city life, heritage and new consumption coexist' }, correct: true, feedback: { zh: '正是。它的重点不是变新,而是不丢生活气。', en: 'Exactly. Its point is not becoming new, but keeping everyday warmth.' } },
+      { text: { zh: '完全拆掉记忆后的空白商业区', en: 'A blank commercial area after erasing memory' }, correct: false, feedback: { zh: '不对。永庆坊的价值正是保留街巷记忆并继续使用。', en: 'No. Its value is keeping memory in use.' } },
+    ] }],
+    reward: { badge: '🫖', badgeName: { zh: '西关烟火印', en: 'Seal of Xiguan Everyday Life' }, insight: { zh: '永庆坊说明:城市更新最好不是替换生活,而是给生活续航。', en: 'Yongqing Fang shows renewal should extend life, not replace it.' } },
+  },
+  'N-AW06': {
+    characters: [{ name: { zh: '石湾陶工', en: 'Shiwan Potter' }, role: { zh: '南风古灶守窑人', en: 'Keeper of Nanfeng Kiln' }, portrait: '' }],
+    intro: { zh: '南风古灶的火延续数百年。泥土、火候、碗盏与屋脊装饰,让湾区风味从餐桌延伸到器物。', en: 'Nanfeng Ancient Kiln has burned for centuries. Clay and fire extend Bay Area taste into objects.' },
+    scenes: [{ speaker: 0, q: { zh: '南风古灶让我们看到什么?', en: 'What does Nanfeng Ancient Kiln reveal?' }, options: [
+      { text: { zh: '生活方式也可以由陶土、火候和工艺慢慢烧成', en: 'Lifestyle can be slowly fired from clay, heat and craft' }, correct: true, feedback: { zh: '没错。味道不只在食物中,也在承载食物的器物里。', en: 'Yes. Taste lives not only in food, but also in the vessels that hold it.' } },
+      { text: { zh: '陶瓷与岭南生活完全无关', en: 'Ceramics have nothing to do with Lingnan life' }, correct: false, feedback: { zh: '不对。石湾陶长期塑造岭南日用器物和审美。', en: 'No. Shiwan ceramics shaped Lingnan daily objects and aesthetics.' } },
+    ] }],
+    reward: { badge: '🏺', badgeName: { zh: '石湾陶火印', en: 'Seal of Shiwan Kiln Fire' }, insight: { zh: '南风古灶让湾区风味拥有器物和火候的维度。', en: 'Nanfeng Kiln gives Bay Area flavor the dimension of objects and fire.' } },
+  },
+  'N-AW07': {
+    characters: [{ name: { zh: '石岐食客', en: 'Shiqi Diner' }, role: { zh: '中山味觉讲述者', en: 'Narrator of Zhongshan taste' }, portrait: '' }],
+    intro: { zh: '你走在石岐老街,乳鸽香气从骑楼间飘出。香山侨乡、商贸往来与家族记忆,都能在一张餐桌上相遇。', en: 'In Shiqi Old Street, roast pigeon aroma drifts through arcades. Overseas-Chinese memory meets commerce at the table.' },
+    scenes: [{ speaker: 0, q: { zh: '石岐老街的食物为何值得成为锚点?', en: 'Why can Shiqi food be an anchor?' }, options: [
+      { text: { zh: '它连接侨乡迁徙、地方身份和珠江口商贸', en: 'It connects migration, local identity and estuary commerce' }, correct: true, feedback: { zh: '准确。食物是理解地方身份的一条捷径。', en: 'Correct. Food is a shortcut to local identity.' } },
+      { text: { zh: '食物永远不能承载历史', en: 'Food can never carry history' }, correct: false, feedback: { zh: '不对。许多地方记忆正是通过味道保存的。', en: 'No. Many local memories are preserved through taste.' } },
+    ] }],
+    reward: { badge: '🐦', badgeName: { zh: '石岐风味印', en: 'Seal of Shiqi Flavor' }, insight: { zh: '石岐老街提醒我们:一口地方味,也能讲迁徙和家族的故事。', en: 'Shiqi Old Street shows local taste can tell stories of migration and family.' } },
+  },
+  'N-AW08': {
+    characters: [{ name: { zh: '官也街店主', en: 'Rua do Cunha Shopkeeper' }, role: { zh: '澳门小吃讲述者', en: 'Narrator of Macao snacks' }, portrait: '' }],
+    intro: { zh: '官也街上,蛋挞、杏仁饼、猪扒包与手信店排成一条味觉走廊。澳门的混血历史,落在甜咸之间。', en: 'Rua do Cunha turns egg tarts, cookies and pork buns into a taste corridor of Macao history.' },
+    scenes: [{ speaker: 0, q: { zh: '官也街最能体现澳门哪种特质?', en: 'What Macao trait does Rua do Cunha show?' }, options: [
+      { text: { zh: '中西混合的城市身份可以通过食物被感知', en: 'A mixed East-West identity can be tasted through food' }, correct: true, feedback: { zh: '没错。宏大的交流史,在澳门常常会变成一口点心。', en: 'Yes. In Macao, grand exchange often becomes a snack.' } },
+      { text: { zh: '澳门饮食完全没有中西交流', en: 'Macao food has no East-West exchange' }, correct: false, feedback: { zh: '不对。澳门饮食正是多元文化相遇的日常证据。', en: 'No. Macao food is everyday evidence of cultural encounter.' } },
+    ] }],
+    reward: { badge: '🥧', badgeName: { zh: '官也甜咸印', en: 'Seal of Rua do Cunha Taste' }, insight: { zh: '官也街让城市身份变成可以边走边吃的体验。', en: 'Rua do Cunha turns city identity into a walkable taste.' } },
+  },
+  'N-AW09': {
+    characters: [{ name: { zh: '大澳渔民', en: 'Tai O Fisher' }, role: { zh: '棚屋水道讲述者', en: 'Narrator of stilt houses and waterways' }, portrait: '' }],
+    intro: { zh: '你在大澳水道旁听见船声,棚屋、虾酱和咸鱼记录着香港被高楼遮住的海上生活。', en: 'By Tai O waterways, stilt houses, shrimp paste and salted fish preserve Hong Kongs sea life.' },
+    scenes: [{ speaker: 0, q: { zh: '大澳渔村补充了香港哪一面?', en: 'What side of Hong Kong does Tai O add?' }, options: [
+      { text: { zh: '海上人家、渔港社群与潮汐生活', en: 'Sea families, fishing communities and tidal life' }, correct: true, feedback: { zh: '正确。香港不只有金融天际线,也有棚屋和海风。', en: 'Correct. Hong Kong is not only finance skyline, but stilt houses and sea wind.' } },
+      { text: { zh: '它只代表摩天楼金融区', en: 'It only represents skyscraper finance' }, correct: false, feedback: { zh: '不对。大澳保存的是渔村和海岛社区记忆。', en: 'No. Tai O preserves fishing-village and island memory.' } },
+    ] }],
+    reward: { badge: '🛶', badgeName: { zh: '大澳海家印', en: 'Seal of Tai O Sea Families' }, insight: { zh: '大澳让香港重新显露海上人家的底色。', en: 'Tai O reveals Hong Kongs sea-family roots.' } },
+  },
+  'N-AW10': {
+    characters: [{ name: { zh: '道滘龙舟手', en: 'Daojiao Dragon-Boater' }, role: { zh: '水乡节令讲述者', en: 'Narrator of water-town seasons' }, portrait: '' }],
+    intro: { zh: '道滘水道纵横,粽香与龙舟鼓声一起浮起。东莞不只属于工厂,也属于水网和节令。', en: 'Daojiao waterways carry rice dumpling aroma and dragon-boat drums. Dongguan belongs to water and seasons too.' },
+    scenes: [{ speaker: 0, q: { zh: '道滘水乡为什么放在“湾区风味”?', en: 'Why is Daojiao under Bay Area flavors?' }, options: [
+      { text: { zh: '它把水网、节令饮食和龙舟民俗连成生活时间表', en: 'It connects waterways, seasonal food and dragon-boat customs into a life calendar' }, correct: true, feedback: { zh: '正是。地方味道常常跟节令和水土一起生长。', en: 'Exactly. Local flavor grows with seasons and water.' } },
+      { text: { zh: '它与民俗和饮食没有关系', en: 'It has no relation to food or folk custom' }, correct: false, feedback: { zh: '不对。道滘的水乡生活和节令饮食非常紧密。', en: 'No. Daojiao water-town life is closely tied to seasonal food.' } },
+    ] }],
+    reward: { badge: '🚣', badgeName: { zh: '水乡节令印', en: 'Seal of Water-Town Seasons' }, insight: { zh: '道滘水乡让东莞在制造之外保留了水网生活的节奏。', en: 'Daojiao keeps Dongguans water-town rhythm beyond manufacturing.' } },
+  },
+
+  // ============ 新增锚点 · 航海贸易 ============
+  'N-NA05': {
+    characters: [{ name: { zh: '南沙海民', en: 'Nansha Sea Folk' }, role: { zh: '天后宫航海信仰讲述者', en: 'Narrator of Tianhou maritime belief' }, portrait: '' }],
+    intro: { zh: '你在南沙天后宫望向珠江口,现代港区就在不远处。古老信仰和集装箱航线,其实都在回答同一个问题:如何面对大海。', en: 'At Nansha Tianhou Palace, modern port areas are nearby. Old belief and container routes both answer how to face the sea.' },
+    scenes: [{ speaker: 0, q: { zh: '南沙天后宫连接了哪两种海洋力量?', en: 'What two maritime forces does Nansha Tianhou Palace connect?' }, options: [
+      { text: { zh: '传统航海信仰与现代港口物流', en: 'Traditional maritime belief and modern port logistics' }, correct: true, feedback: { zh: '正确。面对海洋,人既需要技术,也需要精神坐标。', en: 'Correct. Facing the sea requires technology and spiritual coordinates.' } },
+      { text: { zh: '它与海洋完全无关', en: 'It has nothing to do with the sea' }, correct: false, feedback: { zh: '不对。天后信仰本来就与航海安全和海民生活相关。', en: 'No. Tianhou belief is deeply tied to maritime safety and sea folk life.' } },
+    ] }],
+    reward: { badge: '🕯️', badgeName: { zh: '南沙祈风印', en: 'Seal of Nansha Sea Blessing' }, insight: { zh: '南沙天后宫让古老海洋信仰与现代港口站在同一片海边。', en: 'Nansha Tianhou Palace lets old maritime belief stand beside modern ports.' } },
+  },
+  'N-NA06': {
+    characters: [{ name: { zh: '妈阁庙香客', en: 'A-Ma Pilgrim' }, role: { zh: '澳门港口源头讲述者', en: 'Narrator of Macaus maritime origin' }, portrait: '' }],
+    intro: { zh: '妈阁庙前海风吹来,澳门名字的传说也从这里展开。小小庙宇,连接华南海民与葡萄牙航海时代。', en: 'Sea wind reaches A-Ma Temple, where the legend of Macaus name begins.' },
+    scenes: [{ speaker: 0, q: { zh: '妈阁庙为什么是澳门重要锚点?', en: 'Why is A-Ma Temple an important Macau anchor?' }, options: [
+      { text: { zh: '它连接妈祖信仰、港口起源与澳门地名记忆', en: 'It links Mazu belief, port origins and the memory of Macaus name' }, correct: true, feedback: { zh: '正是。澳门的世界港口故事,从这样的小港湾开始。', en: 'Yes. Macaus world-port story begins from such a small harbor.' } },
+      { text: { zh: '它只是一座与航海无关的高楼', en: 'It is only a tower unrelated to navigation' }, correct: false, feedback: { zh: '不对。妈阁庙是澳门海上信仰和港口记忆核心。', en: 'No. A-Ma Temple is central to Macaus maritime belief and memory.' } },
+    ] }],
+    reward: { badge: '🌊', badgeName: { zh: '妈阁海源印', en: 'Seal of A-Ma Maritime Origin' }, insight: { zh: '妈阁庙把澳门的名字、港口和海上信仰连接在一起。', en: 'A-Ma Temple connects Macaus name, port and maritime belief.' } },
+  },
+  'N-NA07': {
+    characters: [{ name: { zh: '桂山船长', en: 'Guishan Captain' }, role: { zh: '万山群岛航线讲述者', en: 'Narrator of Wanshan island routes' }, portrait: '' }],
+    intro: { zh: '船靠近桂山岛,珠江口不再只是一条海岸线,而是一串岛屿、航道和渔港组成的网络。', en: 'Approaching Guishan Island, the estuary becomes a network of islands, routes and fishing ports.' },
+    scenes: [{ speaker: 0, q: { zh: '桂山岛让湾区地图增加了什么维度?', en: 'What dimension does Guishan Island add to the Bay Area map?' }, options: [
+      { text: { zh: '岛链、渔港、航道和海上生活', en: 'Island chains, fishing ports, routes and sea life' }, correct: true, feedback: { zh: '没错。大湾区并不止于陆地城市,海面本身也是网络。', en: 'Yes. The Bay Area is not only land cities; the sea is also a network.' } },
+      { text: { zh: '它证明湾区没有海洋空间', en: 'It proves the Bay Area has no maritime space' }, correct: false, feedback: { zh: '恰恰相反。桂山岛强调的是湾区的海岛维度。', en: 'The opposite. Guishan emphasizes the island dimension.' } },
+    ] }],
+    reward: { badge: '🏝️', badgeName: { zh: '万山岛链印', en: 'Seal of the Wanshan Islands' }, insight: { zh: '桂山岛提醒我们:湾区的城市网络也漂浮在海面上。', en: 'Guishan reminds us that the Bay Area network also floats on the sea.' } },
+  },
+  'N-NA08': {
+    characters: [{ name: { zh: '海防军户', en: 'Coastal Defender' }, role: { zh: '平海古城守望者', en: 'Guardian of Pinghai Ancient City' }, portrait: '' }],
+    intro: { zh: '你走近平海古城墙,南海季风从城门穿过。开放的海岸,也曾需要防御、军户和社区共同守望。', en: 'At Pinghai walls, the monsoon passes the gate. Open coasts also needed defense and community watch.' },
+    scenes: [{ speaker: 0, q: { zh: '平海古城补充了海洋叙事的哪一面?', en: 'What side of maritime history does Pinghai add?' }, options: [
+      { text: { zh: '海防、沿海聚落和开放背后的安全需求', en: 'Coastal defense, settlements and the need for security behind openness' }, correct: true, feedback: { zh: '准确。海洋带来贸易,也要求守望和防御。', en: 'Correct. The sea brings trade, but also demands defense.' } },
+      { text: { zh: '海岸永远不需要防御', en: 'Coasts never need defense' }, correct: false, feedback: { zh: '不对。明代海防正是沿海社会的重要部分。', en: 'No. Ming coastal defense was a vital part of coastal society.' } },
+    ] }],
+    reward: { badge: '🛡️', badgeName: { zh: '平海海防印', en: 'Seal of Pinghai Defense' }, insight: { zh: '平海古城让开放的海洋叙事拥有了防守的一面。', en: 'Pinghai gives the open-sea story a defensive side.' } },
+  },
+  'N-NA09': {
+    characters: [{ name: { zh: '长洲岛民', en: 'Cheung Chau Islander' }, role: { zh: '离岛节庆讲述者', en: 'Narrator of island festivals' }, portrait: '' }],
+    intro: { zh: '长洲渡轮靠岸,街巷里包山、庙会和鱼港气息交织。香港的海洋性,也藏在小岛节庆中。', en: 'The ferry reaches Cheung Chau. Bun towers, temple rites and fishing-port air reveal Hong Kongs island character.' },
+    scenes: [{ speaker: 0, q: { zh: '长洲岛为什么属于航海贸易图层?', en: 'Why does Cheung Chau belong in the maritime layer?' }, options: [
+      { text: { zh: '它展示离岛渡轮、渔港社群和海上节庆如何维系共同体', en: 'It shows ferries, fishing communities and maritime festivals sustaining community' }, correct: true, feedback: { zh: '没错。海港社会不只有大码头,也有小岛日常。', en: 'Yes. Harbor society includes island everyday life.' } },
+      { text: { zh: '它与海岛和航线毫无关系', en: 'It has nothing to do with islands or routes' }, correct: false, feedback: { zh: '不对。长洲的渡轮和渔港生活就是海洋网络的一部分。', en: 'No. Its ferries and fishing life are part of the maritime network.' } },
+    ] }],
+    reward: { badge: '⛴️', badgeName: { zh: '长洲渡海印', en: 'Seal of Cheung Chau Ferry' }, insight: { zh: '长洲岛让香港的海洋文明回到社区与节庆。', en: 'Cheung Chau brings Hong Kongs maritime culture back to community and festival.' } },
+  },
+  'N-NA10': {
+    characters: [{ name: { zh: '沙面洋行职员', en: 'Shamian Firm Clerk' }, role: { zh: '近代外贸记录者', en: 'Recorder of modern foreign trade' }, portrait: '' }],
+    intro: { zh: '你走在沙面岛树荫下,银行、洋行、领事馆旧址安静排列。黄埔古港之后,贸易进入建筑、金融和法律空间。', en: 'On Shamian Island, banks, firms and consulates line the shade. After Huangpu, trade moved into architecture, finance and law.' },
+    scenes: [{ speaker: 0, q: { zh: '沙面岛把广州贸易史推进到哪一阶段?', en: 'What stage of Guangzhou trade history does Shamian represent?' }, options: [
+      { text: { zh: '近代外贸、金融机构和领事空间交织的阶段', en: 'Modern foreign trade mixed with finance and consular space' }, correct: true, feedback: { zh: '正是。沙面让贸易从码头延伸到制度与建筑空间。', en: 'Yes. Shamian extends trade from docks into institutions and architecture.' } },
+      { text: { zh: '完全没有近代外贸痕迹', en: 'It has no trace of modern foreign trade' }, correct: false, feedback: { zh: '不对。沙面保存了广州近代外贸城市纹理。', en: 'No. Shamian preserves Guangzhous modern foreign-trade fabric.' } },
+    ] }],
+    reward: { badge: '🏛️', badgeName: { zh: '沙面洋行印', en: 'Seal of Shamian Trade Houses' }, insight: { zh: '沙面岛说明:贸易史不只在港口,也写在城市制度和建筑里。', en: 'Shamian shows trade history also lives in institutions and buildings.' } },
+  },
 };
+
+Object.entries(EPISODE_SCENE_EXPANSIONS).forEach(([anchorId, extraScenes]) => {
+  if (!EPISODES[anchorId] || !Array.isArray(extraScenes) || extraScenes.length === 0) return;
+  EPISODES[anchorId].scenes = [...EPISODES[anchorId].scenes, ...extraScenes];
+});
 
 /** 判断某锚点是否拥有剧情副本 */
 export function hasEpisode(anchorId) {
