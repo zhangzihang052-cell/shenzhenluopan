@@ -751,34 +751,3 @@
   0%, 100% { transform: rotate(0deg); }
   50% { transform: rotate(-90deg); }
 }
-
-/* ===== V2: 设置按钮 + 三主按钮移动端适配 ===== */
-@media (max-width: 820px) and (orientation: landscape) {
-  #settings-btn {
-    top: 48px;
-    right: max(10px, calc(100vw - 52px));
-    width: 36px;
-    height: 36px;
-  }
-  #settings-btn svg { width: 17px; height: 17px; }
-
-  .settings-menu {
-    top: 88px;
-    right: max(10px, calc(100vw - 200px));
-    min-width: 160px;
-  }
-  .settings-item { font-size: 13px; padding: 7px 10px; }
-  .settings-lang-btn { font-size: 12px; padding: 6px 10px; }
-}
-
-@media (max-width: 500px) and (orientation: landscape) {
-  #settings-btn {
-    right: 6px;
-    width: 32px;
-    height: 32px;
-  }
-  .settings-menu {
-    right: 6px;
-    min-width: 140px;
-  }
-}

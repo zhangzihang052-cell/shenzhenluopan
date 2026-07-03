@@ -713,44 +713,101 @@ body.route-planner-open .main-actions {
   .main-actions { bottom: 46px; }
 }
 
-/* 三主按钮：复用 explore-launcher 风格，等宽并列 */
-.main-actions .explore-launcher {
-  position: static;
-  transform: none;
-  animation: none;
-  min-width: auto;
-  max-width: none;
+/* 三主按钮：独立 contained 样式，避免水墨背景互相重叠 */
+.main-actions .main-action-btn {
+  position: relative;
+  display: flex;
   flex: 1 1 0;
-  min-height: 56px;
-  padding: 9px 20px 9px 14px;
-  font-size: 18px;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 56px;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(58, 48, 36, 0.88), rgba(38, 30, 22, 0.92));
+  color: #fff7e6;
+  cursor: pointer;
+  isolation: isolate;
+  overflow: hidden;
+  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.46);
+  box-shadow:
+    0 6px 16px -6px rgba(15, 11, 7, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 0 0 1px rgba(255, 246, 224, 0.06);
+  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
-.main-actions .explore-launcher::after {
-  inset: -7px -16px -8px -14px;
-  background-size: 100% 58%;
+/* 水墨纹理：contained 在按钮内，不溢出 */
+.main-actions .main-action-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--ink-brush-button);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 130% 80%;
+  opacity: 0.22;
+  pointer-events: none;
 }
-.main-actions .explore-launcher:hover {
-  transform: translateY(-3px) scale(1.03);
+.main-actions .main-action-btn > span {
+  position: relative;
+  z-index: 1;
 }
-.main-actions .explore-launcher:active {
-  transform: translateY(0) scale(0.98);
+.main-actions .main-action-btn:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+  box-shadow:
+    0 10px 22px -6px rgba(15, 11, 7, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
-.main-actions .explore-ico {
+.main-actions .main-action-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+.main-actions .main-action-btn .explore-ico {
   width: 32px;
   height: 32px;
   font-size: 20px;
+  border-radius: 7px;
 }
 /* 激活态：朱砂高亮 */
-.main-actions .explore-launcher.active {
-  filter: brightness(1.12);
+.main-actions .main-action-btn.active {
+  background: linear-gradient(180deg, rgba(168, 56, 38, 0.92), rgba(128, 32, 20, 0.95));
+  box-shadow:
+    0 8px 20px -4px rgba(168, 56, 38, 0.5),
+    0 0 16px 2px rgba(217, 80, 62, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
-.main-actions .explore-launcher.active .explore-ico {
-  background: radial-gradient(130% 130% at 38% 28%, #d9503e 0%, #b5341f 68%, #9a2010 100%);
-  box-shadow: 0 0 14px 2px rgba(217, 80, 62, 0.5), 0 4px 10px -4px rgba(120, 24, 12, 0.76);
+.main-actions .main-action-btn.active .explore-ico {
+  background: radial-gradient(130% 130% at 38% 28%, #e8604e 0%, #c5402f 68%, #a82818 100%);
+  box-shadow: 0 0 12px 2px rgba(232, 96, 78, 0.5), 0 4px 10px -4px rgba(120, 24, 12, 0.76);
 }
-.main-actions .explore-launcher.active::after {
-  opacity: 0.88;
+.main-actions .main-action-btn.active::after {
+  opacity: 0.3;
+}
+/* 涟漪 */
+.main-actions .main-action-btn::before {
+  position: absolute;
+  top: var(--ripple-y, 50%);
+  left: var(--ripple-x, 50%);
+  z-index: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: rgba(255, 248, 230, 0.4);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+}
+.main-actions .main-action-btn.is-rippling::before {
+  animation: exploreRipple 0.42s ease-out;
 }
 /* 移动端横屏：三按钮宽度自适应 */
 @media (max-width: 820px) and (orientation: landscape) {
@@ -759,12 +816,13 @@ body.route-planner-open .main-actions {
     bottom: 28px;
     width: min(100%, 440px);
   }
-  .main-actions .explore-launcher {
+  .main-actions .main-action-btn {
     min-height: 48px;
     font-size: 15px;
-    padding: 7px 12px 7px 10px;
+    padding: 7px 12px;
+    border-radius: 12px;
   }
-  .main-actions .explore-ico {
+  .main-actions .main-action-btn .explore-ico {
     width: 28px;
     height: 28px;
     font-size: 17px;
@@ -772,112 +830,9 @@ body.route-planner-open .main-actions {
 }
 @media (max-width: 500px) and (orientation: landscape) {
   .main-actions { gap: 5px; width: calc(100vw - 24px); }
-  .main-actions .explore-launcher { font-size: 13px; padding: 6px 8px 6px 7px; }
-  .main-actions .explore-ico { width: 24px; height: 24px; font-size: 15px; }
+  .main-actions .main-action-btn { font-size: 13px; padding: 6px 8px; border-radius: 10px; }
+  .main-actions .main-action-btn .explore-ico { width: 24px; height: 24px; font-size: 15px; }
 }
-
-/* 设置按钮（右上角精简） */
-#settings-btn {
-  position: absolute;
-  top: 84px;
-  right: 16px;
-  z-index: 28;
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  border: 1.5px solid rgba(43, 33, 24, 0.5);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(255, 252, 244, 0.42), rgba(236, 226, 203, 0.26)),
-    rgba(247, 244, 236, 0.24);
-  cursor: pointer;
-  -webkit-backdrop-filter: blur(5px) saturate(0.96);
-  backdrop-filter: blur(5px) saturate(0.96);
-  box-shadow: 0 4px 7px -7px rgba(43, 33, 24, 0.5), inset 0 0 0 1px rgba(255, 252, 244, 0.18);
-  transition: transform 0.2s ease, border-color 0.2s ease;
-}
-#settings-btn:hover {
-  border-color: rgba(43, 33, 24, 0.68);
-  transform: translateY(-1px);
-}
-#settings-btn svg { width: 20px; height: 20px; stroke: #2b2118; }
-@media (min-width: 768px) {
-  #settings-btn { top: 104px; right: 24px; }
-}
-body.info-panel-open #settings-btn {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(10px);
-  transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-/* 设置下拉面板 */
-.settings-menu {
-  position: absolute;
-  top: 132px;
-  right: 16px;
-  z-index: 29;
-  min-width: 180px;
-  border-radius: 12px;
-  border: 1px solid rgba(43, 33, 24, 0.18);
-  background: rgba(247, 244, 236, 0.96);
-  -webkit-backdrop-filter: blur(12px) saturate(1.04);
-  backdrop-filter: blur(12px) saturate(1.04);
-  box-shadow: 0 12px 36px -8px rgba(43, 33, 24, 0.3);
-  padding: 6px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.settings-menu.open {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-@media (min-width: 768px) {
-  .settings-menu { top: 152px; right: 24px; }
-}
-.settings-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: transparent;
-  color: #2b2118;
-  font-size: 14px;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease;
-}
-.settings-item:hover { background: rgba(43, 33, 24, 0.06); }
-.settings-sep { height: 1px; background: rgba(43, 33, 24, 0.1); margin: 4px 0; }
-.settings-lang-list { display: flex; flex-direction: column; gap: 2px; }
-.settings-lang-btn {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 12px;
-  border: none; background: transparent;
-  color: #2b2118; font-size: 13px;
-  border-radius: 8px; cursor: pointer; text-align: left;
-  transition: background 0.15s ease;
-}
-.settings-lang-btn:hover { background: rgba(43, 33, 24, 0.06); }
-.settings-lang-btn.active { color: #b5762a; font-weight: 600; }
-.settings-lang-btn .flag { font-size: 16px; }
-.settings-back {
-  display: flex; align-items: center; gap: 6px;
-  padding: 8px 12px;
-  border: none; background: transparent;
-  color: #5a4d3c; font-size: 13px;
-  border-radius: 8px; cursor: pointer;
-  font-family: inherit;
-}
-.settings-back:hover { background: rgba(43, 33, 24, 0.06); }
 
 /* 轻量 Toast 提示 */
 .toast {

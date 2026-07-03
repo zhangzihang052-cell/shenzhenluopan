@@ -87,75 +87,66 @@ export function updateVisibleCount(n, themeLabel) {
 
 /* ============ 顶部工具组：语言下拉 + 印章册 + 路线规划 ============ */
 /**
- * V2: renderToolCluster 现在渲染底部三主按钮（探索附近/留下记忆/路线规划）
- * + 右上角精简设置按钮。印章册迁移到探索面板内部。
+ * V2: renderToolCluster 渲染底部三主按钮（探索附近/留下记忆/路线规划）
+ * + 右上角保留原语言选择器（地球仪图标+下拉菜单）+ 印章册按钮。
  */
 export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan, onMemory, onSettings }) {
+  // ===== 右上角：语言选择器（保持原样） + 印章册 =====
   const el = document.createElement('div');
   el.className = 'tool-cluster';
-  el.style.display = 'none'; // V2: tool-cluster 不再直接显示，保留 DOM 供 memory.js 兼容
+
+  // 语言选择器
+  const langWrap = document.createElement('div');
+  langWrap.className = 'lang-selector';
+  langWrap.innerHTML = `
+    <button class="lang-trigger tool-btn" id="lang-trigger" title="${esc(getText('lang.switch'))}">
+      <span class="lang-ico">${INK_ICONS.globe}</span>
+      <span class="lang-label" id="lang-label">${esc(getText('lang.switch'))}</span>
+    </button>
+    <div class="lang-menu" id="lang-menu">
+      ${LANGS.map(
+        (l) => `
+        <button class="lang-option ${l.code === getLang() ? 'active' : ''}" data-lang="${l.code}">
+          <span class="flag">${l.flag}</span><span>${esc(l.label)}</span>
+        </button>`
+      ).join('')}
+    </div>`;
+
+  // 印章册按钮
+  const stampBtn = document.createElement('button');
+  stampBtn.className = 'tool-btn';
+  stampBtn.id = 'stampbook-btn';
+  stampBtn.title = getText('stamp.title');
+  stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
+
+  el.appendChild(langWrap);
+  el.appendChild(stampBtn);
   root.appendChild(el);
 
-  // ===== 右上角设置按钮 =====
-  const settingsBtn = document.createElement('button');
-  settingsBtn.className = 'tool-btn';
-  settingsBtn.id = 'settings-btn';
-  settingsBtn.title = getText('action.settings');
-  settingsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
-  root.appendChild(settingsBtn);
-
-  // 设置下拉面板
-  const settingsMenu = document.createElement('div');
-  settingsMenu.className = 'settings-menu';
-  settingsMenu.id = 'settings-menu';
-  root.appendChild(settingsMenu);
-
-  function renderSettingsMain() {
-    settingsMenu.innerHTML = `
-      <button class="settings-item" id="settings-lang-toggle">
-        <span>🌐</span><span>${esc(getText('settings.language'))}</span><span style="margin-left:auto">›</span>
-      </button>
-      <div class="settings-sep"></div>
-      <button class="settings-item" id="settings-stampbook">
-        <span>📖</span><span>${esc(getText('stamp.btn'))}</span>
-      </button>`;
-    settingsMenu.querySelector('#settings-lang-toggle').addEventListener('click', renderSettingsLang);
-    settingsMenu.querySelector('#settings-stampbook').addEventListener('click', () => {
-      settingsMenu.classList.remove('open');
-      if (onStampBook) onStampBook();
-    });
-  }
-
-  function renderSettingsLang() {
-    settingsMenu.innerHTML = `
-      <button class="settings-back" id="settings-back">‹ ${esc(getText('settings.title'))}</button>
-      <div class="settings-sep"></div>
-      <div class="settings-lang-list">
-        ${LANGS.map((l) => `
-          <button class="settings-lang-btn ${l.code === getLang() ? 'active' : ''}" data-lang="${l.code}">
-            <span class="flag">${l.flag}</span><span>${esc(l.label)}</span>
-          </button>`).join('')}
-      </div>`;
-    settingsMenu.querySelector('#settings-back').addEventListener('click', renderSettingsMain);
-    settingsMenu.querySelectorAll('.settings-lang-btn').forEach((opt) => {
-      opt.addEventListener('click', () => {
-        const code = opt.dataset.lang;
-        setLang(code);
-        settingsMenu.classList.remove('open');
-        if (onChangeLang) onChangeLang(code);
-      });
-    });
-  }
-
-  settingsBtn.addEventListener('click', (e) => {
+  // 交互：语言菜单开合
+  const trigger = langWrap.querySelector('#lang-trigger');
+  const menu = langWrap.querySelector('#lang-menu');
+  trigger.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isOpen = settingsMenu.classList.toggle('open');
-    if (isOpen) renderSettingsMain();
+    menu.classList.toggle('open');
   });
-  document.addEventListener('click', (e) => {
-    if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
-      settingsMenu.classList.remove('open');
-    }
+  document.addEventListener('click', () => menu.classList.remove('open'));
+  menu.addEventListener('click', (e) => {
+    const opt = e.target.closest('.lang-option');
+    if (!opt) return;
+    const code = opt.dataset.lang;
+    setLang(code);
+    menu.querySelectorAll('.lang-option').forEach((o) =>
+      o.classList.toggle('active', o.dataset.lang === code)
+    );
+    const label = langWrap.querySelector('#lang-label');
+    if (label) label.textContent = getText('lang.switch');
+    menu.classList.remove('open');
+    if (onChangeLang) onChangeLang(code);
+  });
+
+  stampBtn.addEventListener('click', () => {
+    if (onStampBook) onStampBook();
   });
 
   // ===== 底部三主按钮 =====
@@ -165,7 +156,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
 
   // 探索附近
   const exploreBtn = document.createElement('button');
-  exploreBtn.className = 'explore-launcher';
+  exploreBtn.className = 'main-action-btn';
   exploreBtn.id = 'explore-btn';
   exploreBtn.title = getText('action.explore');
   exploreBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('action.explore'))}</span>`;
@@ -177,7 +168,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
 
   // 留下记忆
   const memoryBtn = document.createElement('button');
-  memoryBtn.className = 'explore-launcher';
+  memoryBtn.className = 'main-action-btn';
   memoryBtn.id = 'memory-btn';
   memoryBtn.title = getText('action.memory');
   memoryBtn.innerHTML = `<span class="explore-ico">忆</span><span>${esc(getText('action.memory'))}</span>`;
@@ -189,7 +180,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
 
   // 路线规划
   const routeBtn = document.createElement('button');
-  routeBtn.className = 'explore-launcher';
+  routeBtn.className = 'main-action-btn';
   routeBtn.id = 'route-btn';
   routeBtn.title = getText('action.route');
   routeBtn.innerHTML = `<span class="explore-ico">途</span><span>${esc(getText('action.route'))}</span>`;
@@ -220,19 +211,19 @@ function bindRipple(btn) {
 
 /** 设置当前激活的主按钮 */
 function setActiveMainBtn(activeId) {
-  document.querySelectorAll('.main-actions .explore-launcher').forEach((btn) => {
+  document.querySelectorAll('.main-actions .main-action-btn').forEach((btn) => {
     btn.classList.toggle('active', btn.id === activeId);
   });
 }
 
 /** 清除所有主按钮激活态 */
 export function clearActiveMainBtn() {
-  document.querySelectorAll('.main-actions .explore-launcher').forEach((btn) => {
+  document.querySelectorAll('.main-actions .main-action-btn').forEach((btn) => {
     btn.classList.remove('active');
   });
 }
 
-/** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 设置按钮）*/
+/** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 语言选择器 + 印章册）*/
 export function refreshToolCluster() {
   // 三主按钮文案
   const exploreBtn = document.getElementById('explore-btn');
@@ -250,12 +241,19 @@ export function refreshToolCluster() {
     routeBtn.title = getText('action.route');
     routeBtn.innerHTML = `<span class="explore-ico">途</span><span>${esc(getText('action.route'))}</span>`;
   }
-  // 设置按钮
-  const settingsBtn = document.getElementById('settings-btn');
-  if (settingsBtn) settingsBtn.title = getText('action.settings');
-  // 关闭设置菜单（语言已切换）
-  const settingsMenu = document.getElementById('settings-menu');
-  if (settingsMenu) settingsMenu.classList.remove('open');
+  // 语言切换按钮文案
+  const langTrigger = document.getElementById('lang-trigger');
+  if (langTrigger) langTrigger.title = getText('lang.switch');
+  const langLabel = document.getElementById('lang-label');
+  if (langLabel) langLabel.textContent = getText('lang.switch');
+  // 印章册按钮
+  const stampBtn = document.getElementById('stampbook-btn');
+  if (stampBtn) {
+    stampBtn.title = getText('stamp.title');
+    const badgeEl = document.getElementById('stamp-count');
+    const badgeText = badgeEl ? badgeEl.textContent : '';
+    stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+  }
 }
 
 export function setGpsLoading(loading) {
