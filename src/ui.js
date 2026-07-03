@@ -88,14 +88,13 @@ export function updateVisibleCount(n, themeLabel) {
 /* ============ 顶部工具组：语言下拉 + 印章册 + 路线规划 ============ */
 /**
  * V2: renderToolCluster 渲染底部三主按钮（探索附近/留下记忆/路线规划）
- * + 右上角保留原语言选择器（地球仪图标+下拉菜单）+ 印章册按钮。
+ * + 右上角只保留语言选择器（地球仪图标+下拉菜单）。
  */
 export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan, onMemory, onSettings }) {
-  // ===== 右上角：语言选择器（保持原样） + 印章册 =====
+  // ===== 右上角：仅语言选择器 =====
   const el = document.createElement('div');
   el.className = 'tool-cluster';
 
-  // 语言选择器
   const langWrap = document.createElement('div');
   langWrap.className = 'lang-selector';
   langWrap.innerHTML = `
@@ -112,15 +111,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
       ).join('')}
     </div>`;
 
-  // 印章册按钮
-  const stampBtn = document.createElement('button');
-  stampBtn.className = 'tool-btn';
-  stampBtn.id = 'stampbook-btn';
-  stampBtn.title = getText('stamp.title');
-  stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
-
   el.appendChild(langWrap);
-  el.appendChild(stampBtn);
   root.appendChild(el);
 
   // 交互：语言菜单开合
@@ -143,10 +134,6 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
     if (label) label.textContent = getText('lang.switch');
     menu.classList.remove('open');
     if (onChangeLang) onChangeLang(code);
-  });
-
-  stampBtn.addEventListener('click', () => {
-    if (onStampBook) onStampBook();
   });
 
   // ===== 底部三主按钮 =====
@@ -223,7 +210,7 @@ export function clearActiveMainBtn() {
   });
 }
 
-/** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 语言选择器 + 印章册）*/
+/** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 语言选择器）*/
 export function refreshToolCluster() {
   // 三主按钮文案
   const exploreBtn = document.getElementById('explore-btn');
@@ -246,14 +233,6 @@ export function refreshToolCluster() {
   if (langTrigger) langTrigger.title = getText('lang.switch');
   const langLabel = document.getElementById('lang-label');
   if (langLabel) langLabel.textContent = getText('lang.switch');
-  // 印章册按钮
-  const stampBtn = document.getElementById('stampbook-btn');
-  if (stampBtn) {
-    stampBtn.title = getText('stamp.title');
-    const badgeEl = document.getElementById('stamp-count');
-    const badgeText = badgeEl ? badgeEl.textContent : '';
-    stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
-  }
 }
 
 export function setGpsLoading(loading) {

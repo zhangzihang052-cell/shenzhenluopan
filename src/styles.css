@@ -713,7 +713,7 @@ body.route-planner-open .main-actions {
   .main-actions { bottom: 46px; }
 }
 
-/* 三主按钮：独立 contained 样式，避免水墨背景互相重叠 */
+/* 三主按钮：水墨毛笔笔刷风格，每块墨迹 contained 在按钮内防重叠 */
 .main-actions .main-action-btn {
   position: relative;
   display: flex;
@@ -722,11 +722,10 @@ body.route-planner-open .main-actions {
   justify-content: center;
   gap: 8px;
   min-height: 56px;
-  padding: 9px 16px;
+  padding: 11px 20px;
   border: none;
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(58, 48, 36, 0.88), rgba(38, 30, 22, 0.92));
+  border-radius: 0;
+  background: transparent;
   color: #fff7e6;
   cursor: pointer;
   isolation: isolate;
@@ -736,39 +735,37 @@ body.route-planner-open .main-actions {
   font-weight: 500;
   letter-spacing: 0.1em;
   line-height: 1;
-  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.46);
-  box-shadow:
-    0 6px 16px -6px rgba(15, 11, 7, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 0 0 1px rgba(255, 246, 224, 0.06);
-  transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.46), 0 0 16px rgba(255, 246, 224, 0.18);
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
-/* 水墨纹理：contained 在按钮内，不溢出 */
+/* 水墨毛笔底：contained 在按钮内，不溢出到相邻按钮 */
 .main-actions .main-action-btn::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   background-image: var(--ink-brush-button);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 130% 80%;
-  opacity: 0.22;
+  background-size: 115% 100%;
+  filter: drop-shadow(0 5px 6px rgba(15, 11, 7, 0.3));
   pointer-events: none;
+  opacity: 0.78;
 }
 .main-actions .main-action-btn > span {
   position: relative;
   z-index: 1;
 }
 .main-actions .main-action-btn:hover {
-  transform: translateY(-3px);
-  filter: brightness(1.08);
-  box-shadow:
-    0 10px 22px -6px rgba(15, 11, 7, 0.56),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(-3px) scale(1.03);
+  filter: brightness(1.06);
+}
+.main-actions .main-action-btn:hover::after {
+  filter: drop-shadow(0 7px 8px rgba(15, 11, 7, 0.34)) brightness(1.04);
+  opacity: 0.82;
 }
 .main-actions .main-action-btn:active {
-  transform: translateY(0) scale(0.97);
+  transform: translateY(0) scale(0.98);
 }
 .main-actions .main-action-btn .explore-ico {
   width: 32px;
@@ -778,18 +775,14 @@ body.route-planner-open .main-actions {
 }
 /* 激活态：朱砂高亮 */
 .main-actions .main-action-btn.active {
-  background: linear-gradient(180deg, rgba(168, 56, 38, 0.92), rgba(128, 32, 20, 0.95));
-  box-shadow:
-    0 8px 20px -4px rgba(168, 56, 38, 0.5),
-    0 0 16px 2px rgba(217, 80, 62, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  filter: brightness(1.12);
 }
 .main-actions .main-action-btn.active .explore-ico {
-  background: radial-gradient(130% 130% at 38% 28%, #e8604e 0%, #c5402f 68%, #a82818 100%);
-  box-shadow: 0 0 12px 2px rgba(232, 96, 78, 0.5), 0 4px 10px -4px rgba(120, 24, 12, 0.76);
+  background: radial-gradient(130% 130% at 38% 28%, #d9503e 0%, #b5341f 68%, #9a2010 100%);
+  box-shadow: 0 0 14px 2px rgba(217, 80, 62, 0.5), 0 4px 10px -4px rgba(120, 24, 12, 0.76);
 }
 .main-actions .main-action-btn.active::after {
-  opacity: 0.3;
+  opacity: 0.88;
 }
 /* 涟漪 */
 .main-actions .main-action-btn::before {
@@ -806,6 +799,9 @@ body.route-planner-open .main-actions {
   pointer-events: none;
   transform: translate(-50%, -50%) scale(0);
 }
+.main-actions .main-action-btn.is-pressing {
+  animation: explorePress 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
 .main-actions .main-action-btn.is-rippling::before {
   animation: exploreRipple 0.42s ease-out;
 }
@@ -820,7 +816,6 @@ body.route-planner-open .main-actions {
     min-height: 48px;
     font-size: 15px;
     padding: 7px 12px;
-    border-radius: 12px;
   }
   .main-actions .main-action-btn .explore-ico {
     width: 28px;
@@ -830,7 +825,7 @@ body.route-planner-open .main-actions {
 }
 @media (max-width: 500px) and (orientation: landscape) {
   .main-actions { gap: 5px; width: calc(100vw - 24px); }
-  .main-actions .main-action-btn { font-size: 13px; padding: 6px 8px; border-radius: 10px; }
+  .main-actions .main-action-btn { font-size: 13px; padding: 6px 8px; }
   .main-actions .main-action-btn .explore-ico { width: 24px; height: 24px; font-size: 15px; }
 }
 
