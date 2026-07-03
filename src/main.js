@@ -77,7 +77,8 @@ import {
   clearRoutePlannerItinerary,
   refreshRoutePlannerTexts,
   setRoutePlannerLocation,
-} from './ui.js?rev=ink-btn-1';
+  clearActiveMainBtn,
+} from './ui.js?rev=v2-main-actions-1';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {
@@ -319,6 +320,8 @@ function boot() {
     onCompass: handleCompass,
     onStampBook: handleStampBook,
     onRoutePlan: handleRoutePlanButton,
+    onMemory: handleMemoryButton,
+    onSettings: null,
   });
   // 初始化主题强调色 CSS 变量
   document.documentElement.style.setProperty('--theme-accent', OVERVIEW_MODE.accentColor);
@@ -571,6 +574,7 @@ function boot() {
   function handleRoutePlanButton() {
     if (isRoutePlannerOpen()) {
       closeRoutePlanner();
+      clearActiveMainBtn();
       return;
     }
     if (isCompassOpen()) closeCompassPanel();
@@ -598,6 +602,7 @@ function boot() {
   function handleCompass() {
     if (isCompassOpen()) {
       closeCompassPanel();
+      clearActiveMainBtn();
       return;
     }
     if (isRoutePlannerOpen()) closeRoutePlanner();
@@ -622,6 +627,17 @@ function boot() {
   function handleCompassClose() {
     setClueMapMood(false);
     controller.clearClueFocus(state.activeTheme);
+  }
+
+  // ===== 留下记忆 =====
+  function handleMemoryButton() {
+    // 先关闭其他面板
+    if (isCompassOpen()) closeCompassPanel();
+    if (isRoutePlannerOpen()) closeRoutePlanner();
+    if (isPanelOpen()) handleClose();
+    // 触发记忆创建流程（复用现有 memory.js 的 openListPanel）
+    const memoryBtn = document.getElementById('memory-list-btn');
+    if (memoryBtn) memoryBtn.click();
   }
 
   function handleCompassModeChange(view) {
@@ -865,6 +881,10 @@ function boot() {
       else if (isCompassOpen()) closeCompassPanel();
       else if (state.selected) handleClose();
       else if (isNearbyOpen()) closeNearbyDrawer();
+      // 关闭面板时清除主按钮激活态
+      if (!isCompassOpen() && !isRoutePlannerOpen() && !state.selected && !(memoryExperience && memoryExperience.isOpen())) {
+        clearActiveMainBtn();
+      }
     }
   });
 }

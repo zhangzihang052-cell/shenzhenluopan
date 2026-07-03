@@ -86,127 +86,180 @@ export function updateVisibleCount(n, themeLabel) {
 }
 
 /* ============ 顶部工具组：语言下拉 + 印章册 + 路线规划 ============ */
-export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan }) {
+/**
+ * V2: renderToolCluster 现在渲染底部三主按钮（探索附近/留下记忆/路线规划）
+ * + 右上角精简设置按钮。印章册迁移到探索面板内部。
+ */
+export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan, onMemory, onSettings }) {
   const el = document.createElement('div');
   el.className = 'tool-cluster';
-
-  // 语言选择器
-  const langWrap = document.createElement('div');
-  langWrap.className = 'lang-selector';
-  langWrap.innerHTML = `
-    <button class="lang-trigger tool-btn" id="lang-trigger" title="${esc(getText('lang.switch'))}">
-      <span class="lang-ico">${INK_ICONS.globe}</span>
-      <span class="lang-label" id="lang-label">${esc(getText('lang.switch'))}</span>
-    </button>
-    <div class="lang-menu" id="lang-menu">
-      ${LANGS.map(
-        (l) => `
-        <button class="lang-option ${l.code === getLang() ? 'active' : ''}" data-lang="${l.code}">
-          <span class="flag">${l.flag}</span><span>${esc(l.label)}</span>
-        </button>`
-      ).join('')}
-    </div>`;
-
-  // 罗盘探索按钮独立置于底部中段，作为主行动。
-  const compassBtn = document.createElement('button');
-  compassBtn.className = 'explore-launcher';
-  compassBtn.id = 'compass-btn';
-  compassBtn.title = getText('compass.title');
-  compassBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('compass.btn'))}</span>`;
-  compassBtn.addEventListener('pointerdown', (event) => {
-    const rect = compassBtn.getBoundingClientRect();
-    compassBtn.style.setProperty('--ripple-x', `${event.clientX - rect.left}px`);
-    compassBtn.style.setProperty('--ripple-y', `${event.clientY - rect.top}px`);
-    compassBtn.classList.remove('is-pressing', 'is-rippling');
-    void compassBtn.offsetWidth;
-    compassBtn.classList.add('is-pressing', 'is-rippling');
-    window.setTimeout(() => compassBtn.classList.remove('is-pressing', 'is-rippling'), 600);
-  });
-
-  // 印章册按钮（印）
-  const stampBtn = document.createElement('button');
-  stampBtn.className = 'tool-btn';
-  stampBtn.id = 'stampbook-btn';
-  stampBtn.title = getText('stamp.title');
-  stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
-
-  // 规划路线按钮：替代原右上角第三个「叙事图层」入口。
-  const routeBtn = document.createElement('button');
-  routeBtn.className = 'tool-btn';
-  routeBtn.id = 'route-plan-btn';
-  routeBtn.title = getText('route_planner.title');
-  routeBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.compass}</span><span>${esc(getText('route_planner.btn'))}</span>`;
-
-  el.appendChild(langWrap);
-  el.appendChild(stampBtn);
-  el.appendChild(routeBtn);
+  el.style.display = 'none'; // V2: tool-cluster 不再直接显示，保留 DOM 供 memory.js 兼容
   root.appendChild(el);
-  root.appendChild(compassBtn);
 
-  // 交互：语言菜单开合
-  const trigger = langWrap.querySelector('#lang-trigger');
-  const menu = langWrap.querySelector('#lang-menu');
-  trigger.addEventListener('click', (e) => {
+  // ===== 右上角设置按钮 =====
+  const settingsBtn = document.createElement('button');
+  settingsBtn.className = 'tool-btn';
+  settingsBtn.id = 'settings-btn';
+  settingsBtn.title = getText('action.settings');
+  settingsBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
+  root.appendChild(settingsBtn);
+
+  // 设置下拉面板
+  const settingsMenu = document.createElement('div');
+  settingsMenu.className = 'settings-menu';
+  settingsMenu.id = 'settings-menu';
+  root.appendChild(settingsMenu);
+
+  function renderSettingsMain() {
+    settingsMenu.innerHTML = `
+      <button class="settings-item" id="settings-lang-toggle">
+        <span>🌐</span><span>${esc(getText('settings.language'))}</span><span style="margin-left:auto">›</span>
+      </button>
+      <div class="settings-sep"></div>
+      <button class="settings-item" id="settings-stampbook">
+        <span>📖</span><span>${esc(getText('stamp.btn'))}</span>
+      </button>`;
+    settingsMenu.querySelector('#settings-lang-toggle').addEventListener('click', renderSettingsLang);
+    settingsMenu.querySelector('#settings-stampbook').addEventListener('click', () => {
+      settingsMenu.classList.remove('open');
+      if (onStampBook) onStampBook();
+    });
+  }
+
+  function renderSettingsLang() {
+    settingsMenu.innerHTML = `
+      <button class="settings-back" id="settings-back">‹ ${esc(getText('settings.title'))}</button>
+      <div class="settings-sep"></div>
+      <div class="settings-lang-list">
+        ${LANGS.map((l) => `
+          <button class="settings-lang-btn ${l.code === getLang() ? 'active' : ''}" data-lang="${l.code}">
+            <span class="flag">${l.flag}</span><span>${esc(l.label)}</span>
+          </button>`).join('')}
+      </div>`;
+    settingsMenu.querySelector('#settings-back').addEventListener('click', renderSettingsMain);
+    settingsMenu.querySelectorAll('.settings-lang-btn').forEach((opt) => {
+      opt.addEventListener('click', () => {
+        const code = opt.dataset.lang;
+        setLang(code);
+        settingsMenu.classList.remove('open');
+        if (onChangeLang) onChangeLang(code);
+      });
+    });
+  }
+
+  settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    menu.classList.toggle('open');
+    const isOpen = settingsMenu.classList.toggle('open');
+    if (isOpen) renderSettingsMain();
   });
-  document.addEventListener('click', () => menu.classList.remove('open'));
-  menu.addEventListener('click', (e) => {
-    const opt = e.target.closest('.lang-option');
-    if (!opt) return;
-    const code = opt.dataset.lang;
-    setLang(code);
-    menu.querySelectorAll('.lang-option').forEach((o) =>
-      o.classList.toggle('active', o.dataset.lang === code)
-    );
-    // 同步更新触发按钮上的语言切换文案（随语言同步翻译）
-    const label = langWrap.querySelector('#lang-label');
-    if (label) label.textContent = getText('lang.switch');
-    menu.classList.remove('open');
-    if (onChangeLang) onChangeLang(code);
+  document.addEventListener('click', (e) => {
+    if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+      settingsMenu.classList.remove('open');
+    }
   });
 
-  compassBtn.addEventListener('click', () => {
+  // ===== 底部三主按钮 =====
+  const mainActions = document.createElement('div');
+  mainActions.className = 'main-actions';
+  mainActions.id = 'main-actions';
+
+  // 探索附近
+  const exploreBtn = document.createElement('button');
+  exploreBtn.className = 'explore-launcher';
+  exploreBtn.id = 'explore-btn';
+  exploreBtn.title = getText('action.explore');
+  exploreBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('action.explore'))}</span>`;
+  bindRipple(exploreBtn);
+  exploreBtn.addEventListener('click', () => {
+    setActiveMainBtn('explore-btn');
     if (onCompass) onCompass();
   });
-  stampBtn.addEventListener('click', () => {
-    if (onStampBook) onStampBook();
+
+  // 留下记忆
+  const memoryBtn = document.createElement('button');
+  memoryBtn.className = 'explore-launcher';
+  memoryBtn.id = 'memory-btn';
+  memoryBtn.title = getText('action.memory');
+  memoryBtn.innerHTML = `<span class="explore-ico">忆</span><span>${esc(getText('action.memory'))}</span>`;
+  bindRipple(memoryBtn);
+  memoryBtn.addEventListener('click', () => {
+    setActiveMainBtn('memory-btn');
+    if (onMemory) onMemory();
   });
+
+  // 路线规划
+  const routeBtn = document.createElement('button');
+  routeBtn.className = 'explore-launcher';
+  routeBtn.id = 'route-btn';
+  routeBtn.title = getText('action.route');
+  routeBtn.innerHTML = `<span class="explore-ico">途</span><span>${esc(getText('action.route'))}</span>`;
+  bindRipple(routeBtn);
   routeBtn.addEventListener('click', () => {
+    setActiveMainBtn('route-btn');
     if (onRoutePlan) onRoutePlan();
+  });
+
+  mainActions.appendChild(exploreBtn);
+  mainActions.appendChild(memoryBtn);
+  mainActions.appendChild(routeBtn);
+  root.appendChild(mainActions);
+}
+
+/** 涟漪效果绑定 */
+function bindRipple(btn) {
+  btn.addEventListener('pointerdown', (event) => {
+    const rect = btn.getBoundingClientRect();
+    btn.style.setProperty('--ripple-x', `${event.clientX - rect.left}px`);
+    btn.style.setProperty('--ripple-y', `${event.clientY - rect.top}px`);
+    btn.classList.remove('is-pressing', 'is-rippling');
+    void btn.offsetWidth;
+    btn.classList.add('is-pressing', 'is-rippling');
+    window.setTimeout(() => btn.classList.remove('is-pressing', 'is-rippling'), 600);
   });
 }
 
-/** 语言切换时刷新顶部工具组按钮文案（罗盘 / 印章册 / 路线规划 / 语言切换），保留印章进度角标 */
+/** 设置当前激活的主按钮 */
+function setActiveMainBtn(activeId) {
+  document.querySelectorAll('.main-actions .explore-launcher').forEach((btn) => {
+    btn.classList.toggle('active', btn.id === activeId);
+  });
+}
+
+/** 清除所有主按钮激活态 */
+export function clearActiveMainBtn() {
+  document.querySelectorAll('.main-actions .explore-launcher').forEach((btn) => {
+    btn.classList.remove('active');
+  });
+}
+
+/** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 设置按钮）*/
 export function refreshToolCluster() {
-  // 罗盘探索按钮
-  const compassBtn = document.getElementById('compass-btn');
-  if (compassBtn) {
-    compassBtn.title = getText('compass.title');
-    compassBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('compass.btn'))}</span>`;
+  // 三主按钮文案
+  const exploreBtn = document.getElementById('explore-btn');
+  if (exploreBtn) {
+    exploreBtn.title = getText('action.explore');
+    exploreBtn.innerHTML = `<span class="explore-ico">探</span><span>${esc(getText('action.explore'))}</span>`;
   }
-  // 印章册按钮（重渲染文案时保留进度角标内容）
-  const stampBtn = document.getElementById('stampbook-btn');
-  if (stampBtn) {
-    stampBtn.title = getText('stamp.title');
-    const badgeEl = document.getElementById('stamp-count');
-    const badgeText = badgeEl ? badgeEl.textContent : '';
-    stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+  const memoryBtn = document.getElementById('memory-btn');
+  if (memoryBtn) {
+    memoryBtn.title = getText('action.memory');
+    memoryBtn.innerHTML = `<span class="explore-ico">忆</span><span>${esc(getText('action.memory'))}</span>`;
   }
-  const routeBtn = document.getElementById('route-plan-btn');
+  const routeBtn = document.getElementById('route-btn');
   if (routeBtn) {
-    routeBtn.title = getText('route_planner.title');
-    routeBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.compass}</span><span>${esc(getText('route_planner.btn'))}</span>`;
+    routeBtn.title = getText('action.route');
+    routeBtn.innerHTML = `<span class="explore-ico">途</span><span>${esc(getText('action.route'))}</span>`;
   }
-  // 语言切换按钮文案
-  const langTrigger = document.getElementById('lang-trigger');
-  if (langTrigger) langTrigger.title = getText('lang.switch');
-  const langLabel = document.getElementById('lang-label');
-  if (langLabel) langLabel.textContent = getText('lang.switch');
+  // 设置按钮
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) settingsBtn.title = getText('action.settings');
+  // 关闭设置菜单（语言已切换）
+  const settingsMenu = document.getElementById('settings-menu');
+  if (settingsMenu) settingsMenu.classList.remove('open');
 }
 
 export function setGpsLoading(loading) {
-  const btn = document.getElementById('compass-btn');
+  const btn = document.getElementById('explore-btn');
   if (!btn) return;
   btn.classList.toggle('locating', !!loading);
 }
