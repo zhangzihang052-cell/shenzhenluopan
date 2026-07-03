@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>地理形态采集</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #map { width: 1024px; height: 1024px; }
+  #out {
+    position: fixed; top: 0; left: 0; z-index: 9999;
+    background: #000; color: #0f0; font: 16px/1.5 monospace; padding: 6px 10px;
+  }
+</style>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<div id="out">LOADING</div>
+<script>
+  // 目标覆盖矩形：足够覆盖大湾区（用户活动范围）
+  const TARGET = [[112.40, 21.40], [115.00, 23.80]];
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    attributionControl: false,
+    fadeDuration: 0,
+    interactive: false,
+  });
+  map.on('load', () => {
+    map.fitBounds(TARGET, { padding: 0, animate: false });
+    map.once('idle', () => {
+      const b = map.getBounds();
+      const s =
+        'READY W=' + b.getWest().toFixed(6) +
+        ' S=' + b.getSouth().toFixed(6) +
+        ' E=' + b.getEast().toFixed(6) +
+        ' N=' + b.getNorth().toFixed(6) +
+        ' Z=' + map.getZoom().toFixed(4);
+      document.getElementById('out').textContent = s;
+      document.title = s;
+    });
+  });
+</script>
+</body>
+</html>

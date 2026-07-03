@@ -1,25 +1,25 @@
-// 主题图层配置 v3 —— 5+1 主题模式完整视觉 token（双语标签）
+// 主题图层配置 v3 —— 6+1 主题模式完整视觉 token（双语标签）
 // 每个主题含：锚点色 / UI强调色 / 地图 CSS filter / 叠色 overlay / 短名称
 // build: 2026-06-18
 // overlay 使用 rgba() 字符串，由 index.html 中 #theme-overlay div + CSS transition 实现过渡。
 // mapFilter 赋值给 #map 的 style.filter，CSS transition:filter 自动平滑插值。
 
 /**
- * @typedef {'navigation'|'science'|'engineering'|'awakening'|'civilization'} ThemeKey
+ * @typedef {'navigation'|'science'|'engineering'|'reform'|'awakening'|'civilization'} ThemeKey
  */
 
 export const THEMES = {
   navigation: {
     key: 'navigation',
     label: {
-      zh: '和平贸易与大航海', en: 'Peace, Trade & The Age of Sail',
-      ja: '平和貿易と大航海', ko: '평화 무역과 대항해',
-      ru: 'Мир, торговля и эпоха парусов', es: 'Paz, comercio y la era de la vela',
+      zh: '海路贸易与海防门户', en: 'Sea Routes, Trade & Coastal Gates',
+      ja: '海路貿易と海防の門', ko: '해로 무역과 해방 관문',
+      ru: 'Морские пути, торговля и береговые ворота', es: 'Rutas marítimas, comercio y puertas costeras',
     },
     shortName: {
-      zh: '航海贸易', en: 'Maritime Trade',
-      ja: '航海貿易', ko: '항해무역',
-      ru: 'Морская торговля', es: 'Comercio marítimo',
+      zh: '海路海防', en: 'Sea Routes',
+      ja: '海路海防', ko: '해로·해방',
+      ru: 'Морские пути', es: 'Rutas marítimas',
     },
     // 锚点色：航海蓝
     color: '#2e6f9e',
@@ -52,8 +52,8 @@ export const THEMES = {
   engineering: {
     key: 'engineering',
     label: {
-      zh: '近代化与超级工程', en: 'Modernization & Mega-Engineering',
-      ja: '近代化と巨大工事', ko: '근대화와 초대형 공학',
+      zh: '现代化与超级工程', en: 'Modernization & Mega-Engineering',
+      ja: '近現代化と巨大工事', ko: '현대화와 초대형 공학',
       ru: 'Модернизация и мегаинженерия', es: 'Modernización y megaingeniería',
     },
     shortName: {
@@ -69,17 +69,36 @@ export const THEMES = {
     mapFilter: 'sepia(0.60) saturate(0.70) hue-rotate(-12deg) brightness(0.94) contrast(1.02)',
   },
 
+  reform: {
+    key: 'reform',
+    label: {
+      zh: '改革开放与制度创新', en: 'Reform, Opening & Institutional Innovation',
+      ja: '改革開放と制度革新', ko: '개혁개방과 제도 혁신',
+      ru: 'Реформы, открытость и институциональные инновации', es: 'Reforma, apertura e innovación institucional',
+    },
+    shortName: {
+      zh: '改革开放', en: 'Reform & Opening',
+      ja: '改革開放', ko: '개혁개방',
+      ru: 'Реформы', es: 'Reforma',
+    },
+    // 锚点色：朱砂红，强调制度突破与时代转折。
+    color: '#b23a2e',
+    accentColor: '#b23a2e',
+    overlay: 'rgba(64, 10, 8, 0.20)',
+    mapFilter: 'sepia(0.28) saturate(0.95) hue-rotate(-18deg) brightness(0.98) contrast(1.02)',
+  },
+
   awakening: {
     key: 'awakening',
     label: {
-      zh: '湾区风味 · 美食文化', en: 'Bay Area Flavors & Food Culture',
-      ja: '湾区の味わい・食文化', ko: '베이 에어리어 맛과 식문화',
-      ru: 'Вкусы Большого залива и кулинарная культура', es: 'Sabores de la Gran Bahía y cultura gastronómica',
+      zh: '风味民俗与城市生活', en: 'Flavors, Folkways & Urban Life',
+      ja: '味わい・民俗・都市生活', ko: '맛·민속·도시 생활',
+      ru: 'Вкусы, обычаи и городская жизнь', es: 'Sabores, costumbres y vida urbana',
     },
     shortName: {
-      zh: '美食文化', en: 'Culinary Heritage',
-      ja: '食の文化', ko: '음식문화',
-      ru: 'Гастрономия', es: 'Gastronomía',
+      zh: '风味民俗', en: 'Folk Life',
+      ja: '民俗生活', ko: '민속 생활',
+      ru: 'Обычаи', es: 'Vida popular',
     },
     // 锚点色：暖橙红，烟火气
     color: '#e8743b',
@@ -92,14 +111,14 @@ export const THEMES = {
   civilization: {
     key: 'civilization',
     label: {
-      zh: '千年文脉 · 古代文化', en: 'A Millennium of Culture',
-      ja: '千年の文脈と古代文化', ko: '천년 문맥과 고대문화',
-      ru: 'Тысячелетие культуры и древняя цивилизация', es: 'Un milenio de cultura antigua',
+      zh: '千年文脉与岭南文明', en: 'Millennial Culture & Lingnan Civilization',
+      ja: '千年の文脈と嶺南文明', ko: '천년 문맥과 영남 문명',
+      ru: 'Тысячелетняя культура и цивилизация Линнаня', es: 'Cultura milenaria y civilización Lingnan',
     },
     shortName: {
-      zh: '古代文化', en: 'Ancient Culture',
-      ja: '古代文化', ko: '고대문화',
-      ru: 'Древняя культура', es: 'Cultura antigua',
+      zh: '岭南文脉', en: 'Lingnan Culture',
+      ja: '嶺南文脈', ko: '영남 문맥',
+      ru: 'Линнаньская культура', es: 'Cultura Lingnan',
     },
     // 锚点色：帝制金，水墨暖调
     color: '#c9a24b',
@@ -129,8 +148,8 @@ export const OVERVIEW_MODE = {
   color: '#9a7b32',
   accentColor: '#9a7b32',
   overlay: 'rgba(0,0,0,0)',
-  // 恢复默认宣纸滤镜
-  mapFilter: 'sepia(0.32) saturate(0.82) hue-rotate(-6deg) brightness(1.02) contrast(0.96)',
+  // 矢量水墨 v7：色彩已在图层级精确控制，滤镜仅保留极轻微暖调，保证线条锐利。
+  mapFilter: 'sepia(0.04) saturate(0.98) brightness(1.01) contrast(1.0)',
 };
 
 /** 主题展示顺序（图例/筛选控件的稳定排序） */
@@ -138,6 +157,7 @@ export const THEME_ORDER = [
   'navigation',
   'science',
   'engineering',
+  'reform',
   'awakening',
   'civilization',
 ];
@@ -149,14 +169,40 @@ export const LINK_STYLES = {
   echo:     { color: '#5ECFB1', rgb: [ 94, 207, 177], width: 1.0, opacity: 0.60 },
 };
 
-/** 底图配色（v4 山水画 · 清明上河图设色：石青石绿 + 淡赭墨勾线） */
+/** 底图配色（v7 矢量水墨：宣纸暖米陆地 + 清透青黛水域 + 浓墨海岸线，矢量渲染放大始终清晰） */
 export const BASEMAP_COLORS = {
-  background:    '#E6D7B6',  // 宣纸暖黄（陆地 / 背景）
-  water:         '#9CC2B6',  // 石绿黛青（水域）
-  boundary:      '#6E5536',  // 淡赭墨（行政边界勾线）
-  boundaryWidth: 1,
-  green:         '#B8C79A',  // 石绿（山峦草木）
-  road:          '#C9B68C',  // 淡赭墨（道路勾线）
+  background:    '#E4D8BC',  // 宣纸暖米（陆地 / 背景）
+  water:         '#A7C0BA',  // 清透青黛水色（水域，与陆地明确区分）
+  boundary:      '#7A6749',  // 淡墨赭线（行政边界）
+  boundaryWidth: 1.2,
+  green:         '#C4CBA2',  // 山色淡绿
+  road:          '#A8906C',  // 淡赭墨（道路勾线）
+  waterLine:     '#3C4F48',  // 浓墨海岸线（矢量线，随缩放渐粗，始终锐利）
+};
+
+/**
+ * 水墨艺术叠加层（raster image 源，分级显示）
+ * 铺在矢量水墨底图之上、锚点之下，随缩放淡出：
+ * 总览态(zoom≤fadeStart)显示完整水墨画风；放大到街道级(zoom≥fadeEnd)完全淡出，
+ * 露出下方清晰锐利的矢量地图。兼得"画风"与"放大清晰"。
+ * coordinates 顺序：左上(TL) → 右上(TR) → 右下(BR) → 左下(BL)。
+ */
+export const INK_BASEMAP = {
+  url: './public/textures/ink-basemap-hd-clean.png',
+  west: 112.4,
+  south: 21.4,
+  east: 115.0,
+  north: 23.8,
+  fadeStart: 11,   // 此缩放级别及以下：水墨画完全不透明
+  fadeEnd: 13.5,   // 此缩放级别及以上：水墨画完全淡出，露出清晰矢量
+  get coordinates() {
+    return [
+      [this.west, this.north],
+      [this.east, this.north],
+      [this.east, this.south],
+      [this.west, this.south],
+    ];
+  },
 };
 
 /** 大湾区全局视角相机参数 */
@@ -184,14 +230,14 @@ export const BAY_AREA_BOUNDS = {
 
 /**
  * 罗盘探索 · 默认模拟定位
- * GPS 获取失败 / 用户拒绝授权时回退到此坐标（默认福田中心），
+ * GPS 获取失败 / 用户拒绝授权时回退到此坐标（默认腾讯滨海大厦），
  * 并在 UI 标注「模拟定位（路演）」，确保离线 / 无授权也能完整体验。
  */
 export const DEFAULT_LOCATION = {
-  center: [114.05, 22.54],
+  center: [113.9304075, 22.5258747],
   label: {
-    zh: '福田中心', en: 'Futian Center',
-    ja: '福田中心', ko: '푸톈 중심', ru: 'Центр Футянь', es: 'Centro de Futian',
+    zh: '腾讯滨海大厦', en: 'Tencent Binhai Building',
+    ja: 'テンセント海岸ビル', ko: '텐센트 빈하이 빌딩', ru: 'Tencent Binhai Building', es: 'Edificio Tencent Binhai',
   },
 };
 

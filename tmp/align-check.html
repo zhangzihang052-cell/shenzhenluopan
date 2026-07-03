@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>水墨表层对齐验证</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #fff; }
+  #map { width: 1024px; height: 1024px; }
+  .lbl { position: fixed; top: 8px; left: 8px; z-index: 99; background: rgba(0,0,0,.7); color: #fff; font: 14px monospace; padding: 4px 8px; }
+</style>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<div class="lbl" id="lbl">LOADING</div>
+<script>
+  const INK = {
+    url: '/public/textures/ink-basemap-gba-clean.png',
+    west: 112.4, south: 21.4, east: 115.0, north: 23.8,
+    coords: [[112.4,23.8],[115.0,23.8],[115.0,21.4],[112.4,21.4]],
+  };
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    attributionControl: false, fadeDuration: 0, interactive: false,
+  });
+  map.on('load', () => {
+    // 隐藏所有电子底图地物，仅留背景色打底（模拟正式方案）
+    for (const layer of map.getStyle().layers) {
+      const id = layer.id.toLowerCase();
+      if (layer.type === 'background') {
+        map.setPaintProperty(layer.id, 'background-color', '#DCD3B8');
+        continue;
+      }
+      // 保留海岸线电子矢量(细红线)用于核对对齐，其余隐藏
+      if (id.includes('water') && layer.type === 'line') {
+        map.setPaintProperty(layer.id, 'line-color', '#c0392b');
+        map.setPaintProperty(layer.id, 'line-width', 1.5);
+        map.setPaintProperty(layer.id, 'line-opacity', 1);
+        continue;
+      }
+      try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e){}
+    }
+    map.addSource('ink', { type: 'image', url: INK.url, coordinates: INK.coords });
+    // 半透明铺水墨图，以便核对与红色海岸线的贴合度
+    map.addLayer({ id: 'ink', type: 'raster', source: 'ink', paint: { 'raster-opacity': 0.72, 'raster-fade-duration': 0 } });
+    map.fitBounds([[INK.west, INK.south],[INK.east, INK.north]], { padding: 0, animate: false });
+    map.once('idle', () => { document.getElementById('lbl').textContent = 'READY-ALIGN'; document.title = 'READY-ALIGN'; });
+  });
+</script>
+</body>
+</html>

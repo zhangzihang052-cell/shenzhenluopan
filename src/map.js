@@ -1,6 +1,6 @@
 // 地图引擎模块 v2：深墨暖色底图 + 菱形发光呼吸锚点 + FlyTo + GPS/Haversine + deck.gl ArcLayer 全球连线
 // build: 2026-06-18
-import { ANCHORS } from './data/anchors.js';
+import { ANCHORS } from './data/anchors.js?rev=classification-1';
 import {
   THEMES,
   GLOBAL_VIEW,
@@ -9,7 +9,7 @@ import {
   BASEMAP_COLORS,
   LINK_STYLES,
   DEFAULT_LOCATION,
-} from './data/themes.js';
+} from './data/themes.js?rev=clean-8';
 
 const SOURCE_ID = 'anchors';
 const HOVER_SOURCE_ID = 'anchor-hover';
@@ -17,6 +17,61 @@ const GLOW_LAYER = 'anchor-glow';
 const PULSE_LAYER = 'anchor-pulse';
 const CORE_LAYER = 'anchor-core';
 const HOVER_CORE_LAYER = 'anchor-hover-core';
+const LABEL_TIER_1_LAYER = 'anchor-label-tier-1';
+const LABEL_TIER_2_LAYER = 'anchor-label-tier-2';
+const LABEL_TIER_3_LAYER = 'anchor-label-tier-3';
+const ANCHOR_RENDER_LAYERS = [GLOW_LAYER, PULSE_LAYER, CORE_LAYER];
+const LABEL_LAYER_DEFS = [];
+
+// 当前总览层级只露出这些“叙事骨架”锚点；继续放大后再逐层补全。
+const PRIMARY_LABEL_IDS = new Set([
+  'M01',      // 赤湾天后宫
+  'M02',      // 罗浮山
+  'M11',      // 莲花山
+  'N-CV02',   // 南越王宫
+  'N-CV04',   // 开平碉楼
+  'N-EG03',   // 港珠澳大桥
+  'N-SC02',   // 腾讯滨海
+  'N-SC03',   // 大疆天空之城
+  'N-NA04',   // 黄埔古港
+]);
+
+const LABEL_ALIASES = {
+  M02: '罗浮山',
+  M07: '深圳河红树林',
+  M08: '前海',
+  M09: '文天祥故里',
+  M11: '莲花山',
+  M12: '大梅沙',
+  'N-CV02': '南越王宫',
+  'N-CV03': '鹤湖新居',
+  'N-CV04': '开平碉楼',
+  'N-CV08': '大三巴牌坊',
+  'N-CV10': '南社古村',
+  'N-EG03': '港珠澳大桥',
+  'N-EG04': '东深供水',
+  'N-EG07': '横琴合作区',
+  'N-EG09': '西九龙站',
+  'N-SC01': '华强北',
+  'N-SC02': '腾讯滨海',
+  'N-SC03': '大疆天空之城',
+  'N-SC04': '光明科学城',
+  'N-SC06': '中大南校园',
+  'N-SC08': '散裂中子源',
+  'N-SC10': '澳大横琴校区',
+  'N-AW02': '深井烧鹅',
+  'N-AW03': '顺德粤菜',
+  'N-AW04': '元朗盆菜',
+  'N-AW05': '永庆坊',
+  'N-AW07': '石岐老街',
+  'N-AW09': '大澳渔村',
+  'N-NA01': '屯门季风港',
+  'N-NA02': '伶仃洋',
+  'N-NA03': '维多利亚港',
+  'N-NA04': '黄埔古港',
+  'N-NA05': '南沙天后宫',
+  'N-NA08': '平海古城',
+};
 
 // 路线图层（一键主题路线）：底衬线 + 流动主线
 const ROUTE_SOURCE = 'theme-route';
@@ -54,6 +109,77 @@ function loadImage(url) {
   });
 }
 
+function anchorLabelTier(anchor) {
+  if (PRIMARY_LABEL_IDS.has(anchor.id)) return 1;
+  if (anchor.worldImpact) return 2;
+  return 3;
+}
+
+function anchorLabelName(anchor) {
+  if (LABEL_ALIASES[anchor.id]) return LABEL_ALIASES[anchor.id];
+  return anchor.name && anchor.name.zh ? anchor.name.zh : anchor.id;
+}
+
+function labelFilter(tier, baseFilter) {
+  const tierFilter = ['==', ['get', 'labelTier'], tier];
+  return baseFilter ? ['all', tierFilter, baseFilter] : tierFilter;
+}
+
+function applyAnchorAndLabelFilters(map, baseFilter) {
+  ANCHOR_RENDER_LAYERS.forEach((layer) => {
+    if (map.getLayer(layer)) map.setFilter(layer, baseFilter);
+  });
+  LABEL_LAYER_DEFS.forEach(({ id, tier }) => {
+    if (map.getLayer(id)) map.setFilter(id, labelFilter(tier, baseFilter));
+  });
+}
+
+function addAnchorLabelLayers(map) {
+  LABEL_LAYER_DEFS.forEach(({ id, tier, minzoom, sizeStops }) => {
+    if (map.getLayer(id)) return;
+    map.addLayer({
+      id,
+      type: 'symbol',
+      source: SOURCE_ID,
+      minzoom,
+      filter: labelFilter(tier),
+      layout: {
+        'text-field': ['get', 'label'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], ...sizeStops],
+        'text-anchor': 'bottom',
+        'text-offset': [0, -1.15],
+        'text-max-width': 8,
+        'text-letter-spacing': 0.02,
+        'text-padding': 4,
+        'text-allow-overlap': false,
+        'text-ignore-placement': false,
+        'text-optional': true,
+        'symbol-sort-key': ['-', 4, ['get', 'labelTier']],
+      },
+      paint: {
+        'text-color': [
+          'case',
+          ['==', ['get', 'labelTier'], 1],
+          '#3b2918',
+          '#5a4326',
+        ],
+        'text-halo-color': 'rgba(255, 250, 235, 0.94)',
+        'text-halo-width': ['interpolate', ['linear'], ['zoom'], 8.5, 1.8, 13, 2.4],
+        'text-halo-blur': 0.45,
+        'text-opacity': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          minzoom,
+          0,
+          minzoom + 0.22,
+          tier === 1 ? 0.96 : 0.86,
+        ],
+      },
+    });
+  });
+}
+
 /** 将锚点转换为 GeoJSON */
 function anchorsToGeoJSON() {
   return {
@@ -65,6 +191,8 @@ function anchorsToGeoJSON() {
       properties: {
         id: a.id,
         name: a.name && a.name.zh ? a.name.zh : a.id,
+        label: anchorLabelName(a),
+        labelTier: anchorLabelTier(a),
         theme: a.theme,
         color: THEMES[a.theme] ? THEMES[a.theme].color : '#C9A84C',
         worldImpact: a.worldImpact ? 1 : 0,
@@ -73,60 +201,104 @@ function anchorsToGeoJSON() {
   };
 }
 
-/** 极简化底图：隐藏 POI / 道路文字、并染成深墨暖色调 */
+/** 矢量水墨底图：保留矢量图层由引擎渲染（放大始终清晰），逐类样式化为水墨风 */
 function simplifyBasemap(map) {
   const style = map.getStyle();
   if (!style || !style.layers) return;
+  const C = BASEMAP_COLORS;
+  const has = (id, ...keys) => keys.some((k) => id.includes(k));
+
   for (const layer of style.layers) {
     const id = layer.id.toLowerCase();
-    const isNoise =
-      id.includes('poi') ||
-      (id.includes('road') && id.includes('label')) ||
-      id.includes('housenum') ||
-      id.includes('transit') ||
-      id.includes('waterway-label');
-    if (isNoise) {
-      try {
-        map.setLayoutProperty(layer.id, 'visibility', 'none');
-      } catch (e) {
-        /* 忽略不可设置的图层 */
-      }
-    }
-    // 背景 / 陆地 → 宣纸暖黄
+    const type = layer.type;
     try {
-      if (layer.type === 'background') {
-        map.setPaintProperty(layer.id, 'background-color', BASEMAP_COLORS.background);
-      }
-      if (id.includes('land') && layer.type === 'fill') {
-        map.setPaintProperty(layer.id, 'fill-color', BASEMAP_COLORS.background);
-      }
-      // 水域 → 石绿黛青（山水画水色）
-      if (id.includes('water') && layer.type === 'fill') {
-        map.setPaintProperty(layer.id, 'fill-color', BASEMAP_COLORS.water);
-      }
-      // 绿地 / 公园 / 林地 → 石绿（山水画山峦草木设色）
+      // ① 噪声图层隐藏：POI / 门牌 / 公交 / 水系名 / 机场 / 建筑顶
       if (
-        layer.type === 'fill' &&
-        (id.includes('park') ||
-          id.includes('grass') ||
-          id.includes('wood') ||
-          id.includes('forest') ||
-          id.includes('vegetation') ||
-          id.includes('landcover') ||
-          id.includes('landuse'))
+        has(id, 'poi', 'housenum', 'transit', 'aeroway', 'waterway_label', 'watername', 'building-top') ||
+        (has(id, 'road') && has(id, 'label'))
       ) {
-        map.setPaintProperty(layer.id, 'fill-color', BASEMAP_COLORS.green);
+        map.setLayoutProperty(layer.id, 'visibility', 'none');
+        continue;
+      }
+
+      // ② 背景 / 陆地 → 宣纸暖米
+      if (type === 'background') {
+        map.setPaintProperty(layer.id, 'background-color', C.background);
+        continue;
+      }
+      if (type === 'fill' && has(id, 'landcover', 'landuse', 'background')) {
+        map.setPaintProperty(layer.id, 'fill-color', C.background);
+        map.setPaintProperty(layer.id, 'fill-opacity', 1);
+        continue;
+      }
+
+      // ③ 绿地 / 公园 / 林地 → 山色淡绿（山水画草木设色）
+      if (type === 'fill' && has(id, 'park', 'grass', 'wood', 'forest', 'vegetation', 'nature')) {
+        map.setPaintProperty(layer.id, 'fill-color', C.green);
+        map.setPaintProperty(layer.id, 'fill-opacity', 0.45);
+        continue;
+      }
+
+      // ④ 水域填充 → 淡青黛（山水画水色）
+      if (type === 'fill' && has(id, 'water')) {
+        map.setPaintProperty(layer.id, 'fill-color', C.water);
+        map.setPaintProperty(layer.id, 'fill-opacity', 1);
+        continue;
+      }
+
+      // ⑤ 海岸线 / 水系线 → 浓墨勾勒（矢量线，放大始终锐利，随缩放渐粗）
+      if (type === 'line' && has(id, 'water')) {
+        map.setPaintProperty(layer.id, 'line-color', C.waterLine || C.water);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.7);
+        map.setPaintProperty(layer.id, 'line-width', [
+          'interpolate', ['linear'], ['zoom'], 8, 0.8, 12, 1.6, 15, 2.6, 18, 4,
+        ]);
+        continue;
+      }
+
+      // ⑥ 道路：case(描边) 用淡宣纸色让路“浮”出，fill(路面) 用赭墨勾线
+      if (type === 'line' && has(id, 'road', 'bridge', 'tunnel', 'transportation')) {
+        if (has(id, 'case')) {
+          map.setPaintProperty(layer.id, 'line-color', '#EFE6CF');
+          map.setPaintProperty(layer.id, 'line-opacity', 0.55);
+        } else {
+          map.setPaintProperty(layer.id, 'line-color', C.road);
+          map.setPaintProperty(layer.id, 'line-opacity', 0.72);
+        }
+        continue;
+      }
+
+      // ⑦ 铁路 → 淡墨虚线感
+      if (type === 'line' && has(id, 'rail')) {
+        map.setPaintProperty(layer.id, 'line-color', C.boundary);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.5);
+        continue;
+      }
+
+      // ⑧ 行政边界 → 淡赭墨勾线
+      if (type === 'line' && has(id, 'boundary', 'admin')) {
+        map.setPaintProperty(layer.id, 'line-color', C.boundary);
+        map.setPaintProperty(layer.id, 'line-width', C.boundaryWidth);
+        map.setPaintProperty(layer.id, 'line-opacity', 0.5);
+        continue;
+      }
+
+      // ⑨ 建筑轮廓 → 淡赭墨半透明填充（近景层次，不喧宾夺主）
+      if (type === 'fill' && has(id, 'building')) {
+        map.setPaintProperty(layer.id, 'fill-color', '#D8C79E');
         map.setPaintProperty(layer.id, 'fill-opacity', 0.5);
+        map.setPaintProperty(layer.id, 'fill-outline-color', 'rgba(90,77,60,0.4)');
+        continue;
       }
-      // 道路 → 淡赭墨勾线（清明上河图的街巷线条感）
-      if (id.includes('road') && layer.type === 'line' && BASEMAP_COLORS.road) {
-        map.setPaintProperty(layer.id, 'line-color', BASEMAP_COLORS.road);
-      }
-      // 行政边界 → 淡赭墨勾线
-      if ((id.includes('boundary') || id.includes('admin')) && layer.type === 'line') {
-        map.setPaintProperty(layer.id, 'line-color', BASEMAP_COLORS.boundary);
-        map.setPaintProperty(layer.id, 'line-width', BASEMAP_COLORS.boundaryWidth);
-        map.setPaintProperty(layer.id, 'line-opacity', 0.55);
+
+      // ⑩ 地名题字 → 墨色字 + 宣纸描边（任何底色上都清晰可读）
+      if (type === 'symbol' && has(id, 'place', 'label')) {
+        map.setLayoutProperty(layer.id, 'visibility', 'visible');
+        map.setPaintProperty(layer.id, 'text-color', '#3A2E20');
+        map.setPaintProperty(layer.id, 'text-halo-color', 'rgba(240, 232, 210, 0.95)');
+        map.setPaintProperty(layer.id, 'text-halo-width', 1.6);
+        map.setPaintProperty(layer.id, 'text-halo-blur', 0.3);
+        continue;
       }
     } catch (e) {
       /* 某些图层属性不可设置，忽略 */
@@ -134,7 +306,6 @@ function simplifyBasemap(map) {
   }
 }
 
-/** 添加 3D 建筑挤出（数据缺失时静默降级） */
 function add3DBuildings(map) {
   try {
     const style = map.getStyle();
@@ -221,6 +392,8 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
   let selectedId = null;
   let hoveredAnchorId = null;
   let coreUsesSymbol = false;
+  let clueFocusIds = [];
+  let clueFocusActiveId = null;
   let userMarker = null;
   let foreignMarkers = [];
   let deckOverlay = null;
@@ -354,6 +527,7 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
         paint: { 'icon-opacity': 1 },
       });
     }
+    addAnchorLabelLayers(map);
 
     function setHoveredAnchor(nextId) {
       if (hoveredAnchorId === nextId) return;
@@ -410,10 +584,42 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
         const rippleRadius = 6 + t * 11;
         // 起点和终点均淡出，半径重置发生在不可见状态，避免视觉上像快速回缩。
         const rippleOpacity = 0.36 * Math.sin(Math.PI * t);
-        map.setPaintProperty(PULSE_LAYER, 'circle-radius', rippleRadius);
-        map.setPaintProperty(PULSE_LAYER, 'circle-stroke-opacity', ['case', hoveredFeature, 1, rippleOpacity]);
-        map.setPaintProperty(GLOW_LAYER, 'circle-opacity', ['case', hoveredFeature, 1, 0.2]);
-        map.setPaintProperty(CORE_LAYER, coreUsesSymbol ? 'icon-opacity' : 'circle-opacity', ['case', hoveredFeature, 1, 0.86]);
+        if (clueFocusIds.length) {
+          const clueIds = ['in', ['get', 'id'], ['literal', clueFocusIds]];
+          const activeClue = clueFocusActiveId || '__none__';
+          map.setPaintProperty(PULSE_LAYER, 'circle-radius', [
+            'case',
+            ['==', ['get', 'id'], activeClue], rippleRadius + 4,
+            clueIds, rippleRadius,
+            0,
+          ]);
+          map.setPaintProperty(PULSE_LAYER, 'circle-stroke-opacity', [
+            'case',
+            hoveredFeature, 0.82,
+            ['==', ['get', 'id'], activeClue], Math.min(0.5, rippleOpacity + 0.12),
+            clueIds, rippleOpacity * 0.72,
+            0,
+          ]);
+          map.setPaintProperty(GLOW_LAYER, 'circle-opacity', [
+            'case',
+            hoveredFeature, 1,
+            ['==', ['get', 'id'], activeClue], 0.92,
+            clueIds, 0.64,
+            0.06,
+          ]);
+          map.setPaintProperty(CORE_LAYER, coreUsesSymbol ? 'icon-opacity' : 'circle-opacity', [
+            'case',
+            hoveredFeature, 1,
+            ['==', ['get', 'id'], activeClue], 1,
+            clueIds, 0.96,
+            0.34,
+          ]);
+        } else {
+          map.setPaintProperty(PULSE_LAYER, 'circle-radius', rippleRadius);
+          map.setPaintProperty(PULSE_LAYER, 'circle-stroke-opacity', ['case', hoveredFeature, 1, rippleOpacity]);
+          map.setPaintProperty(GLOW_LAYER, 'circle-opacity', ['case', hoveredFeature, 1, 0.2]);
+          map.setPaintProperty(CORE_LAYER, coreUsesSymbol ? 'icon-opacity' : 'circle-opacity', ['case', hoveredFeature, 1, 0.86]);
+        }
       }
       rafId = requestAnimationFrame(animate);
     };
@@ -427,6 +633,10 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
     map,
     getSelectedId: () => selectedId,
     setSelectedId: (v) => (selectedId = v),
+    setClueFocus: (ids, activeId) => {
+      clueFocusIds = Array.isArray(ids) ? ids : [];
+      clueFocusActiveId = activeId || null;
+    },
     getThemeBoost: () => themeBoostActive,
     setThemeBoost: (v) => (themeBoostActive = v),
     getRouteFlowRaf: () => routeFlowRaf,
@@ -512,6 +722,56 @@ function buildController(ctx) {
     ctx.setUserMarker(marker);
   }
 
+  function isMobileAppView() {
+    return window.matchMedia('(max-width: 820px)').matches;
+  }
+
+  function pulseUserMarker() {
+    const marker = ctx.getUserMarker();
+    const el = marker && marker.getElement ? marker.getElement() : null;
+    if (!el) return;
+    el.classList.remove('is-locating-focus');
+    // 强制重启动画，让连续点击定位时也有明确反馈。
+    void el.offsetWidth;
+    el.classList.add('is-locating-focus');
+    window.setTimeout(() => el.classList.remove('is-locating-focus'), 2600);
+  }
+
+  function flyToUserLocation(lng, lat, { inBay = true, duration = 2200 } = {}) {
+    const mobileView = isMobileAppView();
+    const zeroPadding = { top: 0, bottom: 0, left: 0, right: 0 };
+
+    if (typeof map.stop === 'function') map.stop();
+    if (typeof map.resize === 'function') map.resize();
+    if (mobileView && typeof map.setPadding === 'function') map.setPadding(zeroPadding);
+
+    const camera = {
+      center: [lng, lat],
+      zoom: mobileView ? (inBay ? 13.2 : 9.6) : (inBay ? 12.5 : 9.1),
+      pitch: mobileView ? (inBay ? 26 : 0) : (inBay ? 45 : 0),
+      bearing: 0,
+      essential: true,
+      retainPadding: false,
+      offset: [0, 0],
+      padding: mobileView ? zeroPadding : { left: 380, top: 0, bottom: 0, right: 0 },
+    };
+
+    if (mobileView && typeof map.easeTo === 'function') {
+      map.easeTo({
+        ...camera,
+        duration: Math.min(duration, 1050),
+        easing: (t) => 1 - Math.pow(1 - t, 4),
+      });
+    } else {
+      map.flyTo({
+        ...camera,
+        duration,
+        curve: 1.45,
+      });
+    }
+    pulseUserMarker();
+  }
+
   return {
     map,
 
@@ -522,9 +782,7 @@ function buildController(ctx) {
         visible.length === 0
           ? ['==', ['get', 'theme'], '__none__']
           : ['in', ['get', 'theme'], ['literal', visible]];
-      [GLOW_LAYER, PULSE_LAYER, CORE_LAYER].forEach((layer) => {
-        if (map.getLayer(layer)) map.setFilter(layer, filter);
-      });
+      applyAnchorAndLabelFilters(map, filter);
     },
 
     /** 选中锚点：FlyTo + 高亮 */
@@ -596,9 +854,7 @@ function buildController(ctx) {
         themeKey === 'all'
           ? null
           : ['==', ['get', 'theme'], themeKey];
-      [GLOW_LAYER, PULSE_LAYER, CORE_LAYER].forEach((layer) => {
-        if (map.getLayer(layer)) map.setFilter(layer, filter);
-      });
+      applyAnchorAndLabelFilters(map, filter);
 
       // 叙事图层只负责筛选，不改变总览中锚点的尺寸、光晕或色彩表现。
       ctx.setThemeBoost(false);
@@ -777,15 +1033,7 @@ function buildController(ctx) {
             lat >= BAY_AREA_BOUNDS.minLat &&
             lat <= BAY_AREA_BOUNDS.maxLat;
 
-          map.flyTo({
-            center: [lng, lat],
-            zoom: inBay ? 12.5 : 9.1,
-            pitch: inBay ? 45 : 0,
-            bearing: 0,
-            duration: 2600,
-            curve: 1.5,
-            essential: true,
-          });
+          flyToUserLocation(lng, lat, { inBay, duration: 2600 });
 
           if (onSuccess) onSuccess({ lng, lat, inBay });
         },
@@ -808,12 +1056,7 @@ function buildController(ctx) {
         const inBay =
           lng >= BAY_AREA_BOUNDS.minLng && lng <= BAY_AREA_BOUNDS.maxLng &&
           lat >= BAY_AREA_BOUNDS.minLat && lat <= BAY_AREA_BOUNDS.maxLat;
-        map.flyTo({
-          center: [lng, lat],
-          zoom: 12.2, pitch: 40, bearing: 0,
-          duration: 2400, curve: 1.5, essential: true,
-          padding: { left: 380, top: 0, bottom: 0, right: 0 },
-        });
+        flyToUserLocation(lng, lat, { inBay, duration: 2400 });
         if (onResult) onResult({ lng, lat, simulated, inBay });
       };
       const fallback = () =>
@@ -956,6 +1199,82 @@ function buildController(ctx) {
         if (km * 1000 <= radiusM) hits.push({ anchor: a, distM: km * 1000 });
       });
       return hits.sort((x, y) => x.distM - y.distM);
+    },
+
+    /** 聚焦当前"附近线索"对应的 3-6 个锚点，并用青绿脉冲强调线索状态。*/
+    focusClueAnchors(idSet, activeId = null) {
+      if (!map.getLayer(GLOW_LAYER)) return;
+      const ids = Array.from(idSet || []).filter(Boolean);
+      if (!ids.length) return;
+      const clueIds = ['in', ['get', 'id'], ['literal', ids]];
+      const active = activeId || '__none__';
+      ctx.setClueFocus(ids, activeId);
+      applyAnchorAndLabelFilters(map, null);
+      resetHighlight();
+      if (map.getLayer(PULSE_LAYER)) {
+        map.setPaintProperty(PULSE_LAYER, 'circle-stroke-color', '#D8B866');
+      }
+      map.setPaintProperty(GLOW_LAYER, 'circle-opacity', [
+        'case',
+        ['==', ['get', 'id'], active],
+        0.92,
+        clueIds,
+        0.64,
+        0.06,
+      ]);
+      map.setPaintProperty(GLOW_LAYER, 'circle-radius', [
+        'case',
+        ['==', ['get', 'id'], active],
+        46,
+        clueIds,
+        32,
+        12,
+      ]);
+      map.setPaintProperty(GLOW_LAYER, 'circle-blur', [
+        'case',
+        ['==', ['get', 'id'], active],
+        0.72,
+        clueIds,
+        1.02,
+        1.22,
+      ]);
+      const coreType = map.getLayer(CORE_LAYER) && map.getLayer(CORE_LAYER).type;
+      if (coreType === 'symbol') {
+        map.setLayoutProperty(CORE_LAYER, 'icon-size', [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          8,
+          ['case', ['==', ['get', 'id'], active], 1.16, clueIds, 0.82, 0.46],
+          14,
+          ['case', ['==', ['get', 'id'], active], 1.48, clueIds, 1.16, 0.82],
+        ]);
+      } else if (coreType === 'circle') {
+        map.setPaintProperty(CORE_LAYER, 'circle-radius', [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          8,
+          ['case', ['==', ['get', 'id'], active], 10, clueIds, 6, 3],
+          14,
+          ['case', ['==', ['get', 'id'], active], 15, clueIds, 10, 6],
+        ]);
+      }
+    },
+
+    clearClueFocus(themeKey = 'all') {
+      ctx.setClueFocus([], null);
+      this.setThemeFilter(themeKey);
+      resetHighlight();
+      if (map.getLayer(PULSE_LAYER)) {
+        map.setPaintProperty(PULSE_LAYER, 'circle-stroke-color', '#2B1C0E');
+      }
+      if (map.getLayer(GLOW_LAYER)) {
+        map.setPaintProperty(GLOW_LAYER, 'circle-opacity', 0.45);
+        map.setPaintProperty(GLOW_LAYER, 'circle-radius',
+          ['interpolate', ['linear'], ['zoom'], 8, 12, 14, 30]);
+        map.setPaintProperty(GLOW_LAYER, 'circle-blur', 1);
+      }
     },
 
     /** 高亮"附近"锚点（光晕增强 1.5 倍）*/

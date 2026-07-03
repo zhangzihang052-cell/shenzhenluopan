@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- 时空罗盘 · 移动端 H5 展示壳 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>时空罗盘 · 移动端 H5 预览</title>
+    <meta
+      name="description"
+      content="时空罗盘移动端 Web App 展示页：375px H5 画布 + iPhone 风格模拟器外壳。"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Ma+Shan+Zheng&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/mobile-shell.css?rev=mobile-h5-1" />
+  </head>
+  <body class="mobile-shell-body">
+    <main class="mobile-shell-stage" aria-label="时空罗盘移动端模拟器">
+      <section class="mobile-device" aria-label="iPhone preview frame">
+        <div class="mobile-device-side mobile-device-side-left" aria-hidden="true"></div>
+        <div class="mobile-device-side mobile-device-side-right" aria-hidden="true"></div>
+        <div class="mobile-device-speaker" aria-hidden="true"></div>
+        <div class="mobile-device-screen">
+          <iframe
+            class="mobile-app-frame"
+            title="时空罗盘移动端 H5"
+            src="./mobile-app.html?v=mobile-route-lite-1"
+            loading="eager"
+            scrolling="no"
+          ></iframe>
+        </div>
+      </section>
+      <p class="mobile-shell-note">H5 视角 · 375px 画布 · 与 PC 版独立演示</p>
+    </main>
+  </body>
+</html>

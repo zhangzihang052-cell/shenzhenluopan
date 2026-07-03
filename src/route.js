@@ -1,7 +1,7 @@
 // 路线规划模块：离线估算 + OpenStreetMap OSRM 道路备援。
 // 当商业地图服务不可用时，仍按真实道路耗时排序并绘制道路折线。
 // build: 2026-06-18
-import { TRAVEL_MODES } from './data/themes.js';
+import { TRAVEL_MODES } from './data/themes.js?rev=clean-8';
 
 const OSRM_BASE = 'https://router.project-osrm.org';
 const REQUEST_TIMEOUT_MS = 12000;

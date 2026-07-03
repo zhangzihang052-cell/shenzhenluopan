@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>矢量水墨快照</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #333; }
+  #map { width: 1200px; height: 820px; position: absolute; left: -5000px; top: 0; }
+  #shot { width: 1200px; height: 820px; display: block; }
+  .lbl { position: fixed; top: 8px; left: 8px; z-index: 99; background: rgba(0,0,0,.8); color: #0f0; font: 14px monospace; padding: 4px 8px; }
+</style>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<img id="shot" alt="" />
+<div class="lbl" id="lbl">LOADING</div>
+<script type="module">
+  import { BASEMAP_COLORS } from '/src/data/themes.js?rev=vec-ink-4';
+  const lbl = document.getElementById('lbl');
+  const C = BASEMAP_COLORS;
+  const has = (id, ...ks) => ks.some((k) => id.includes(k));
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    center: [113.95, 22.58], zoom: 9.1,
+    attributionControl: false, fadeDuration: 0, interactive: false,
+    preserveDrawingBuffer: true,
+  });
+  // 复刻正式 simplifyBasemap 的矢量水墨染色逻辑
+  function inkify() {
+    for (const layer of map.getStyle().layers) {
+      const id = layer.id.toLowerCase(); const type = layer.type;
+      try {
+        if (has(id,'poi','housenum','transit','aeroway','waterway_label','watername','building-top') || (has(id,'road')&&has(id,'label'))) { map.setLayoutProperty(layer.id,'visibility','none'); continue; }
+        if (type==='background') { map.setPaintProperty(layer.id,'background-color',C.background); continue; }
+        if (type==='fill' && has(id,'landcover','landuse','background')) { map.setPaintProperty(layer.id,'fill-color',C.background); map.setPaintProperty(layer.id,'fill-opacity',1); continue; }
+        if (type==='fill' && has(id,'park','grass','wood','forest','vegetation','nature')) { map.setPaintProperty(layer.id,'fill-color',C.green); map.setPaintProperty(layer.id,'fill-opacity',0.45); continue; }
+        if (type==='fill' && has(id,'water')) { map.setPaintProperty(layer.id,'fill-color',C.water); map.setPaintProperty(layer.id,'fill-opacity',1); continue; }
+        if (type==='line' && has(id,'water')) { map.setPaintProperty(layer.id,'line-color',C.waterLine||C.water); map.setPaintProperty(layer.id,'line-opacity',0.7); map.setPaintProperty(layer.id,'line-width',['interpolate',['linear'],['zoom'],8,0.8,12,1.6,15,2.6,18,4]); continue; }
+        if (type==='line' && has(id,'road','bridge','tunnel','transportation')) { if (has(id,'case')) { map.setPaintProperty(layer.id,'line-color','#EFE6CF'); map.setPaintProperty(layer.id,'line-opacity',0.55);} else { map.setPaintProperty(layer.id,'line-color',C.road); map.setPaintProperty(layer.id,'line-opacity',0.72);} continue; }
+        if (type==='line' && has(id,'rail')) { map.setPaintProperty(layer.id,'line-color',C.boundary); map.setPaintProperty(layer.id,'line-opacity',0.5); continue; }
+        if (type==='line' && has(id,'boundary','admin')) { map.setPaintProperty(layer.id,'line-color',C.boundary); map.setPaintProperty(layer.id,'line-width',C.boundaryWidth); map.setPaintProperty(layer.id,'line-opacity',0.5); continue; }
+        if (type==='fill' && has(id,'building')) { map.setPaintProperty(layer.id,'fill-color','#D8C79E'); map.setPaintProperty(layer.id,'fill-opacity',0.5); continue; }
+        if (type==='symbol' && has(id,'place','label')) { map.setPaintProperty(layer.id,'text-color','#3A2E20'); map.setPaintProperty(layer.id,'text-halo-color','rgba(240,232,210,0.95)'); map.setPaintProperty(layer.id,'text-halo-width',1.6); }
+      } catch(e){}
+    }
+  }
+  map.on('load', () => {
+    inkify();
+    // 应用与正式一致的轻微暖调滤镜
+    document.getElementById('map').style.filter = 'sepia(0.04) saturate(0.98) brightness(1.01) contrast(1.0)';
+    map.once('idle', () => setTimeout(() => {
+      try {
+        const cv = document.querySelector('#map canvas');
+        document.getElementById('shot').src = cv.toDataURL('image/png');
+        map.remove(); document.getElementById('map').remove();
+        lbl.textContent = 'SNAP-DONE'; document.title = 'SNAP-DONE';
+      } catch(e){ lbl.textContent='ERR '+e.message; document.title='SNAP-ERR'; }
+    }, 900));
+  });
+</script>
+</body>
+</html>

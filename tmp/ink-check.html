@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>水墨叠层自检</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1440px; height: 900px; overflow: hidden; }
+  #stage { position: absolute; inset: 0; }
+  /* 模拟底图：陆地做旧宣纸暖米 + 水域雾感青黛（对应 BASEMAP_COLORS） */
+  .basemap {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(115deg, #A6B7AD 0%, #A6B7AD 26%, #DCD3B8 26%, #DCD3B8 62%, #C3C4A0 62%, #C3C4A0 74%, #DCD3B8 74%);
+  }
+  /* 模拟浓墨海岸线 */
+  .coast {
+    position: absolute; top: 0; bottom: 0; left: 26%; width: 2.4px;
+    background: #41544C; opacity: 0.68;
+    box-shadow: 40vw 0 0 0 rgba(65,84,76,0), 0 0 0 0 #41544C;
+  }
+  /* 整体 CSS filter（对应 OVERVIEW_MODE.mapFilter v6） */
+  .filtered { filter: sepia(0.36) saturate(0.70) hue-rotate(-12deg) brightness(1.04) contrast(0.89); }
+  /* 水彩墨晕层（静态，禁用动画） */
+  .ink-map-wash {
+    position: absolute; inset: 0;
+    background-image: url('/public/textures/ink-wash.png');
+    background-size: 120% 120%; background-position: center;
+    mix-blend-mode: soft-light; opacity: 0.5;
+  }
+  /* 做旧宣纸层 */
+  .ink-map-paper {
+    position: absolute; inset: 0;
+    background-image: url('/public/textures/ink-paper.png');
+    background-size: cover; background-position: center;
+    mix-blend-mode: multiply; opacity: 0.42;
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(120,100,70,0) 55%, rgba(70,55,30,0.22) 100%);
+  }
+  .tag { position: absolute; left: 20px; top: 16px; font: 600 20px/1.4 "PingFang SC", sans-serif; color: #2b2118; background: rgba(255,255,255,.6); padding: 6px 14px; border-radius: 8px; z-index: 99; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="filtered">
+      <div class="basemap"></div>
+      <div class="coast"></div>
+    </div>
+    <div class="ink-map-wash"></div>
+    <div class="ink-map-paper"></div>
+    <div class="vignette"></div>
+    <div class="tag">水墨叠层自检 · 左上水域 / 中陆地 / 浓墨海岸线</div>
+  </div>
+</body>
+</html>

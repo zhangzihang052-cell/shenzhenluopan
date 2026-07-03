@@ -1,10 +1,33 @@
 // UI 模块 v2：标题栏 / 语言下拉 / GPS / 图层 / 附近抽屉 / 面包屑 / 信息面板 / 降级弹窗
 // build: 2026-06-18
-import { THEMES, THEME_ORDER, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
-import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
-import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=compass-tabs-routes-1';
-import { hasEpisode } from './data/episodes.js?rev=episodes-depth-1';
-import { isCompleted } from './game.js?rev=stamp-focus-1';
+import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
+import { ANCHORS } from './data/anchors.js?rev=classification-1';
+import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=audio-sfx-1';
+import { hasEpisode } from './data/episodes.js?rev=audio-sfx-1';
+import { isCompleted } from './game.js?rev=audio-sfx-1';
+import { nearbyClues } from './data/nearby-clues.js?rev=audio-sfx-1';
+import {
+  addWantToVisit,
+  removeWantToVisit,
+  isWantToVisit,
+  getWantToVisitAnchors,
+} from './want-to-visit.js?rev=route-planner-1';
+
+/**
+ * 水墨白描线条图标（细笔勾勒，配合墨迹按钮的白色书法风格）。
+ * stroke 由 CSS 控制为宣纸白；viewBox 24，线宽 1.6。
+ */
+const INK_ICONS = {
+  // 地球仪 / 语言
+  globe:
+    '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg>',
+  // 册子 / 印章册
+  book:
+    '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M8 4v13"/><path d="M11 9h4M11 12h4"/></svg>',
+  // 指南针 / 规划路线
+  compass:
+    '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>',
+};
 
 /** HTML 转义 */
 function esc(str) {
@@ -62,8 +85,8 @@ export function updateVisibleCount(n, themeLabel) {
   if (labelEl) labelEl.textContent = themeLabel || getText('header.anchors');
 }
 
-/* ============ 顶部工具组：语言下拉 + GPS 定位 ============ */
-export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook }) {
+/* ============ 顶部工具组：语言下拉 + 印章册 + 路线规划 ============ */
+export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan }) {
   const el = document.createElement('div');
   el.className = 'tool-cluster';
 
@@ -72,7 +95,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
   langWrap.className = 'lang-selector';
   langWrap.innerHTML = `
     <button class="lang-trigger tool-btn" id="lang-trigger" title="${esc(getText('lang.switch'))}">
-      <span class="lang-ico">🌐</span>
+      <span class="lang-ico">${INK_ICONS.globe}</span>
       <span class="lang-label" id="lang-label">${esc(getText('lang.switch'))}</span>
     </button>
     <div class="lang-menu" id="lang-menu">
@@ -84,7 +107,7 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
       ).join('')}
     </div>`;
 
-  // 罗盘探索按钮独立置于右侧中段，作为主行动。
+  // 罗盘探索按钮独立置于底部中段，作为主行动。
   const compassBtn = document.createElement('button');
   compassBtn.className = 'explore-launcher';
   compassBtn.id = 'compass-btn';
@@ -105,10 +128,18 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
   stampBtn.className = 'tool-btn';
   stampBtn.id = 'stampbook-btn';
   stampBtn.title = getText('stamp.title');
-  stampBtn.innerHTML = `<span class="tool-ico">📜</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
+  stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
+
+  // 规划路线按钮：替代原右上角第三个「叙事图层」入口。
+  const routeBtn = document.createElement('button');
+  routeBtn.className = 'tool-btn';
+  routeBtn.id = 'route-plan-btn';
+  routeBtn.title = getText('route_planner.title');
+  routeBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.compass}</span><span>${esc(getText('route_planner.btn'))}</span>`;
 
   el.appendChild(langWrap);
   el.appendChild(stampBtn);
+  el.appendChild(routeBtn);
   root.appendChild(el);
   root.appendChild(compassBtn);
 
@@ -141,9 +172,12 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
   stampBtn.addEventListener('click', () => {
     if (onStampBook) onStampBook();
   });
+  routeBtn.addEventListener('click', () => {
+    if (onRoutePlan) onRoutePlan();
+  });
 }
 
-/** 语言切换时刷新顶部工具组按钮文案（罗盘 / 印章册 / 语言切换），保留印章进度角标 */
+/** 语言切换时刷新顶部工具组按钮文案（罗盘 / 印章册 / 路线规划 / 语言切换），保留印章进度角标 */
 export function refreshToolCluster() {
   // 罗盘探索按钮
   const compassBtn = document.getElementById('compass-btn');
@@ -157,7 +191,12 @@ export function refreshToolCluster() {
     stampBtn.title = getText('stamp.title');
     const badgeEl = document.getElementById('stamp-count');
     const badgeText = badgeEl ? badgeEl.textContent : '';
-    stampBtn.innerHTML = `<span class="tool-ico">📜</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+    stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+  }
+  const routeBtn = document.getElementById('route-plan-btn');
+  if (routeBtn) {
+    routeBtn.title = getText('route_planner.title');
+    routeBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.compass}</span><span>${esc(getText('route_planner.btn'))}</span>`;
   }
   // 语言切换按钮文案
   const langTrigger = document.getElementById('lang-trigger');
@@ -336,6 +375,44 @@ export function renderInfoPanel(root) {
   return el;
 }
 
+function anchorLocationText(anchor) {
+  if (anchor.location && anchor.location.address) return pick(anchor.location.address);
+  if (anchor.location && anchor.location.visitPoint) return pick(anchor.location.visitPoint);
+  return pick(anchor.hero || anchor.title);
+}
+
+function wantToggleLabel(anchorId, longLabel = false) {
+  const added = isWantToVisit(anchorId);
+  if (longLabel) return getText(added ? 'want.added_long' : 'want.add_long');
+  return getText(added ? 'want.added' : 'want.add');
+}
+
+function renderWantMiniButton(anchor, id, className = '') {
+  const added = isWantToVisit(anchor.id);
+  return `
+    <button class="want-toggle ${added ? 'active' : ''} ${className}" id="${id}" data-anchor-id="${esc(anchor.id)}" aria-pressed="${added}">
+      <span class="want-icon" aria-hidden="true">${added ? '✓' : '＋'}</span>
+      <span>${esc(wantToggleLabel(anchor.id))}</span>
+    </button>`;
+}
+
+function bindWantToggle(button, anchor, { longLabel = false, onChange } = {}) {
+  if (!button || !anchor) return;
+  const sync = () => {
+    const added = isWantToVisit(anchor.id);
+    button.classList.toggle('active', added);
+    button.setAttribute('aria-pressed', String(added));
+    button.innerHTML = `<span class="want-icon" aria-hidden="true">${added ? '✓' : '＋'}</span><span>${esc(wantToggleLabel(anchor.id, longLabel))}</span>`;
+  };
+  sync();
+  button.addEventListener('click', () => {
+    if (isWantToVisit(anchor.id)) removeWantToVisit(anchor.id);
+    else addWantToVisit(anchor.id);
+    sync();
+    if (onChange) onChange(isWantToVisit(anchor.id));
+  });
+}
+
 /**
  * 打开锚点信息面板
  * @param {Object} anchor
@@ -381,23 +458,21 @@ export function openInfoPanel(anchor, handlers = {}) {
     </div>`
       : '';
 
-  // 实用参观信息：仅保留到访决策所需的开放时间与参观建议。
-  const metaParts = [];
-  if (anchor.openHours)
-    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.hours'))}：</b><span>${esc(anchor.openHours)}</span></div>`);
-  if (anchor.visitTips)
-    metaParts.push(`<div class="panel-meta"><b>${esc(getText('panel.visit'))}：</b><span>${esc(anchor.visitTips)}</span></div>`);
-  const metaHtml =
-    metaParts.length
-      ? `<section class="panel-visit-card fade-in-up" style="animation-delay:.7s">
-          ${metaParts.join('')}
-        </section>`
-      : '';
+  // 到访决策信息与想去清单合并，避免详情面板出现重复的“真实地点”区块。
+  const visitLabel = anchor.openHours
+    ? getText('panel.hours')
+    : anchor.visitTips
+      ? getText('panel.visit')
+      : getText('panel.visit');
+  const visitPrimary = anchor.openHours || anchor.visitTips || anchorLocationText(anchor);
+  const visitSecondary = anchor.openHours && anchor.visitTips
+    ? `<p class="panel-want-sub">${esc(getText('panel.visit'))}：${esc(anchor.visitTips)}</p>`
+    : '';
 
   // 人物 / 地点配图（优先 heroImage，其次 placeImage）；加载失败自动降级隐藏整块
   const imgSrc = anchor.heroImage || anchor.placeImage || '';
   const imageHtml = imgSrc
-    ? `<figure class="panel-image fade-in-up" style="animation-delay:.47s">
+    ? `<figure class="panel-image impact-image fade-in-up" style="animation-delay:.36s">
         <img src="${esc(imgSrc)}" alt="${esc(anchor.imageCaption || pick(anchor.hero))}" loading="lazy"
           onerror="this.closest('.panel-image').style.display='none'" />
         ${anchor.imageCaption ? `<figcaption class="panel-image-cap">${esc(anchor.imageCaption)}</figcaption>` : ''}
@@ -405,53 +480,56 @@ export function openInfoPanel(anchor, handlers = {}) {
       </figure>`
     : '';
 
+  const episodeHtml = hasEpisode(anchor.id)
+    ? `<div class="panel-quest-card fade-in-up" style="--ep-accent:${theme.color};animation-delay:.58s">
+        <button class="episode-enter-btn ${isCompleted(anchor.id) ? 'completed' : ''}" id="episode-enter">
+          <span class="ee-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M6 5h12v14H6z"/><path d="M4 5h16M4 19h16M9 9h6M9 13h4"/></svg>
+          </span>
+          <span class="ee-copy">${esc(getText(isCompleted(anchor.id) ? 'episode.replay_cta' : 'episode.cta'))}</span>
+          <span class="ee-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>`
+    : '';
+
+  const wantHtml = `
+    <section class="panel-want-card fade-in-up" style="animation-delay:.64s">
+      <div>
+        <span>${esc(visitLabel)}</span>
+        <b>${esc(visitPrimary)}</b>
+        ${visitSecondary}
+      </div>
+      ${renderWantMiniButton(anchor, 'anchor-want-toggle')}
+    </section>`;
+
   card.style.boxShadow = `0 24px 80px -20px ${theme.color}40, inset 0 1px 0 0 rgba(255,255,255,0.06)`;
   card.innerHTML = `
     <div class="glass-top-band" style="background:linear-gradient(90deg,transparent,${theme.color},transparent)"></div>
     <button class="close-btn" id="panel-close" aria-label="${esc(getText('panel.close'))}">✕</button>
 
-    <div class="mb-5 flex items-center gap-2 fade-in-up" style="animation-delay:.1s">
-      <span class="h-2 w-2 rounded-full" style="background:${theme.color};box-shadow:0 0 8px ${theme.color}"></span>
-      <span class="text-[11px] font-semibold tracking-[0.18em]" style="color:${theme.color}">
-        ${esc(pick(theme.label))}
-      </span>
-      ${anchor.era ? `<span class="ml-auto text-[10px] tracking-widest text-[#8a7a62]">${esc(anchor.era)}</span>` : ''}
-    </div>
+    <section class="impact-brief fade-in-up" style="--impact-accent:${theme.color};animation-delay:.1s">
+      <div class="impact-kicker">
+        <span class="impact-dot"></span>
+        <span>${esc(pick(theme.shortName || theme.label))}</span>
+        ${anchor.era ? `<span class="impact-era">${esc(anchor.era)}</span>` : ''}
+      </div>
+      <h2 class="impact-place font-brush">${esc(pick(anchor.name))}</h2>
+      <p class="impact-title font-brush">${esc(pick(anchor.title))}</p>
+      ${imageHtml}
+      <p class="impact-story panel-description">
+        <span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span>
+      </p>
+      <div class="impact-facts">
+        <span>
+          <b>${esc(getText(subjectLabelKey))}</b>
+          ${esc(pick(anchor.hero))}
+        </span>
+      </div>
+    </section>
 
-    <h2 class="panel-place-title font-brush fade-in-up" style="animation-delay:.2s">
-      ${esc(pick(anchor.name))}
-    </h2>
-
-    <p class="panel-story-title font-brush fade-in-up" style="animation-delay:.32s">${esc(pick(anchor.title))}</p>
-
-    <div class="mt-6 rounded-2xl border border-[#9a7b32]/20 bg-[#fffcf4]/45 px-4 py-3 fade-in-up" style="animation-delay:.42s">
-      <span class="block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText(subjectLabelKey))}</span>
-      <span class="mt-1 block font-brush text-xl text-compass-amber">${esc(pick(anchor.hero))}</span>
-    </div>
-
-    ${imageHtml}
-
-    <div class="mt-6 fade-in-up" style="animation-delay:.52s">
-      <span class="mb-3 block text-[10px] tracking-[0.2em] text-[#8a7a62]">${esc(getText('panel.ripple'))}</span>
-      <p class="panel-description font-serif text-[17px] text-[#2b2118]"><span id="typed-text"></span><span class="typewriter-caret" id="typed-caret"></span></p>
-    </div>
-
-    ${linksHtml}
-    ${metaHtml}
-
-    <div class="panel-quest-card fade-in-up" style="--ep-accent:${theme.color};animation-delay:.85s">
-      ${
-        hasEpisode(anchor.id)
-          ? `<button class="episode-enter-btn ${isCompleted(anchor.id) ? 'completed' : ''}" id="episode-enter">
-              <span class="ee-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false"><path d="M6 5h12v14H6z"/><path d="M4 5h16M4 19h16M9 9h6M9 13h4"/></svg>
-              </span>
-              <span class="ee-copy">${esc(getText(isCompleted(anchor.id) ? 'episode.replay_cta' : 'episode.cta'))}</span>
-              <span class="ee-arrow" aria-hidden="true">→</span>
-            </button>`
-          : ''
-      }
-    </div>`;
+    ${episodeHtml}
+    ${wantHtml}
+    ${linksHtml}`;
 
   const closeBtn = document.getElementById('panel-close');
   if (closeBtn) closeBtn.addEventListener('click', onClose);
@@ -461,6 +539,10 @@ export function openInfoPanel(anchor, handlers = {}) {
   if (epBtn && onEnterEpisode) {
     epBtn.addEventListener('click', () => onEnterEpisode(anchor));
   }
+
+  bindWantToggle(document.getElementById('anchor-want-toggle'), anchor, {
+    onChange: () => showToast(getText(isWantToVisit(anchor.id) ? 'want.toast_added' : 'want.toast_removed')),
+  });
 
   // 连线条目点击
   card.querySelectorAll('.link-row').forEach((row) => {
@@ -473,6 +555,7 @@ export function openInfoPanel(anchor, handlers = {}) {
   });
 
   panel.classList.add('open');
+  document.body.classList.add('info-panel-open');
   runTypewriter(pick(anchor.desc) || getText('panel.decoding'));
 }
 
@@ -514,6 +597,7 @@ export function openForeignPanel(link, handlers = {}) {
   const closeBtn = document.getElementById('panel-close');
   if (closeBtn) closeBtn.addEventListener('click', onClose);
   panel.classList.add('open');
+  document.body.classList.add('info-panel-open');
   runTypewriter(pick(link.desc) || pick(link.eventName) || getText('panel.decoding'));
 }
 
@@ -570,6 +654,7 @@ export function closeInfoPanel() {
   currentAnchor = null;
   const panel = document.getElementById('info-panel');
   if (panel) panel.classList.remove('open');
+  document.body.classList.remove('info-panel-open');
   stopTypewriter();
 }
 
@@ -805,9 +890,452 @@ function fmtDuration(min) {
   return `${m} ${getText('route.min')}`;
 }
 
+/* ============================================================= */
+/* ===== 路线规划中心（右上角入口：我的想去 + 自由选择）========= */
+/* ============================================================= */
+
+const ROUTE_PLANNER_RECOMMENDATIONS = [
+  {
+    id: 'wutong-cloud',
+    title: { zh: '梧桐登云步道', en: 'Wutong Cloud-Ascent Trail' },
+    meta: { zh: '罗湖 · 登高看城海', en: 'Luohu · city-and-sea summit' },
+    route: { zh: '梧桐山风景名胜区主入口 → 登云道 → 小梧桐 → 好汉坡 → 大梧桐 → 秀桐道', en: 'Wutong Mountain main entrance → Dengyun Trail → Xiao Wutong → Hero Slope → Da Wutong → Xiutong Road' },
+    reason: { zh: '深圳最经典的登高线之一，山顶能把盐田港、城市天际线与山脊层次一起收入视野。', en: 'A classic Shenzhen climb where port, skyline and ridge views gather in one route.' },
+    navKeyword: '梧桐山风景名胜区主入口 登云道',
+  },
+  {
+    id: 'qiniang-geology',
+    title: { zh: '七娘山主峰科考线', en: 'Qiniang Mountain Research Trail' },
+    meta: { zh: '大鹏 · 火山地质与山海', en: 'Dapeng · volcanic geology and sea views' },
+    route: { zh: '大鹏半岛国家地质公园 → 一号至四号观景平台 → 七娘山主峰观景平台', en: 'Dapeng Peninsula Geopark → viewing platforms 1-4 → Qiniang summit platform' },
+    reason: { zh: '适合把深圳东部的海岸、地质和山脊风景合成一条强记忆路线。', en: 'A memorable eastern-Shenzhen route joining coast, geology and ridgelines.' },
+    navKeyword: '大鹏半岛国家地质公园 七娘山主峰科考线',
+  },
+  {
+    id: 'kunpeng-city-ridge',
+    title: { zh: '鲲鹏径城市山脊段', en: 'Kunpeng Trail Urban Ridge Section' },
+    meta: { zh: '福田/梅林 · 山海连城体验', en: 'Futian/Meilin · mountain-city connector' },
+    route: { zh: '笔架山公园 → 银湖山 → 鲲鹏径节点 → 梅林山', en: 'Bijiashan Park → Yinhu Mountain → Kunpeng Trail node → Meilin Mountain' },
+    reason: { zh: '用半日体验深圳远足径的“城市山脊”，不离城区也能有穿林越岭的节奏。', en: 'A half-day taste of Shenzhen’s urban ridgeline without leaving the city core.' },
+    navKeyword: '笔架山公园 银湖山 梅林山 鲲鹏径',
+  },
+  {
+    id: 'maluan-waterfall',
+    title: { zh: '马峦山山水环线', en: 'Maluan Mountain Landscape Loop' },
+    meta: { zh: '坪山/盐田 · 溪谷郊野', en: 'Pingshan/Yantian · valley countryside' },
+    route: { zh: '梅沙湾公园 → 马峦山郊野公园 → 瀑布溪谷 → 山海观景段', en: 'Meisha Bay Park → Maluan Mountain Country Park → waterfall valley → sea-view section' },
+    reason: { zh: '比城市公园更野趣，又比长距离穿越更容易控制节奏，适合做周末轻徒步。', en: 'Wilder than a city park but easier to pace than a full long-distance crossing.' },
+    navKeyword: '马峦山郊野公园 梅沙湾公园',
+  },
+  {
+    id: 'nanshan-shekou',
+    title: { zh: '大南山蛇口海景线', en: 'Dananshan-Shekou Sea-View Trail' },
+    meta: { zh: '南山 · 轻量登山', en: 'Nanshan · light hill walk' },
+    route: { zh: '大南山登山口 → 山顶观景台 → 蛇口/海上世界周边', en: 'Dananshan trailhead → summit lookout → Shekou / Sea World area' },
+    reason: { zh: '强度友好、交通方便，能把深圳湾、蛇口港与南山科技城区放在同一视线里。', en: 'Accessible and friendly, with views toward Shenzhen Bay, Shekou and Nanshan’s tech district.' },
+    navKeyword: '深圳大南山登山口 蛇口',
+  },
+];
+
+let routePlannerState = {
+  activeTab: 'free',
+  userPos: null,
+  selectedIds: new Set(),
+  selectionOrder: [],
+  itinerary: null,
+  itineraryTheme: null,
+  planning: false,
+  handlers: {},
+};
+
+function activeRouteSelectionIds() {
+  return routePlannerState.selectionOrder.slice();
+}
+
+function setRoutePlannerSelected(anchorId, selected) {
+  if (!anchorId) return;
+  if (selected) {
+    routePlannerState.selectedIds.add(anchorId);
+    if (!routePlannerState.selectionOrder.includes(anchorId)) {
+      routePlannerState.selectionOrder.push(anchorId);
+    }
+    return;
+  }
+  routePlannerState.selectedIds.delete(anchorId);
+  routePlannerState.selectionOrder = routePlannerState.selectionOrder.filter((id) => id !== anchorId);
+}
+
+function clearActiveRouteSelection() {
+  routePlannerState.selectedIds.clear();
+  routePlannerState.selectionOrder = [];
+}
+
+function hasValidCoord(anchor) {
+  return !!(
+    anchor &&
+    Array.isArray(anchor.coordinates) &&
+    Number.isFinite(anchor.coordinates[0]) &&
+    Number.isFinite(anchor.coordinates[1])
+  );
+}
+
+function buildTencentMarkerUrl(anchor) {
+  if (!hasValidCoord(anchor)) return '';
+  const [lng, lat] = anchor.coordinates;
+  const params = new URLSearchParams({
+    marker: `coord:${lat.toFixed(6)},${lng.toFixed(6)};title:${pick(anchor.name)}`,
+    referer: 'shikongluopan',
+  });
+  return `https://apis.map.qq.com/uri/v1/marker?${params.toString()}`;
+}
+
+function buildTencentSearchUrl(keyword) {
+  if (!keyword) return '';
+  const params = new URLSearchParams({
+    keyword,
+    region: '深圳',
+    referer: 'shikongluopan',
+  });
+  return `https://apis.map.qq.com/uri/v1/search?${params.toString()}`;
+}
+
+function buildRoutePlannerTencentUrl(itinerary) {
+  const stops = itinerary && itinerary.stops ? itinerary.stops.map((stop) => stop.anchor).filter(hasValidCoord) : [];
+  if (!stops.length) return '';
+  if (stops.length === 1 && !itinerary.startCoord) return buildTencentMarkerUrl(stops[0]);
+  const firstStop = stops[0];
+  const lastStop = stops[stops.length - 1];
+  const fromCoord = Array.isArray(itinerary.startCoord) ? itinerary.startCoord : firstStop.coordinates;
+  const fromName = Array.isArray(itinerary.startCoord) ? getText('route.start_short') : pick(firstStop.name);
+  const [fromLng, fromLat] = fromCoord;
+  const [toLng, toLat] = lastStop.coordinates;
+  const params = new URLSearchParams({
+    type: itinerary.modeKey === 'drive' ? 'drive' : 'walk',
+    from: fromName,
+    fromcoord: `${fromLat.toFixed(6)},${fromLng.toFixed(6)}`,
+    to: pick(lastStop.name),
+    tocoord: `${toLat.toFixed(6)},${toLng.toFixed(6)}`,
+    referer: 'shikongluopan',
+  });
+  if (itinerary.modeKey === 'drive') params.set('policy', '0');
+  return `https://apis.map.qq.com/uri/v1/routeplan?${params.toString()}`;
+}
+
+function openMapUrl(url) {
+  if (!url) {
+    showToast(getText('route_planner.nav_unavailable'));
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+}
+
+function routeAnchorInfo(anchor) {
+  const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
+  const location = anchorLocationText(anchor);
+  return {
+    theme,
+    location,
+    title: pick(anchor.title),
+    name: pick(anchor.name),
+  };
+}
+
+function sortedFreeRouteAnchors() {
+  const wantIds = new Set(getWantToVisitAnchors().map((anchor) => anchor.id));
+  const canMeasure = routePlannerState.userPos && _haversine;
+  const [lng, lat] = canMeasure ? routePlannerState.userPos : [null, null];
+  return ANCHORS.map((anchor, index) => {
+    const dist = canMeasure ? _haversine(lng, lat, anchor.coordinates[0], anchor.coordinates[1]) : Number.POSITIVE_INFINITY;
+    return {
+      anchor,
+      dist,
+      index,
+      wanted: wantIds.has(anchor.id),
+    };
+  })
+    .sort((a, b) => {
+      if (a.wanted !== b.wanted) return a.wanted ? -1 : 1;
+      if (Number.isFinite(a.dist) && Number.isFinite(b.dist) && a.dist !== b.dist) return a.dist - b.dist;
+      return a.index - b.index;
+    })
+    .map((item) => ({
+      ...item.anchor,
+      _routePlannerDist: Number.isFinite(item.dist) ? item.dist : undefined,
+      _routePlannerWanted: item.wanted,
+    }));
+}
+
+function routeAnchorRow(anchor, { source = 'free' } = {}) {
+  const info = routeAnchorInfo(anchor);
+  const selected = routePlannerState.selectedIds.has(anchor.id);
+  const detail =
+    source === 'free' && Number.isFinite(anchor._routePlannerDist)
+      ? `${anchor._routePlannerWanted ? `${getText('route_planner.want_badge')} · ` : ''}${fmtDist(anchor._routePlannerDist)} · ${info.location || info.title}`
+      : info.location || info.title;
+  return `
+    <article class="route-anchor-row ${selected ? 'selected' : ''}" style="--row-accent:${info.theme.color}" data-anchor-id="${esc(anchor.id)}">
+      <button class="route-anchor-info" data-route-action="view-anchor" data-anchor-id="${esc(anchor.id)}">
+        <span class="route-anchor-copy">
+          <span class="route-anchor-top">
+            <span class="route-dot"></span>
+            <b>${esc(info.name)}</b>
+          </span>
+          <span>${esc(detail)}</span>
+        </span>
+      </button>
+      <button class="route-anchor-select" data-route-action="toggle-select" data-anchor-id="${esc(anchor.id)}" role="checkbox" aria-checked="${selected}" aria-label="${esc(info.name)}">
+        ${selected ? '✓' : ''}
+      </button>
+    </article>`;
+}
+
+function routePlannerTabsHtml() {
+  const tabs = [
+    ['free', getText('route_planner.free_tab')],
+    ['recommend', getText('route_planner.recommend_tab')],
+  ];
+  return `
+    <div class="route-planner-tabs" role="tablist">
+      ${tabs
+        .map(
+          ([key, label]) =>
+            `<button class="route-planner-tab ${routePlannerState.activeTab === key ? 'active' : ''}" data-route-tab="${key}" role="tab" aria-selected="${routePlannerState.activeTab === key}">${esc(label)}</button>`
+        )
+        .join('')}
+    </div>`;
+}
+
+function routePlannerActionBarHtml() {
+  const selectedCount = activeRouteSelectionIds().length;
+  return `
+    <div class="route-plan-bar">
+      <span>${esc(getText('route_planner.selected', { count: selectedCount }))}</span>
+      <div class="route-plan-actions">
+        <button class="rt-select-action" data-route-action="clear-selection" ${selectedCount ? '' : 'disabled'}>${esc(getText('route.clear_selected'))}</button>
+        <button class="rt-plan-btn route-generate-btn" data-route-action="plan-route" ${selectedCount && !routePlannerState.planning ? '' : 'disabled'}>
+          <span class="cp-label">${esc(getText(routePlannerState.planning ? 'compass.planning' : 'route_planner.plan'))}</span>
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderRecommendationTab() {
+  return `
+    <section class="route-recommend-panel">
+      <div class="route-recommend-intro">
+        <b>${esc(getText('route_planner.recommend_title'))}</b>
+        <p>${esc(getText('route_planner.recommend_body'))}</p>
+      </div>
+      <div class="route-recommend-list">
+        ${ROUTE_PLANNER_RECOMMENDATIONS.map((route) => `
+          <article class="route-recommend-card">
+            <div class="route-recommend-copy">
+              <span>${esc(pick(route.meta))}</span>
+              <b>${esc(pick(route.title))}</b>
+              <p>${esc(pick(route.reason))}</p>
+              <em>${esc(getText('route_planner.recommend_nav'))}：${esc(pick(route.route))}</em>
+            </div>
+            <button class="route-recommend-nav" data-route-action="nav-recommendation" data-recommendation-id="${esc(route.id)}">${esc(getText('route_planner.recommend_open'))}</button>
+          </article>
+        `).join('')}
+      </div>
+    </section>`;
+}
+
+function renderFreeTab() {
+  return `
+    ${routePlannerActionBarHtml()}
+    <div class="route-anchor-list-full">
+      ${sortedFreeRouteAnchors().map((anchor) => routeAnchorRow(anchor, { source: 'free' })).join('')}
+    </div>`;
+}
+
+function routePlannerResultHtml() {
+  const itinerary = routePlannerState.itinerary;
+  if (!itinerary || !itinerary.stops || !itinerary.stops.length) return '';
+  const stops = itinerary.stops
+    .map((stop, index) => {
+      const info = routeAnchorInfo(stop.anchor);
+      const meta = stop.legKm > 0 ? `${fmtDist(stop.legKm)} · ${fmtDuration(stop.cumMin)}` : info.location;
+      return `
+        <button class="route-result-stop" data-route-action="view-anchor" data-anchor-id="${esc(stop.anchor.id)}">
+          <span class="route-result-index">${esc(getText('route_planner.stop', { index: index + 1 }))}</span>
+          <div>
+            <b>${esc(info.name)}</b>
+            <span>${esc(meta)}</span>
+          </div>
+          <span class="route-result-go" aria-hidden="true">→</span>
+        </button>`;
+    })
+    .join('');
+  return `
+    <section class="route-result-card">
+      <div class="route-result-head">
+        <h3>${esc(getText('route_planner.route_title'))}</h3>
+        <span>${esc(fmtDist(itinerary.totalKm))} · ${esc(fmtDuration(itinerary.totalMin))}</span>
+      </div>
+      <div class="route-result-list">${stops}</div>
+      <div class="route-result-footer">
+        <button class="route-nav" data-route-action="nav-itinerary">${esc(getText('route.open_tencent'))}</button>
+        <button class="route-clear" data-route-action="continue-select">${esc(getText('route_planner.continue_select'))}</button>
+        <button class="route-clear" data-route-action="clear-route">${esc(getText('route_planner.clear_route'))}</button>
+      </div>
+    </section>`;
+}
+
+export function renderRoutePlanner(root, handlers = {}) {
+  routePlannerState.handlers = handlers;
+  const el = document.createElement('aside');
+  el.id = 'route-planner-panel';
+  el.innerHTML = `
+    <div class="route-planner-card">
+      <div class="route-planner-head">
+        <div>
+          <span class="route-planner-title">${esc(getText('route_planner.title'))}</span>
+          <p>${esc(getText('route_planner.subtitle'))}</p>
+        </div>
+        <button class="close-btn" id="route-planner-close" style="position:static;width:30px;height:30px">✕</button>
+      </div>
+      <div class="route-planner-content" id="route-planner-content"></div>
+    </div>`;
+  root.appendChild(el);
+  el.querySelector('#route-planner-close').addEventListener('click', closeRoutePlanner);
+}
+
+export function openRoutePlanner(tab = 'free') {
+  const el = document.getElementById('route-planner-panel');
+  if (tab) routePlannerState.activeTab = tab === 'want' ? 'recommend' : tab;
+  if (el) el.classList.add('open');
+  renderRoutePlannerContent();
+}
+
+export function setRoutePlannerLocation(pos) {
+  routePlannerState.userPos =
+    Array.isArray(pos) && Number.isFinite(pos[0]) && Number.isFinite(pos[1])
+      ? pos
+      : null;
+  if (isRoutePlannerOpen() && routePlannerState.activeTab === 'free') renderRoutePlannerContent();
+}
+
+export function closeRoutePlanner() {
+  const el = document.getElementById('route-planner-panel');
+  if (el) el.classList.remove('open');
+}
+
+export function isRoutePlannerOpen() {
+  const el = document.getElementById('route-planner-panel');
+  return !!(el && el.classList.contains('open'));
+}
+
+export function setRoutePlannerPlanning(loading) {
+  routePlannerState.planning = !!loading;
+  const buttons = document.querySelectorAll('#route-planner-panel .route-generate-btn');
+  buttons.forEach((btn) => {
+    btn.classList.toggle('loading', !!loading);
+    btn.disabled = !!loading || activeRouteSelectionIds().length === 0;
+  });
+  const label = document.querySelector('#route-planner-panel .route-generate-btn .cp-label');
+  if (label) label.textContent = getText(loading ? 'compass.planning' : 'route_planner.plan');
+}
+
+export function showRoutePlannerItinerary(itinerary, themeKey) {
+  routePlannerState.itinerary = itinerary;
+  routePlannerState.itineraryTheme = themeKey;
+  openRoutePlanner(routePlannerState.activeTab || 'want');
+}
+
+export function clearRoutePlannerItinerary({ clearSelection = false } = {}) {
+  routePlannerState.itinerary = null;
+  routePlannerState.itineraryTheme = null;
+  if (clearSelection) {
+    routePlannerState.selectedIds.clear();
+    routePlannerState.selectionOrder = [];
+  }
+  if (isRoutePlannerOpen()) renderRoutePlannerContent();
+}
+
+export function refreshRoutePlannerTexts() {
+  const panel = document.getElementById('route-planner-panel');
+  if (!panel) return;
+  const head = panel.querySelector('.route-planner-head > div');
+  if (head) {
+    head.innerHTML = `
+      <span class="route-planner-title">${esc(getText('route_planner.title'))}</span>
+      <p>${esc(getText('route_planner.subtitle'))}</p>`;
+  }
+  if (isRoutePlannerOpen()) renderRoutePlannerContent();
+}
+
+function renderRoutePlannerContent() {
+  const box = document.getElementById('route-planner-content');
+  if (!box) return;
+  const content =
+    routePlannerState.activeTab === 'recommend'
+      ? renderRecommendationTab()
+      : renderFreeTab();
+  box.innerHTML = `
+    ${routePlannerResultHtml()}
+    ${routePlannerTabsHtml()}
+    ${content}`;
+
+  box.querySelectorAll('[data-route-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      routePlannerState.activeTab = btn.dataset.routeTab || 'recommend';
+      renderRoutePlannerContent();
+    });
+  });
+
+  box.querySelectorAll('[data-route-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.routeAction;
+      const anchorId = btn.dataset.anchorId;
+      const anchor = ANCHORS.find((item) => item.id === anchorId);
+      if (action === 'toggle-select') {
+        setRoutePlannerSelected(anchorId, !routePlannerState.selectedIds.has(anchorId));
+        renderRoutePlannerContent();
+      } else if (action === 'clear-selection') {
+        clearActiveRouteSelection();
+        renderRoutePlannerContent();
+      } else if (action === 'plan-route') {
+        const ids = activeRouteSelectionIds();
+        if (!ids.length) {
+          showToast(getText('route_planner.no_selection'));
+          return;
+        }
+        if (routePlannerState.handlers.onPlanRoute) {
+          routePlannerState.handlers.onPlanRoute(
+            'all',
+            'walk',
+            ids,
+            { source: 'routePlanner' }
+          );
+        }
+      } else if (action === 'view-anchor' && anchor && routePlannerState.handlers.onAnchorClick) {
+        routePlannerState.handlers.onAnchorClick(anchor);
+      } else if (action === 'nav-itinerary') {
+        openMapUrl(buildRoutePlannerTencentUrl(routePlannerState.itinerary));
+      } else if (action === 'nav-recommendation') {
+        const route = ROUTE_PLANNER_RECOMMENDATIONS.find((item) => item.id === btn.dataset.recommendationId);
+        openMapUrl(buildTencentSearchUrl(route && route.navKeyword));
+      } else if (action === 'continue-select') {
+        clearRoutePlannerItinerary();
+      } else if (action === 'clear-route') {
+        if (routePlannerState.handlers.onClearRoute) routePlannerState.handlers.onClearRoute();
+        else clearRoutePlannerItinerary();
+      } else if (action === 'go-nearby') {
+        closeRoutePlanner();
+        if (routePlannerState.handlers.onOpenNearby) routePlannerState.handlers.onOpenNearby();
+      }
+    });
+  });
+}
+
 let compassState = {
   userPos: null,
   simulated: false,
+  view: 'clues',
+  clueItems: [],
+  activeClueAnchorId: null,
   activeRouteTab: 'diy',
   routeMode: 'walk',
   itinerary: null,
@@ -820,8 +1348,8 @@ const RECOMMENDED_ROUTES = [
   {
     id: 'sz-speed',
     icon: '🏙️',
-    theme: 'engineering',
-    title: { zh: '深圳速度半日线', en: 'Shenzhen Speed Half-Day Route' },
+    theme: 'reform',
+    title: { zh: '深圳改革速度半日线', en: 'Shenzhen Reform Speed Half-Day Route' },
     desc: { zh: '从国贸到莲花山，再看资本市场与硬件街区。', en: 'From Guomao to Lianhua Mountain, capital markets and hardware streets.' },
     ids: ['N-EG01', 'M11', 'N-EG02', 'N-SC01'],
   },
@@ -843,6 +1371,342 @@ const RECOMMENDED_ROUTES = [
   },
 ];
 
+const configuredCluesByAnchor = new Map(nearbyClues.map((clue) => [clue.anchorId, clue]));
+const CLUE_COVER_FALLBACK = 'public/assets/clues/fallback-cover.webp';
+const CLUE_COVER_VERSION = 'generated-20260701-dji-1';
+const COMPASS_CLUE_LIMIT = 8;
+
+function clampScore(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+function pickClueText(field) {
+  if (field == null) return '';
+  if (typeof field === 'string') return field;
+  const lang = getLang();
+  if (field[lang]) return field[lang];
+  if (lang === 'zh') return field.zh || field.en || '';
+  return field.en || field.zh || '';
+}
+
+function pickList(field) {
+  const value = pickClueText(field);
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  return String(value).split(/\s*\/\s*/).filter(Boolean);
+}
+
+function textIncludesAny(text, keywords) {
+  const value = String(text || '').toLowerCase();
+  return keywords.some((keyword) => value.includes(String(keyword).toLowerCase()));
+}
+
+function anchorText(anchor) {
+  return [
+    anchor.id,
+    anchor.theme,
+    anchor.contentType,
+    anchor.name && anchor.name.zh,
+    anchor.name && anchor.name.en,
+    anchor.title && anchor.title.zh,
+    anchor.title && anchor.title.en,
+    anchor.hero && anchor.hero.zh,
+    anchor.hero && anchor.hero.en,
+    anchor.desc && anchor.desc.zh,
+    anchor.desc && anchor.desc.en,
+    anchor.checkinTag,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+function anchorNames(anchor) {
+  return {
+    zh: (anchor.name && (anchor.name.zh || anchor.name.en)) || anchor.id,
+    en: (anchor.name && (anchor.name.en || anchor.name.zh)) || anchor.id,
+  };
+}
+
+function pickFallbackTemplate(anchor) {
+  const source = anchorText(anchor);
+  if (textIncludesAny(source, ['红树林', '湿地', '生态', '候鸟', 'esg', 'mangrove', 'wetland', 'ecology'])) {
+    return 'ecology';
+  }
+  if (textIncludesAny(source, ['证券', '资本', '金融', '交易所', '制度', '市场化', 'stock', 'capital', 'finance', 'exchange', 'institution', 'market reform'])) {
+    return 'finance';
+  }
+  if (anchor.globalLinks && anchor.globalLinks.length) {
+    return 'global';
+  }
+  if (textIncludesAny(source, ['科技', '电子', '硬件', '制造', '创新', '芯片', '工厂', '科学', 'tech', 'electronics', 'hardware', 'manufacturing', 'innovation', 'supply chain'])) {
+    return 'tech';
+  }
+  if (textIncludesAny(source, ['铁路', '旧址', '档案', '工程', 'bridge', 'railway', 'archive', 'engineering'])) {
+    return 'archive';
+  }
+  if (anchor.theme === 'reform') return 'reform';
+  if (anchor.contentType === 'person' || textIncludesAny(source, ['人物', '见证', 'founder', 'pioneer', 'builder'])) {
+    return 'character';
+  }
+  if (textIncludesAny(source, ['古城', '古港', '港口', '地名', '天后', '庙', 'temple', 'harbor', 'port', 'ancient', 'old'])) {
+    return 'place';
+  }
+  if (anchor.theme === 'navigation' || anchor.theme === 'civilization') return 'place';
+  return 'city';
+}
+
+function generatedClueByTemplate(anchor, templateKey) {
+  const name = anchorNames(anchor);
+  const generatedBackground =
+    anchor && /generated/i.test(String(anchor.imageLicense || ''))
+      ? anchor.placeImage || anchor.heroImage || ''
+      : '';
+  const common = {
+    id: `clue_generated_${anchor.id}`,
+    anchorId: anchor.id,
+    distancePrefix: { zh: '', en: '' },
+    backgroundImage: generatedBackground,
+    accentColor: '#3f7d6e',
+    manual: false,
+    weak: false,
+  };
+  const templates = {
+    reform: {
+      type: 'character',
+      typeLabel: { zh: '人物线索', en: 'Character Clue' },
+      title: { zh: `${name.zh}为什么会留下改革记忆？`, en: `Why does ${name.en} hold a memory of reform?` },
+      visualStyleTag: 'reform_witness',
+      accentColor: '#b06b36',
+      hook: {
+        zh: '这里留下了一段关于深圳如何走向开放前沿的记忆。',
+        en: 'A memory of how Shenzhen moved toward the front line of opening is waiting for your questions.',
+      },
+      question: {
+        zh: '为什么深圳会成为中国改革开放的重要窗口？',
+        en: 'Why did Shenzhen become an important window of reform and opening?',
+      },
+      reward: { zh: ['改革记忆知识卡'], en: ['Reform Memory Card'] },
+      cta: { zh: '追寻记忆', en: 'Trace the Memory' },
+      priority: 68,
+    },
+    finance: {
+      type: 'archive',
+      typeLabel: { zh: '档案线索', en: 'Archive Clue' },
+      title: { zh: '这份制度实验档案为什么缺了一页？', en: 'Why is a page missing from this institutional experiment archive?' },
+      visualStyleTag: 'sealed_archive',
+      accentColor: '#2f8f80',
+      hook: {
+        zh: '一份关于制度创新的档案缺少了关键一页。',
+        en: 'An archive about institutional innovation is missing a key page, pointing to a real anchor nearby.',
+      },
+      question: {
+        zh: '这个地点如何见证中国市场化改革的一次重要实验？',
+        en: 'How did this place witness an important experiment in China’s market-oriented reform?',
+      },
+      reward: { zh: ['制度实验知识卡'], en: ['Institutional Experiment Card'] },
+      cta: { zh: '展开档案', en: 'Open Archive' },
+      priority: 70,
+    },
+    tech: {
+      type: 'object',
+      typeLabel: { zh: '器物线索', en: 'Object Clue' },
+      title: { zh: '一件普通器物为什么能连向全球网络？', en: 'Why can an ordinary object lead into a global network?' },
+      visualStyleTag: 'component_network',
+      accentColor: '#287f8f',
+      hook: {
+        zh: '一件看似普通的器物，连接着制造、创业、供应链与全球市场。',
+        en: 'A seemingly ordinary object connects manufacturing, entrepreneurship, supply chains and global markets.',
+      },
+      question: {
+        zh: '深圳为什么能形成面向世界的科技创新生态？',
+        en: 'Why could Shenzhen form a technology innovation ecosystem facing the world?',
+      },
+      reward: { zh: ['科技创新知识卡'], en: ['Tech Innovation Card'] },
+      cta: { zh: '追踪器物', en: 'Trace the Object' },
+      priority: 66,
+    },
+    ecology: {
+      type: 'city-question',
+      typeLabel: { zh: '城市问题', en: 'City Question' },
+      title: { zh: '高速发展的城市为什么还要保留自然记忆？', en: 'Why does a fast-growing city keep a memory of nature?' },
+      visualStyleTag: 'green_question',
+      accentColor: '#3f7d6e',
+      hook: {
+        zh: '在高速发展的城市中，有一片自然记忆被保留下来，它提出了一个关于发展的选择题。',
+        en: 'Inside a fast-growing city, a piece of natural memory remains and poses a choice about development.',
+      },
+      question: {
+        zh: '现代城市如何在发展与生态之间寻找平衡？',
+        en: 'How can a modern city balance development and ecology?',
+      },
+      reward: { zh: ['生态城市知识卡'], en: ['Eco-City Card'] },
+      cta: { zh: '调查问题', en: 'Investigate the Question' },
+      priority: 64,
+    },
+    place: {
+      type: 'place-name',
+      typeLabel: { zh: '地名线索', en: 'Place Name Clue' },
+      title: { zh: '这个地名背后藏着怎样的城市来路？', en: 'What earlier path is hidden inside this place name?' },
+      visualStyleTag: 'old_map',
+      accentColor: '#9a7b32',
+      hook: {
+        zh: '一个地名保留了城市更早的来路，线索藏在地图与记忆之间。',
+        en: 'A place name preserves an earlier path into the city, with clues hidden between maps and memory.',
+      },
+      question: {
+        zh: '这个地方如何帮助你理解深圳更早的历史？',
+        en: 'How can this place help you understand Shenzhen’s earlier history?',
+      },
+      reward: { zh: ['城市来路知识卡'], en: ['City Origins Card'] },
+      cta: { zh: '打开地图', en: 'Open the Map' },
+      priority: 62,
+    },
+    character: {
+      type: 'character',
+      typeLabel: { zh: '人物线索', en: 'Character Clue' },
+      title: { zh: `${name.zh}为什么留下了一段未完讲述？`, en: `Why did ${name.en} leave an unfinished story?` },
+      visualStyleTag: 'witness_memory',
+      accentColor: '#b06b36',
+      hook: {
+        zh: '一位见证者留下了一段未讲完的记忆。',
+        en: 'A witness left behind an unfinished memory, waiting for your next question.',
+      },
+      question: {
+        zh: '这个人物如何影响了这座城市的精神？',
+        en: 'How did this figure shape the spirit of the city?',
+      },
+      reward: { zh: ['见证者知识卡'], en: ['Witness Card'] },
+      cta: { zh: '追问见证者', en: 'Question the Witness' },
+      priority: 60,
+    },
+    archive: {
+      type: 'archive',
+      typeLabel: { zh: '档案线索', en: 'Archive Clue' },
+      title: { zh: '这段城市记忆为什么留下了空白？', en: 'Why did this urban memory leave a blank page?' },
+      visualStyleTag: 'missing_record',
+      accentColor: '#2f8f80',
+      hook: {
+        zh: '一段关键记录留下了空白，线索正把你带向这座城市的一个真实现场。',
+        en: 'A key record has left a blank, leading you toward a real site in the city.',
+      },
+      question: {
+        zh: '这段记录如何改变人们理解深圳的方式？',
+        en: 'How does this record change the way people understand Shenzhen?',
+      },
+      reward: { zh: ['历史档案知识卡'], en: ['Historical Archive Card'] },
+      cta: { zh: '展开档案', en: 'Open Archive' },
+      priority: 58,
+    },
+    global: {
+      type: 'global-link',
+      typeLabel: { zh: '世界连接', en: 'Global Link' },
+      title: { zh: '这个地点如何把深圳连接到世界？', en: 'How does this place connect Shenzhen to the world?' },
+      visualStyleTag: 'global_echo',
+      accentColor: '#3c8c9d',
+      hook: {
+        zh: '这个地点把本地选择连接到更大的世界网络。',
+        en: 'This place connects a local choice to a wider world network, waiting for you to inspect its echoes.',
+      },
+      question: {
+        zh: '这个地点如何连接中国与世界？',
+        en: 'How does this place connect China with the world?',
+      },
+      reward: { zh: ['世界连接知识卡'], en: ['Global Link Card'] },
+      cta: { zh: '查看回响', en: 'View the Echo' },
+      priority: 67,
+    },
+    city: {
+      type: 'city-question',
+      typeLabel: { zh: '城市问题', en: 'City Question' },
+      title: { zh: `${name.zh}留下了什么城市问题？`, en: `What urban question does ${name.en} leave behind?` },
+      visualStyleTag: 'urban_question',
+      accentColor: '#3f7d6e',
+      hook: {
+        zh: '这处真实地点留下了一个关于城市选择的问题。',
+        en: 'This real place leaves a question about urban choices, waiting for you to keep investigating.',
+      },
+      question: {
+        zh: '这个地点揭示了深圳发展的哪一次关键选择？',
+        en: 'What key choice in Shenzhen’s development does this place reveal?',
+      },
+      reward: { zh: ['城市问题知识卡'], en: ['Urban Question Card'] },
+      cta: { zh: '调查问题', en: 'Investigate the Question' },
+      priority: 55,
+    },
+  };
+  return { ...common, ...templates[templateKey] };
+}
+
+function makeFallbackClue(anchor) {
+  if (anchor && (anchor.name || anchor.title || anchor.desc)) {
+    return generatedClueByTemplate(anchor, pickFallbackTemplate(anchor));
+  }
+  return {
+    ...generatedClueByTemplate(anchor || { id: 'unknown', name: { zh: '未知锚点', en: 'Unknown Anchor' } }, 'city'),
+    weak: true,
+    priority: 12,
+  };
+}
+
+function getClueForAnchor(anchor) {
+  const manual = configuredCluesByAnchor.get(anchor.id);
+  return manual ? { ...manual, manual: true, weak: false } : makeFallbackClue(anchor);
+}
+
+function formatClueDistance(km, clue) {
+  if (km == null || !Number.isFinite(km)) return pickClueText(clue.distancePrefix);
+  const zh = getLang() === 'zh';
+  if (km < 1) {
+    const meters = Math.max(1, Math.round(km * 1000));
+    return zh ? `${meters}m 处` : `${meters}m away`;
+  }
+  return zh ? `${km.toFixed(1)}km 处` : `${km.toFixed(1)}km away`;
+}
+
+function compareNearbyClueItems(a, b) {
+  const aDist = Number.isFinite(a.dist) ? a.dist : Number.POSITIVE_INFINITY;
+  const bDist = Number.isFinite(b.dist) ? b.dist : Number.POSITIVE_INFINITY;
+  const distDelta = aDist - bDist;
+  if (Math.abs(distDelta) > 0.3) return distDelta;
+
+  const tieBias = (item) => {
+    const manualBias = item.clue && item.clue.manual ? 0.035 : 0;
+    const episodeBias = hasEpisode(item.anchor.id) ? 0.02 : 0;
+    const priorityBias = (clampScore(item.clue.priority == null ? 50 : item.clue.priority) / 100) * 0.015;
+    return manualBias + episodeBias + priorityBias;
+  };
+  const adjustedDelta = (aDist - tieBias(a)) - (bDist - tieBias(b));
+  if (Math.abs(adjustedDelta) > 0.001) return adjustedDelta;
+
+  return distDelta;
+}
+
+function computeCompassClues() {
+  if (!compassState.userPos || !_haversine) return [];
+  const [ulng, ulat] = compassState.userPos;
+  const items = ANCHORS.map((anchor) => {
+    const clue = getClueForAnchor(anchor);
+    const dist = _haversine(ulng, ulat, anchor.coordinates[0], anchor.coordinates[1]);
+    return {
+      anchor,
+      clue,
+      dist,
+    };
+  }).sort(compareNearbyClueItems);
+  const strong = items.filter((item) => !item.clue.weak);
+  if (strong.length >= COMPASS_CLUE_LIMIT) return strong.slice(0, COMPASS_CLUE_LIMIT);
+  return strong.concat(items.filter((item) => item.clue.weak)).slice(0, COMPASS_CLUE_LIMIT);
+}
+
+function getCompassAreaLabel() {
+  if (!compassState.userPos) return getText('clues.area_current');
+  const [lng, lat] = compassState.userPos;
+  const nearCivicCenter = lng >= 114.035 && lng <= 114.07 && lat >= 22.532 && lat <= 22.56;
+  return nearCivicCenter ? getText('clues.area_civic') : getText('clues.area_current');
+}
+
 export function renderCompassPanel(root, handlers = {}) {
   compassState.handlers = handlers;
   const el = document.createElement('aside');
@@ -850,10 +1714,12 @@ export function renderCompassPanel(root, handlers = {}) {
   el.innerHTML = `
     <div class="compass-card">
       <div class="compass-head">
-        <span class="compass-title font-brush">◎ ${esc(getText('compass.title'))}</span>
+        <div class="compass-title">
+          <span class="compass-title-main">${esc(getText('clues.title'))}</span>
+          <span class="compass-title-sub">${esc(getText('clues.title_secondary'))}</span>
+        </div>
         <button class="close-btn" id="compass-close" style="position:static;width:30px;height:30px">✕</button>
       </div>
-      <div class="compass-loc" id="compass-loc"></div>
       <div class="compass-content" id="compass-content"></div>
     </div>`;
   root.appendChild(el);
@@ -862,12 +1728,15 @@ export function renderCompassPanel(root, handlers = {}) {
 
 export function openCompassPanel() {
   const el = document.getElementById('compass-panel');
+  compassState.view = 'clues';
+  document.body.classList.add('compass-panel-open');
   if (el) el.classList.add('open');
   renderCompassContent();
 }
 export function closeCompassPanel() {
   const el = document.getElementById('compass-panel');
   if (el) el.classList.remove('open');
+  document.body.classList.remove('compass-panel-open');
   if (compassState.handlers.onClose) compassState.handlers.onClose();
 }
 export function isCompassOpen() {
@@ -875,17 +1744,35 @@ export function isCompassOpen() {
   return el && el.classList.contains('open');
 }
 
+export function isCompassShowingClues() {
+  return compassState.view === 'clues';
+}
+
+export function getCompassClueIds() {
+  return new Set(compassState.clueItems.map((item) => item.anchor.id));
+}
+
+export function focusCompassClue(anchorId) {
+  if (!anchorId) return;
+  compassState.view = 'clues';
+  compassState.activeClueAnchorId = anchorId;
+  if (!isCompassOpen()) {
+    const el = document.getElementById('compass-panel');
+    if (el) el.classList.add('open');
+  }
+  renderCompassContent();
+  requestAnimationFrame(() => {
+    const card = Array.from(document.querySelectorAll('#compass-panel .clue-card')).find(
+      (item) => item.dataset.anchorId === anchorId
+    );
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
 /** 设置罗盘定位状态（实时 / 模拟）并刷新内容 */
 export function setCompassLocation({ lng, lat, simulated }) {
   compassState.userPos = [lng, lat];
   compassState.simulated = !!simulated;
-  const loc = document.getElementById('compass-loc');
-  if (loc) {
-    loc.innerHTML = `
-      <span class="cl-dot ${simulated ? 'sim' : 'live'}"></span>
-      <span class="cl-text">${esc(getText(simulated ? 'compass.simulated' : 'compass.real'))}</span>
-      <span class="cl-coord">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>`;
-  }
   renderCompassContent();
 }
 
@@ -902,13 +1789,185 @@ function renderCompassContent() {
     dist: _haversine(ulng, ulat, a.coordinates[0], a.coordinates[1]),
   }))
     .sort((x, y) => x.dist - y.dist);
-  const selectedAnchors = ANCHORS.filter((anchor) => compassState.routeSelectedIds.has(anchor.id));
-  const modeBtns = Object.values(TRAVEL_MODES)
-    .map((mode) => {
-      const active = compassState.routeMode === mode.key;
-      return `<button class="rt-mode ${active ? 'active' : ''}" data-mode="${mode.key}">${mode.icon} ${esc(pick(mode.label))}</button>`;
+  compassState.clueItems = computeCompassClues();
+
+  if (compassState.view !== 'free') {
+    renderClueContent(box);
+    return;
+  }
+
+  renderFreeExploreContent(box, items);
+}
+
+function sentenceEnd(text) {
+  const value = String(text || '').trim().replace(/[。.!?？]+$/, '');
+  if (!value) return '';
+  return getLang() === 'zh' ? `${value}。` : `${value}.`;
+}
+
+function normalizeClueHook(text) {
+  let value = String(text || '').trim();
+  value = value
+    .replace(/[，,]\s*等待你(?:修复|追问|继续追问|调查|查看它的回响|进一步了解)?[。.]?$/u, '')
+    .replace(/[，,]\s*等待你沿着线索继续调查[。.]?$/u, '');
+  return sentenceEnd(value);
+}
+
+function normalizeClueQuestion(text) {
+  const value = String(text || '').trim().replace(/[？?]+$/, '');
+  if (getLang() !== 'zh') return value;
+  return value.replace(/^为什么(.{1,12}?)(会|被|能|是|成为)/u, '$1为什么$2');
+}
+
+function actionBridgeForClue(clue) {
+  const zh = getLang() === 'zh';
+  const bridges = {
+    archive: zh ? '展开它，看看' : 'Open it to see ',
+    character: zh ? '追寻这段记忆，理解' : 'Trace the memory to understand ',
+    object: zh ? '追踪它，理解' : 'Trace it to understand ',
+    'city-question': zh ? '调查这个问题，理解' : 'Investigate the question to understand ',
+    'place-name': zh ? '打开这张地图，理解' : 'Open the map to understand ',
+    'global-link': zh ? '查看它的回响，理解' : 'Follow its echoes to understand ',
+  };
+  return bridges[clue.type] || (zh ? '沿着线索，理解' : 'Follow the clue to understand ');
+}
+
+function mergedClueDescription(clue) {
+  const explicit = pickClueText(clue.mergedDescription);
+  if (explicit) return explicit;
+  const hook = normalizeClueHook(pickClueText(clue.hook));
+  const question = normalizeClueQuestion(pickClueText(clue.question));
+  if (!question) return hook || pickClueText(clue.hook);
+  const bridge = actionBridgeForClue(clue);
+  if (getLang() === 'zh') return `${hook}${bridge}${question}。`;
+  const lowerQuestion = question.charAt(0).toLowerCase() + question.slice(1);
+  return `${hook} ${bridge}${lowerQuestion}.`;
+}
+
+function clueMissionTitle(clue) {
+  const title = (pickClueText(clue.mission) || pickClueText(clue.title)).trim();
+  if (!title) return getLang() === 'zh' ? '调查这处地点留下的关键线索' : 'Investigate the key clue left by this place';
+  return title;
+}
+
+function clueVisualTag(clue) {
+  return String(pickClueText(clue.visualStyleTag) || clue.type || 'quest').trim();
+}
+
+function cssAssetUrl(path) {
+  const value = String(path || '').trim();
+  if (!value) return '';
+  if (/^(https?:|data:)/i.test(value)) return value;
+  const normalized = value.replace(/^\.?\//, '');
+  const publicPath = normalized.startsWith('assets/')
+    ? `public/${normalized}`
+    : normalized;
+  try {
+    return new URL(publicPath, document.baseURI).href;
+  } catch (e) {
+    return publicPath;
+  }
+}
+
+function clueCoverImage(anchor, clue) {
+  const cover = cssAssetUrl(pickClueText(clue.coverImage)) || cssAssetUrl(`/assets/clues/${anchor.id}-cover.webp`);
+  if (!cover || cover.includes('?')) return cover;
+  try {
+    const url = new URL(cover, document.baseURI);
+    if (!url.pathname.includes('/public/assets/clues/')) return cover;
+    url.searchParams.set('v', CLUE_COVER_VERSION);
+    return url.href;
+  } catch (e) {
+    if (!cover.includes('/public/assets/clues/')) return cover;
+    return `${cover}?v=${CLUE_COVER_VERSION}`;
+  }
+}
+
+function clueCardStyle(theme, clue, anchor) {
+  const accent = pickClueText(clue.accentColor) || theme.color || '#3f7d6e';
+  const coverImage = cssAssetUrl(clueCoverImage(anchor, clue));
+  const backgroundImage = cssAssetUrl(pickClueText(clue.backgroundImage));
+  const coverVar = coverImage ? `--clue-cover-image:url(&quot;${esc(coverImage)}&quot;);` : '';
+  const fallbackImage = cssAssetUrl(CLUE_COVER_FALLBACK);
+  const backgroundVar = backgroundImage ? `--clue-bg-image:url(&quot;${esc(backgroundImage)}&quot;);` : `--clue-bg-image:url(&quot;${esc(fallbackImage)}&quot;);`;
+  return `--clue-accent:${theme.color};--clue-task-accent:${accent};${coverVar}${backgroundVar}`;
+}
+
+function renderClueContent(box) {
+  const clueItems = compassState.clueItems;
+  if (!clueItems.length) {
+    box.innerHTML = `<div class="compass-hint">${esc(getText('clues.empty'))}</div>`;
+    return;
+  }
+
+  const cards = clueItems
+    .map(({ anchor, clue, dist }, index) => {
+      const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
+      const completed = isCompleted(anchor.id);
+      const active = compassState.activeClueAnchorId === anchor.id;
+      const softBackground = clue.softBackground ? 'soft-background' : '';
+      return `
+        <article class="clue-card ${index === 0 ? 'recommended' : ''} ${active ? 'active' : ''} ${completed ? 'completed' : ''} ${softBackground}" data-anchor-id="${anchor.id}" data-visual="${esc(clueVisualTag(clue))}" style="${clueCardStyle(theme, clue, anchor)}">
+          <div class="clue-card-body">
+            <button class="clue-card-open" data-anchor-id="${anchor.id}">
+              <span class="clue-card-top">
+                <span class="clue-type clue-type-${esc(clue.type)}">${esc(pickClueText(clue.typeLabel))}</span>
+                <span class="clue-distance">${esc(formatClueDistance(dist, clue))}</span>
+              </span>
+              <span class="clue-place-title">${esc(pick(anchor.name))}</span>
+              <span class="clue-mission">${esc(clueMissionTitle(clue))}</span>
+              <span class="clue-description">${esc(mergedClueDescription(clue))}</span>
+            </button>
+            <button class="clue-cta" data-anchor-id="${anchor.id}">
+              <span>${esc(completed ? getText('clues.revisit_cta') : pickClueText(clue.cta))}</span>
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+        </article>`;
     })
     .join('');
+
+  box.innerHTML = `
+    <section class="clue-brief">
+      <p>${esc(getText('clues.subtitle', { count: clueItems.length }))}</p>
+    </section>
+    <div class="nearby-clue-list">${cards}</div>`;
+
+  const startClue = (anchorId) => {
+    const item = clueItems.find((candidate) => candidate.anchor.id === anchorId);
+    if (!item) return;
+    compassState.activeClueAnchorId = anchorId;
+    if (compassState.handlers.onClueStart) {
+      compassState.handlers.onClueStart(item.anchor, item.clue);
+    }
+  };
+
+  box.querySelectorAll('.clue-card').forEach((card) => {
+    const anchorId = card.dataset.anchorId;
+    card.addEventListener('mouseenter', () => {
+      if (compassState.handlers.onClueHover) compassState.handlers.onClueHover(anchorId);
+    });
+    card.addEventListener('mouseleave', () => {
+      if (compassState.handlers.onClueHover) compassState.handlers.onClueHover(null);
+    });
+    card.addEventListener('focusin', () => {
+      if (compassState.handlers.onClueHover) compassState.handlers.onClueHover(anchorId);
+    });
+    card.addEventListener('focusout', () => {
+      if (compassState.handlers.onClueHover) compassState.handlers.onClueHover(null);
+    });
+  });
+
+  box.querySelectorAll('.clue-card-open, .clue-cta').forEach((btn) => {
+    btn.addEventListener('click', () => startClue(btn.dataset.anchorId));
+  });
+}
+
+function renderFreeExploreContent(box, items) {
+  const selectedAnchors = ANCHORS.filter((anchor) => compassState.routeSelectedIds.has(anchor.id));
+  const selectedCount = selectedAnchors.length;
+  const nearbyRouteItems = items.filter((item) => item.dist <= 20).slice(0, 24);
+  const routeItems = nearbyRouteItems.length ? nearbyRouteItems : items.slice(0, 24);
   const tabBtns = [
     ['diy', getText('compass.diy_tab')],
     ['recommended', getText('compass.recommend_tab')],
@@ -921,28 +1980,34 @@ function renderCompassContent() {
   const itineraryHtml = `<div class="route-card-wrap" id="compass-itinerary"></div>`;
 
   const routeBar = `
+    <div class="free-explore-head">
+      <button class="free-back" id="free-back">← ${esc(getText('clues.back_to_clues'))}</button>
+      <span>${esc(getText('clues.free_title'))}</span>
+    </div>
     <div class="compass-route-bar">
       <div class="compass-tabs">${tabBtns}</div>
-      <div class="compass-route-mode">
-        <span class="rt-mini-label">${esc(getText('compass.mode_label'))}</span>
-        <div class="rt-modes">${modeBtns}</div>
-      </div>
     </div>`;
 
   const diyContent = `
     <section class="compass-diy-panel">
-      <div class="compass-near-title">${esc(getText('compass.diy_title'))}</div>
-      <div class="compass-route-hint">${esc(getText('compass.select_hint'))}</div>
-      <div class="rt-anchor-head">
-        <span class="rt-selected-count">${esc(getText('route.selected', { count: selectedAnchors.length }))}</span>
-        <button class="rt-select-action" id="route-clear-selection">${esc(getText('route.clear_selected'))}</button>
+      <div class="compass-diy-meta">
+        <span class="compass-near-title">${esc(getText('compass.diy_title'))}</span>
+        <span class="rt-selected-count">${esc(getText('route.selected', { count: selectedCount }))}</span>
       </div>
-      <button class="rt-plan-btn" id="compass-plan-btn" ${selectedAnchors.length ? '' : 'disabled'}>
-        <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
-      </button>
+      <div class="compass-route-hint">${esc(getText('compass.select_hint'))}</div>
+      ${
+        selectedCount
+          ? `<div class="rt-diy-actions">
+              <button class="rt-select-action" id="route-clear-selection">${esc(getText('route.clear_selected'))}</button>
+              <button class="rt-plan-btn" id="compass-plan-btn">
+                <span class="cp-label">${esc(getText('compass.plan_btn'))}</span>
+              </button>
+            </div>`
+          : ''
+      }
     </section>
     <div class="compass-near-list compass-anchor-list">
-      ${items
+      ${routeItems
         .map(({ anchor, dist }) => {
           const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
           const active = compassState.routeSelectedIds.has(anchor.id);
@@ -998,6 +2063,15 @@ function renderCompassContent() {
     ${itineraryHtml}
     ${compassState.activeRouteTab === 'recommended' ? recommendedContent : diyContent}`;
 
+  const backBtn = box.querySelector('#free-back');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      compassState.view = 'clues';
+      if (compassState.handlers.onExploreModeChange) compassState.handlers.onExploreModeChange('clues');
+      renderCompassContent();
+    });
+  }
+
   box.querySelectorAll('.compass-tab').forEach((tab) => {
     tab.addEventListener('click', () => {
       compassState.activeRouteTab = tab.dataset.tab || 'diy';
@@ -1008,12 +2082,6 @@ function renderCompassContent() {
     btn.addEventListener('click', () => {
       const a = ANCHORS.find((x) => x.id === btn.dataset.id);
       if (a && compassState.handlers.onAnchorClick) compassState.handlers.onAnchorClick(a);
-    });
-  });
-  box.querySelectorAll('.rt-mode').forEach((m) => {
-    m.addEventListener('click', () => {
-      compassState.routeMode = m.dataset.mode;
-      renderCompassContent();
     });
   });
   box.querySelectorAll('.compass-anchor-select').forEach((option) => {
@@ -1170,12 +2238,111 @@ function buildTencentRouteUrl(itinerary) {
   return `https://apis.map.qq.com/uri/v1/routeplan?${params.toString()}`;
 }
 
+let clueScanTimer = null;
+
+export function playClueScanTransition(message) {
+  let layer = document.getElementById('clue-scan-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'clue-scan-layer';
+    layer.className = 'clue-scan-layer';
+    document.body.appendChild(layer);
+  }
+  layer.innerHTML = `
+    <div class="clue-scan-reticle" aria-hidden="true">
+      <span class="scan-ring scan-ring-1"></span>
+      <span class="scan-ring scan-ring-2"></span>
+      <span class="scan-ring scan-ring-3"></span>
+      <span class="scan-sweep"></span>
+      <span class="scan-point scan-point-a"></span>
+      <span class="scan-point scan-point-b"></span>
+      <span class="scan-point scan-point-c"></span>
+    </div>
+    <div class="clue-scan-text">${esc(message || getText('clues.scanning'))}</div>`;
+  layer.classList.remove('settle');
+  requestAnimationFrame(() => layer.classList.add('show'));
+  if (clueScanTimer) clearTimeout(clueScanTimer);
+  return new Promise((resolve) => {
+    clueScanTimer = window.setTimeout(() => {
+      layer.classList.add('settle');
+      layer.classList.remove('show');
+      clueScanTimer = window.setTimeout(() => {
+        layer.classList.remove('settle');
+        resolve();
+      }, 260);
+    }, 1050);
+  });
+}
+
+export function openClueCompleteFeedback(anchor, clue, handlers = {}) {
+  let modal = document.getElementById('clue-complete-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'clue-complete-modal';
+    document.body.appendChild(modal);
+  }
+  const rewards = pickList(clue.reward);
+  const wanted = isWantToVisit(anchor.id);
+  modal.innerHTML = `
+    <div class="clue-complete-card">
+      <div class="clue-complete-seal">${esc(getText('clues.repaired_seal'))}</div>
+      <div class="clue-complete-copy">
+        <span class="clue-complete-kicker">${esc(getText('clues.repaired_kicker'))}</span>
+        <h2>${esc(getText('clues.repaired_title'))}</h2>
+        <p>${esc(getText('clues.repaired_body'))}</p>
+      </div>
+      <div class="clue-reveal-row">
+        <span>${esc(getText('clues.real_anchor'))}</span>
+        <b>${esc(pick(anchor.name))}</b>
+      </div>
+      <div class="clue-want-note">
+        <b>${esc(getText('want.story_place', { name: pick(anchor.name) }))}</b>
+        <p>${esc(getText('want.story_hint'))}</p>
+      </div>
+      <div class="clue-earned">
+        <span>${esc(getText('clues.earned'))}</span>
+        <div class="clue-rewards">
+          ${rewards.map((reward) => `<span>${esc(reward)}</span>`).join('')}
+        </div>
+      </div>
+      <div class="clue-complete-actions">
+        <button class="clue-complete-secondary" id="clue-continue">${esc(getText('route_planner.continue_explore'))}</button>
+        <button class="clue-complete-secondary" id="clue-plan-route">${esc(getText('route_planner.go_plan'))}</button>
+        <button class="clue-complete-primary ${wanted ? 'active' : ''}" id="clue-want-toggle">${esc(wantToggleLabel(anchor.id, true))}</button>
+      </div>
+    </div>`;
+  modal.classList.add('open');
+
+  const close = () => modal.classList.remove('open');
+  const continueBtn = modal.querySelector('#clue-continue');
+  const planBtn = modal.querySelector('#clue-plan-route');
+  const wantBtn = modal.querySelector('#clue-want-toggle');
+  if (continueBtn) {
+    continueBtn.addEventListener('click', () => {
+      close();
+      if (handlers.onContinue) handlers.onContinue(anchor, clue);
+    });
+  }
+  if (planBtn) {
+    planBtn.addEventListener('click', () => {
+      if (!isWantToVisit(anchor.id)) addWantToVisit(anchor.id);
+      close();
+      if (handlers.onPlanRoute) handlers.onPlanRoute(anchor, clue);
+    });
+  }
+  bindWantToggle(wantBtn, anchor, { longLabel: true });
+}
+
 /** 语言切换时刷新罗盘面板文案 */
 export function refreshCompassTexts() {
   const panel = document.getElementById('compass-panel');
   if (!panel) return;
   const title = panel.querySelector('.compass-title');
-  if (title) title.innerHTML = `◎ ${esc(getText('compass.title'))}`;
+  if (title) {
+    title.innerHTML = `
+      <span class="compass-title-main">${esc(getText('clues.title'))}</span>
+      <span class="compass-title-sub">${esc(getText('clues.title_secondary'))}</span>`;
+  }
   if (compassState.userPos) {
     setCompassLocation({
       lng: compassState.userPos[0],

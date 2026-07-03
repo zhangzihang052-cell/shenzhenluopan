@@ -1,12 +1,42 @@
 // 锚点剧情副本 · 游戏模块：localStorage 进度 + 剧情状态机 UI + 印章册 + 成就 + 地理围栏提示
 // build: 2026-06-18
-import { EPISODES } from './data/episodes.js?rev=episodes-depth-1';
-import { getMascot } from './data/mascots.js';
-import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js';
-import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
-import { getText, pick } from './i18n.js?rev=stamp-focus-1';
+import { EPISODES } from './data/episodes.js?rev=audio-sfx-1';
+import { getMascot } from './data/mascots.js?rev=mascot-set-1';
+import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
+import { ANCHORS } from './data/anchors.js?rev=classification-1';
+import { getText, pick } from './i18n.js?rev=audio-sfx-1';
 
 const STORAGE_KEY = 'stc_progress';
+const RPG_LABELS = {
+  task: { zh: '任务', en: 'Objective' },
+  clues: { zh: '已获得线索', en: 'Clues found' },
+  investigate: { zh: '调查', en: 'Inspect' },
+  collected: { zh: '已收集', en: 'Collected' },
+  completeInvestigation: { zh: '完成调查', en: 'Finish Survey' },
+  continueInvestigation: { zh: '继续调查', en: 'Continue Survey' },
+  continue: { zh: '继续推进', en: 'Continue' },
+  myRecord: { zh: '我的记录', en: 'My Record' },
+  playerRole: { zh: '我 · 文书小吏', en: 'Me · Prefecture Clerk' },
+  caseNote: { zh: '案卷批注', en: 'Case Note' },
+  recordIt: { zh: '记入案卷', en: 'Enter Record' },
+  rewardHint: { zh: '获得知识卡 / 点亮印章', en: 'Knowledge card / stamp unlocked' },
+};
+const PROVIDED_PORTRAIT_NAMES = new Set([
+  '郑和',
+  '葛洪',
+  '屠呦呦',
+  '钱学森',
+  '袁庚',
+  '文天祥',
+  '陈烟桥',
+  '赵佗',
+  '詹天佑',
+  '马化腾',
+  '汪滔',
+  '邓小平',
+  '张敬修',
+  '赖恩爵',
+]);
 
 /** HTML 转义 */
 function esc(str) {
@@ -16,6 +46,25 @@ function esc(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function resolveAssetSrc(src) {
+  const raw = String(src || '').trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw, document.baseURI).href;
+  } catch (e) {
+    return raw;
+  }
+}
+
+function cssUrl(src) {
+  const resolved = resolveAssetSrc(src).replace(/"/g, '%22');
+  return `url("${resolved}")`;
+}
+
+function rpgSceneStyle(rpg, theme) {
+  return `--rpg-bg-image:${esc(cssUrl(rpg && rpg.background))};--ep-accent:${esc(theme.color)}`;
 }
 
 const BADGE_SVGS = {
@@ -32,6 +81,30 @@ function renderBadgeArt(reward, className = '') {
   const svg = reward && reward.badgeIcon ? BADGE_SVGS[reward.badgeIcon] : '';
   if (svg) return `<span class="badge-art ${className}" aria-hidden="true">${svg}</span>`;
   return `<span class="badge-emoji ${className}">${esc(reward && reward.badge)}</span>`;
+}
+
+function needsProvidedPortrait(character) {
+  const name = pick(character && character.name);
+  return PROVIDED_PORTRAIT_NAMES.has(name);
+}
+
+function renderCharacterAvatar(character, theme, themeKey, className = 'ep-char-avatar') {
+  const name = pick(character && character.name);
+  const portrait = String((character && character.portrait) || '').trim();
+  const pending = !portrait && needsProvidedPortrait(character);
+  const mascot = !portrait && !pending ? getMascot(themeKey) : null;
+  const imgSrc = resolveAssetSrc(portrait || (mascot && mascot.img) || '');
+  const stateClass = portrait ? 'has-portrait' : pending ? 'portrait-pending no-img' : 'theme-avatar';
+  const label = pending ? getText('episode.portrait_pending') : (name || '').slice(0, 1);
+  return `
+    <div class="${className} ${stateClass}" style="border-color:${theme.color}" data-label="${esc(label)}">
+      ${
+        imgSrc
+          ? `<img src="${esc(imgSrc)}" alt="${esc(name)}" onerror="this.parentElement.classList.add('no-img');this.remove()"/>`
+          : ''
+      }
+      <span class="ep-char-fallback">${esc(label)}</span>
+    </div>`;
 }
 
 /* ============================================================= */
@@ -145,6 +218,7 @@ export function getTotalProgress() {
 
 let episodeState = null;
 let epTypewriterToken = 0;
+let episodeModelViewer = null;
 
 /** 创建剧情层容器（仅一次）*/
 export function renderEpisodeLayer(root) {
@@ -173,6 +247,7 @@ export function isEpisodeOpen() {
  * @param {{onComplete?:(anchor,opts)=>void, onOpenStampBook?:(anchor,opts)=>void, onClose?:()=>void, onsite?:boolean}} handlers
  */
 export function openEpisode(anchor, episode, handlers = {}) {
+  disposeEpisodeModelViewer();
   episodeState = {
     anchor,
     episode,
@@ -181,6 +256,10 @@ export function openEpisode(anchor, episode, handlers = {}) {
     sceneIndex: 0,
     answered: false,
     onsite: !!handlers.onsite,
+    rpgStepIndex: 0,
+    rpgCollected: new Set(),
+    rpgActiveClue: null,
+    rpgAnswer: null,
   };
   const layer = document.getElementById('episode-layer');
   if (layer) layer.classList.add('open');
@@ -190,6 +269,7 @@ export function openEpisode(anchor, episode, handlers = {}) {
 /** 关闭剧情层 */
 export function closeEpisode() {
   epTypewriterToken += 1;
+  disposeEpisodeModelViewer();
   const layer = document.getElementById('episode-layer');
   if (layer) layer.classList.remove('open');
   const h = episodeState && episodeState.handlers;
@@ -233,15 +313,666 @@ function renderEpisodeProgressDots() {
   wrap.innerHTML = dots.join('<span class="ep-dot-sep"></span>');
 }
 
+function rpgLabel(key) {
+  return pick(RPG_LABELS[key] || {});
+}
+
+function isRpgEpisode(episode) {
+  return episode && episode.immersiveMode === 'rpg-dialogue' && episode.rpg;
+}
+
+function renderRpgChapterProgress(chapters, activeChapter) {
+  return (chapters || [])
+    .map((chapter, index) => {
+      const cls = index === activeChapter ? 'active' : index < activeChapter ? 'done' : '';
+      return `<span class="rpg-chapter ${cls}">${esc(pick(chapter))}</span>`;
+    })
+    .join('');
+}
+
+function getRpgBeat() {
+  if (!episodeState || !episodeState.episode.rpg) return null;
+  const beats = episodeState.episode.rpg.beats || [];
+  return beats[episodeState.rpgStepIndex] || beats[beats.length - 1] || null;
+}
+
+function getRpgActiveChapter() {
+  const rpg = episodeState && episodeState.episode.rpg;
+  if (!rpg) return 0;
+  if (episodeState.phase === 'reward') return Math.max(0, (rpg.chapters || []).length - 1);
+  const beat = getRpgBeat();
+  return Math.max(0, Math.min((rpg.chapters || []).length - 1, Number(beat && beat.chapter) || 0));
+}
+
+function getRpgSpeakerType(beat) {
+  if (!beat) return 'npc';
+  if (beat.speakerType) return beat.speakerType;
+  const name = pick(beat.speakerName || {});
+  if (name.includes('文书') || name.includes('Clerk')) return 'player';
+  if (beat.type === 'narration') return 'narration';
+  if (beat.type === 'system') return 'system';
+  return 'npc';
+}
+
+function resolveRpgSpeaker(beat) {
+  const chars = (episodeState && episodeState.episode.characters) || [];
+  const type = getRpgSpeakerType(beat);
+  if (type === 'player') {
+    return {
+      name: (beat && beat.speakerName) || RPG_LABELS.myRecord,
+      role: (beat && beat.speakerRole) || RPG_LABELS.playerRole,
+      portrait: '',
+    };
+  }
+  if (type === 'narration') {
+    return {
+      name: { zh: '场景提示', en: 'Scene Note' },
+      role: { zh: '旁白', en: 'Narration' },
+      portrait: '',
+    };
+  }
+  if (typeof (beat && beat.speaker) === 'number' && chars[beat.speaker]) return chars[beat.speaker];
+  return {
+    name: (beat && beat.speakerName) || (chars[0] && chars[0].name) || { zh: '东官郡守', en: 'Prefect of Dongguan' },
+    role: (beat && beat.speakerRole) || (chars[0] && chars[0].role) || { zh: '东晋行政长官', en: 'Eastern Jin Administrator' },
+    portrait: (beat && beat.portrait) || (chars[0] && chars[0].portrait) || '',
+  };
+}
+
+function renderRpgSpeakerTab(speaker, speakerType) {
+  if (speakerType === 'player') {
+    return `
+      <div class="rpg-speaker-tab rpg-speaker-tab-player">
+        <span class="rpg-record-mark" aria-hidden="true">卷</span>
+        <span class="rpg-speaker-copy">
+          <strong>${esc(rpgLabel('myRecord'))}</strong>
+          <span>${esc(pick(speaker.role) || rpgLabel('playerRole'))}</span>
+        </span>
+      </div>`;
+  }
+  if (speakerType === 'narration') {
+    return `
+      <div class="rpg-speaker-tab rpg-speaker-tab-narration">
+        <span class="rpg-speaker-copy">
+          <strong>${esc(pick(speaker.name))}</strong>
+          <span>${esc(pick(speaker.role))}</span>
+        </span>
+      </div>`;
+  }
+  const portrait = resolveAssetSrc((speaker && speaker.portrait) || '');
+  const name = pick(speaker && speaker.name);
+  const fallback = (name || '郡').slice(0, 1);
+  return `
+    <div class="rpg-speaker-tab rpg-speaker-tab-npc">
+      <span class="rpg-speaker-avatar-mini ${portrait ? 'has-img' : 'no-img'}" data-label="${esc(fallback)}">
+        ${portrait ? `<img src="${esc(portrait)}" alt="${esc(name)}" onerror="this.parentElement.classList.remove('has-img');this.parentElement.classList.add('no-img');this.remove()" />` : ''}
+      </span>
+      <span class="rpg-speaker-copy">
+        <strong>${esc(name)}</strong>
+        <span>${esc(pick(speaker.role))}</span>
+      </span>
+    </div>`;
+}
+
+function getRpgClueFeedback(clue) {
+  return pick((clue && clue.npcFeedback) || {
+    zh: '很好。把这条线索记下，再继续踏勘。',
+    en: 'Good. Record this clue, then continue the survey.',
+  });
+}
+
+function ensureRpgSentence(text, lang = getRpgDialogueLang()) {
+  const value = String(text || '').trim();
+  if (!value) return '';
+  return /[。！？.!?…]$/.test(value) ? value : `${value}${lang === 'zh' ? '。' : '.'}`;
+}
+
+function getRpgDialogueLang() {
+  return pick({ zh: 'zh', en: 'en' }) === 'zh' ? 'zh' : 'en';
+}
+
+function cleanRpgNpcFeedback(text, lang) {
+  const value = String(text || '').trim();
+  if (!value) return '';
+  if (lang === 'zh') {
+    return value
+      .replace(/^(很好|不错|准确|对|正是|记下|听得准)[。！!，,、\s]*/u, '')
+      .trim();
+  }
+  return value
+    .replace(/^(Good|Yes|Correct|Exactly|Record this|Record that|Good ear)[.!，,\s]*/iu, '')
+    .trim();
+}
+
+function joinRpgSentences(first, second, lang) {
+  if (!second) return first;
+  return lang === 'zh' ? `${first}${second}` : `${first} ${second}`;
+}
+
+function buildRpgNpcClueDialogue(clue, rpg) {
+  const lang = getRpgDialogueLang();
+  const title = pick(clue.title || clue.label);
+  const text = ensureRpgSentence(pick(clue.text), lang);
+  const feedback = ensureRpgSentence(cleanRpgNpcFeedback(getRpgClueFeedback(clue), lang), lang);
+  const scene = pick(rpg && (rpg.sceneName || rpg.chapterTitle));
+  const customDialogue = lang === 'zh' ? pick(clue.dialogue) : '';
+  if (customDialogue) return [ensureRpgSentence(customDialogue, lang)];
+
+  if (lang === 'zh') {
+    const lead = title
+      ? `“${title}”这条线索很关键：${text}`
+      : `这条线索很关键：${text}`;
+    const reading = feedback || '它让我们看见，这处地点的价值往往藏在日常细节背后的连接方式里。';
+    const scenePart = scene ? `「${scene}」` : '这一站';
+    return [
+      joinRpgSentences(lead, reading, lang),
+      `你看到的不是一段孤立材料，而是通向${scenePart}核心判断的一块拼图。继续把它和其他线索并起来，才能看清这里为什么重要。`,
+    ];
+  }
+
+  const lead = title
+    ? `"${title}" matters: ${text}`
+    : `This clue matters: ${text}`;
+  const reading = feedback || 'It shows that a place often matters through the connections hidden behind ordinary details.';
+  return [
+    joinRpgSentences(lead, reading, lang),
+    `This is not an isolated record. It is one piece of the judgment behind ${scene || 'this stop'}. Connect it with the remaining clues to understand why this place matters.`,
+  ];
+}
+
+function renderRpgDialogueContent(activeClue, dialogueText, rpg, speaker) {
+  if (activeClue) {
+    const title = pick(activeClue.title || activeClue.label);
+    const lang = getRpgDialogueLang();
+    const dialogueLines = buildRpgNpcClueDialogue(activeClue, rpg);
+    const speakerName = pick(speaker && speaker.name);
+    const clueMark = lang === 'zh' ? `【线索：${title}】` : `[Clue: ${title}]`;
+    const speakerMark = speakerName ? `${speakerName}${lang === 'zh' ? '：' : ': '}` : '';
+    return `
+      <div class="rpg-dialogue-copy rpg-clue-dialogue-copy" aria-live="polite">
+        <p><span class="rpg-clue-line">${esc(clueMark)}</span>${esc(speakerMark)}${dialogueLines.map((line) => esc(line)).join('<br>')}</p>
+      </div>`;
+  }
+  return `
+    <div class="rpg-dialogue-copy">
+      <p>${esc(dialogueText)}</p>
+    </div>`;
+}
+
+function getRpgContinueLabel(beat, speakerType, isInvestigation, allCluesCollected) {
+  if (beat && beat.continueLabel) return pick(beat.continueLabel);
+  if (isInvestigation) return allCluesCollected ? rpgLabel('completeInvestigation') : rpgLabel('continueInvestigation');
+  if (speakerType === 'player') return rpgLabel('recordIt');
+  return rpgLabel('continue');
+}
+
+function renderRpgHotspots(rpg, collected, activeId) {
+  return `
+    <div class="rpg-hotspots" aria-label="${esc(rpgLabel('investigate'))}">
+      ${(rpg.clues || [])
+        .map((clue) => {
+          const done = collected.has(clue.id);
+          const active = activeId === clue.id;
+          const x = Math.max(8, Math.min(92, Number(clue.x) || 50));
+          const y = Math.max(18, Math.min(62, Number(clue.y) || 50));
+          return `
+            <button class="rpg-hotspot ${done ? 'collected' : ''} ${active ? 'active' : ''}" data-clue-id="${esc(clue.id)}" style="left:${x}%;top:${y}%">
+              <span class="rpg-hotspot-dot"></span>
+              <span class="rpg-hotspot-label">${esc(done ? rpgLabel('collected') : pick(clue.label))}</span>
+            </button>`;
+        })
+        .join('')}
+    </div>`;
+}
+
+function renderRpgOptions(beat, answer) {
+  if (beat.type !== 'choice') return '';
+  return `
+    <div class="rpg-options">
+      ${(beat.options || [])
+        .map((option, index) => {
+          const picked = answer && answer.index === index;
+          const cls = answer
+            ? option.correct
+              ? 'is-correct'
+              : picked
+                ? 'is-wrong'
+                : 'locked'
+            : '';
+          return `
+            <button class="rpg-option ${cls}" data-opt="${index}" ${answer ? 'disabled' : ''}>
+              <span>${String.fromCharCode(65 + index)}</span>
+              <b>${esc(pick(option.text))}</b>
+            </button>`;
+        })
+        .join('')}
+    </div>`;
+}
+
+function advanceRpgBeat() {
+  const beats = (episodeState && episodeState.episode.rpg && episodeState.episode.rpg.beats) || [];
+  if (episodeState.rpgStepIndex >= beats.length - 1) {
+    episodeState.phase = 'reward';
+  } else {
+    episodeState.rpgStepIndex += 1;
+    episodeState.rpgAnswer = null;
+    episodeState.rpgActiveClue = null;
+  }
+  renderEpisodePhase();
+}
+
+function renderRpgEpisodePhase() {
+  const body = document.getElementById('episode-body');
+  const progress = document.getElementById('episode-progress');
+  if (!body || !episodeState) return;
+  if (progress) progress.innerHTML = '';
+  const { anchor, episode } = episodeState;
+  const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
+  const rpg = episode.rpg;
+  const collected = episodeState.rpgCollected || new Set();
+  episodeState.rpgCollected = collected;
+  const totalClues = (rpg.clues || []).length;
+  const activeChapter = getRpgActiveChapter();
+
+  if (episodeState.phase === 'reward') {
+    const r = episode.reward;
+    const { newlyCompleted, achievementUnlocked } = markComplete(anchor.id, { onsite: episodeState.onsite });
+    body.innerHTML = `
+      <section class="rpg-episode rpg-reward-scene" style="${rpgSceneStyle(rpg, theme)}">
+        <div class="rpg-bg"></div>
+        <div class="rpg-shade"></div>
+        <div class="rpg-hud">
+          <div class="rpg-kicker">${esc(pick(rpg.subtitle))}</div>
+          <div class="rpg-progress">${renderRpgChapterProgress(rpg.chapters, activeChapter)}</div>
+          <div class="rpg-task done">${esc(pick(rpg.objectiveDone))}</div>
+        </div>
+        <div class="rpg-reward-panel">
+          <span class="rpg-reward-label">${esc(pick(rpg.completion && rpg.completion.title))}</span>
+          <div class="ep-badge" style="--ep-accent:${theme.color}">${renderBadgeArt(r, 'ep-badge-art')}</div>
+          <h2 class="font-brush">${esc(pick(r.badgeName))}</h2>
+          <p>${esc(pick((rpg.completion && rpg.completion.insight) || r.insight))}</p>
+          <em>${esc(rpgLabel('rewardHint'))}</em>
+          <div class="rpg-reward-actions">
+            <button class="rpg-ghost-btn" id="rpg-replay">${esc(getText('episode.replay'))}</button>
+            <button class="rpg-ghost-btn" id="rpg-stamps">${esc(getText('episode.view_stamps'))}</button>
+            <button class="rpg-next-btn" id="rpg-finish">${esc(getText('episode.close'))}</button>
+          </div>
+        </div>
+      </section>`;
+    body.querySelector('#rpg-replay').addEventListener('click', () => {
+      episodeState.phase = 'intro';
+      episodeState.rpgStepIndex = 0;
+      episodeState.rpgCollected = new Set();
+      episodeState.rpgActiveClue = null;
+      episodeState.rpgAnswer = null;
+      renderEpisodePhase();
+    });
+    body.querySelector('#rpg-finish').addEventListener('click', () => {
+      const h = episodeState.handlers;
+      const a = episodeState.anchor;
+      const onsite = episodeState.onsite;
+      closeEpisode();
+      if (h && h.onComplete) h.onComplete(a, { onsite, newlyCompleted, achievementUnlocked });
+    });
+    body.querySelector('#rpg-stamps').addEventListener('click', () => {
+      const h = episodeState.handlers;
+      const a = episodeState.anchor;
+      const onsite = episodeState.onsite;
+      closeEpisode();
+      if (h && h.onComplete) h.onComplete(a, { onsite, newlyCompleted, achievementUnlocked });
+      if (h && h.onOpenStampBook) h.onOpenStampBook(a, { onsite, newlyCompleted, achievementUnlocked });
+    });
+    const h = episodeState.handlers;
+    if (h && h.onReward) h.onReward(anchor, { onsite: episodeState.onsite, newlyCompleted, achievementUnlocked });
+    return;
+  }
+
+  const beat = getRpgBeat();
+  const activeClue = (rpg.clues || []).find((clue) => clue.id === episodeState.rpgActiveClue);
+  const rawSpeakerType = getRpgSpeakerType(beat);
+  const dialogueMode = activeClue
+    ? 'npc'
+    : rawSpeakerType === 'player'
+      ? 'player'
+      : rawSpeakerType === 'narration' || rawSpeakerType === 'system'
+        ? 'narration'
+        : 'npc';
+  const speaker = resolveRpgSpeaker(beat);
+  const mainNpc = (episode.characters && episode.characters[0]) || speaker;
+  const mainNpcPortrait = resolveAssetSrc((mainNpc && mainNpc.portrait) || '');
+  const answer = episodeState.rpgAnswer;
+  const selectedOption = answer && beat.options && beat.options[answer.index];
+  const dialogueText = activeClue
+    ? getRpgClueFeedback(activeClue)
+    : selectedOption
+      ? pick(selectedOption.feedback)
+      : pick(beat.question || beat.text);
+  const isInvestigation = beat.type === 'investigate';
+  const allCluesCollected = totalClues === 0 || collected.size >= totalClues;
+  const continueDisabled = isInvestigation && !allCluesCollected;
+  const continueLabel = getRpgContinueLabel(beat, rawSpeakerType, isInvestigation, allCluesCollected);
+  const showNextButton = isInvestigation
+    ? allCluesCollected
+    : beat.type !== 'choice' || !!answer;
+
+  body.innerHTML = `
+    <section class="rpg-episode mode-${esc(dialogueMode)}" style="${rpgSceneStyle(rpg, theme)}">
+      <div class="rpg-bg"></div>
+      <div class="rpg-shade"></div>
+      <div class="rpg-hud">
+        <div class="rpg-kicker">${esc(pick(rpg.subtitle))}</div>
+        <div class="rpg-progress">${renderRpgChapterProgress(rpg.chapters, activeChapter)}</div>
+        <h2 class="rpg-scene-title font-brush">${esc(pick(rpg.sceneName))}</h2>
+        <span class="rpg-act-title">${esc(pick(rpg.chapterTitle))}</span>
+        <div class="rpg-task"><b>${esc(rpgLabel('task'))}</b>${esc(pick(rpg.objective))}</div>
+        <div class="rpg-clue-meter">${esc(rpgLabel('clues'))}：<b>${collected.size}/${totalClues}</b></div>
+      </div>
+      ${isInvestigation ? renderRpgHotspots(rpg, collected, episodeState.rpgActiveClue) : ''}
+      <div class="rpg-character-layer">
+        <figure class="rpg-npc ${mainNpcPortrait ? '' : 'no-img'}">
+          ${
+            mainNpcPortrait
+              ? `<img src="${esc(mainNpcPortrait)}" alt="${esc(pick(mainNpc.name))}" onerror="this.closest('.rpg-npc').classList.add('no-img')" />`
+              : ''
+          }
+        </figure>
+      </div>
+      <div class="rpg-dialogue rpg-dialogue-${esc(dialogueMode)}" data-speaker-type="${esc(dialogueMode)}">
+        ${renderRpgSpeakerTab(speaker, dialogueMode)}
+        ${renderRpgDialogueContent(activeClue, dialogueText, rpg, speaker)}
+        ${renderRpgOptions(beat, answer)}
+        <div class="rpg-dialogue-actions">
+          ${
+            !showNextButton
+              ? ''
+              : `<button class="rpg-next-btn" id="rpg-next" ${continueDisabled ? 'disabled' : ''}>${esc(continueLabel)} →</button>`
+          }
+        </div>
+      </div>
+    </section>`;
+
+  body.querySelectorAll('.rpg-hotspot').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.clueId;
+      if (!id) return;
+      collected.add(id);
+      episodeState.rpgActiveClue = id;
+      window.dispatchEvent(new CustomEvent('compass-ui-sound', { detail: { type: 'clue' } }));
+      renderEpisodePhase();
+    });
+  });
+  body.querySelectorAll('.rpg-option').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (episodeState.rpgAnswer) return;
+      episodeState.rpgAnswer = { index: parseInt(btn.dataset.opt, 10) };
+      renderEpisodePhase();
+    });
+  });
+  const nextBtn = body.querySelector('#rpg-next');
+  if (nextBtn) nextBtn.addEventListener('click', advanceRpgBeat);
+}
+
+function disposeObject3D(obj) {
+  if (!obj || !obj.traverse) return;
+  obj.traverse((child) => {
+    if (child.geometry && child.geometry.dispose) child.geometry.dispose();
+    const materials = Array.isArray(child.material) ? child.material : child.material ? [child.material] : [];
+    materials.forEach((material) => {
+      Object.keys(material || {}).forEach((key) => {
+        const value = material[key];
+        if (value && value.isTexture && value.dispose) value.dispose();
+      });
+      if (material && material.dispose) material.dispose();
+    });
+  });
+}
+
+function disposeEpisodeModelViewer() {
+  if (!episodeModelViewer) return;
+  const viewer = episodeModelViewer;
+  viewer.disposed = true;
+  if (viewer.frame) cancelAnimationFrame(viewer.frame);
+  if (viewer.resizeObserver) viewer.resizeObserver.disconnect();
+  if (viewer.onResize) window.removeEventListener('resize', viewer.onResize);
+  if (viewer.mount && viewer.pointerHandlers) {
+    Object.entries(viewer.pointerHandlers).forEach(([type, handler]) => {
+      viewer.mount.removeEventListener(type, handler);
+    });
+  }
+  disposeObject3D(viewer.model);
+  if (viewer.renderer) {
+    viewer.renderer.dispose();
+    if (viewer.renderer.domElement && viewer.renderer.domElement.parentNode) {
+      viewer.renderer.domElement.parentNode.removeChild(viewer.renderer.domElement);
+    }
+  }
+  episodeModelViewer = null;
+}
+
+function renderEpisodeImmersiveEntry(entry) {
+  if (!entry || entry.type !== 'glb') return '';
+  return `
+    <section class="ep-portal is-loading" id="ep-portal" aria-label="${esc(pick(entry.title))}">
+      <div class="ep-portal-stage">
+        <div class="ep-portal-canvas" id="ep-portal-canvas"></div>
+        <div class="ep-portal-veil"></div>
+        <div class="ep-portal-scan" aria-hidden="true"></div>
+        <div class="ep-portal-status" id="ep-portal-status">
+          <span>${esc(getText('episode.portal_loading'))}</span>
+          <b id="ep-portal-progress">0%</b>
+        </div>
+      </div>
+      <div class="ep-portal-caption">
+        <span>${esc(pick(entry.label))}</span>
+        <strong>${esc(pick(entry.title))}</strong>
+        <em>${esc(pick(entry.desc))}</em>
+      </div>
+    </section>`;
+}
+
+async function initEpisodeImmersiveEntry(entry, theme) {
+  const portal = document.getElementById('ep-portal');
+  const mount = document.getElementById('ep-portal-canvas');
+  const status = document.getElementById('ep-portal-status');
+  const progress = document.getElementById('ep-portal-progress');
+  if (!portal || !mount || !entry || entry.type !== 'glb') return;
+
+  const viewer = {
+    disposed: false,
+    mount,
+    frame: 0,
+    model: null,
+    renderer: null,
+    resizeObserver: null,
+    onResize: null,
+    pointerHandlers: null,
+  };
+  episodeModelViewer = viewer;
+
+  try {
+    const [THREE, { GLTFLoader }] = await Promise.all([
+      import('../public/vendor/three/three.module.js'),
+      import('../public/vendor/three/GLTFLoader.js'),
+    ]);
+    if (viewer.disposed || episodeModelViewer !== viewer) return;
+
+    const scene = new THREE.Scene();
+    scene.background = null;
+    scene.fog = new THREE.FogExp2(0xf3ecd9, 0.045);
+
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 120);
+    camera.position.set(0.15, 0.72, 4.2);
+    camera.lookAt(0, 0.02, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    mount.appendChild(renderer.domElement);
+    viewer.renderer = renderer;
+
+    const root = new THREE.Group();
+    scene.add(root);
+
+    const hemi = new THREE.HemisphereLight(0xfff7e2, 0x27322d, 2.4);
+    scene.add(hemi);
+    const key = new THREE.DirectionalLight(0xfff0cf, 2.2);
+    key.position.set(4, 5, 3);
+    scene.add(key);
+    const rim = new THREE.DirectionalLight(theme.color || 0x3f7d6e, 0.9);
+    rim.position.set(-3, 2, -4);
+    scene.add(rim);
+
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(2.9, 96),
+      new THREE.MeshBasicMaterial({ color: 0x3f7d6e, transparent: true, opacity: 0.08, depthWrite: false })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.42;
+    scene.add(floor);
+
+    const loader = new GLTFLoader();
+    loader.load(
+      entry.model,
+      (gltf) => {
+        if (viewer.disposed || episodeModelViewer !== viewer) {
+          disposeObject3D(gltf.scene);
+          return;
+        }
+        const model = gltf.scene;
+        viewer.model = model;
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = false;
+            child.receiveShadow = true;
+            if (child.material) {
+              const materials = Array.isArray(child.material) ? child.material : [child.material];
+              materials.forEach((material) => {
+                material.roughness = Math.min(1, (material.roughness || 0.6) + 0.12);
+                material.metalness = Math.max(0, (material.metalness || 0) - 0.08);
+              });
+            }
+          }
+        });
+
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z) || 1;
+        const scale = 2.75 / maxDim;
+        model.position.sub(center);
+        model.scale.setScalar(scale);
+        root.add(model);
+        root.rotation.y = -0.34;
+        portal.classList.remove('is-loading', 'is-error');
+        portal.classList.add('is-ready');
+        if (status) {
+          status.querySelector('span').textContent = getText('episode.portal_ready');
+          if (progress) progress.textContent = '';
+        }
+      },
+      (event) => {
+        if (!progress) return;
+        if (event.total) progress.textContent = `${Math.min(99, Math.round((event.loaded / event.total) * 100))}%`;
+        else progress.textContent = `${Math.round(event.loaded / 1024 / 1024)}MB`;
+      },
+      () => {
+        portal.classList.remove('is-loading');
+        portal.classList.add('is-error');
+        if (status) {
+          status.querySelector('span').textContent = getText('episode.portal_error');
+          if (progress) progress.textContent = '';
+        }
+      }
+    );
+
+    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pointerState = { down: false, x: 0, target: -0.34, current: -0.34 };
+    const onPointerDown = (event) => {
+      pointerState.down = true;
+      pointerState.x = event.clientX;
+      mount.setPointerCapture && mount.setPointerCapture(event.pointerId);
+      portal.classList.add('is-dragging');
+    };
+    const onPointerMove = (event) => {
+      if (!pointerState.down) return;
+      const dx = event.clientX - pointerState.x;
+      pointerState.x = event.clientX;
+      pointerState.target += dx * 0.008;
+    };
+    const onPointerUp = (event) => {
+      pointerState.down = false;
+      mount.releasePointerCapture && mount.releasePointerCapture(event.pointerId);
+      portal.classList.remove('is-dragging');
+    };
+    viewer.pointerHandlers = {
+      pointerdown: onPointerDown,
+      pointermove: onPointerMove,
+      pointerup: onPointerUp,
+      pointercancel: onPointerUp,
+      pointerleave: onPointerUp,
+    };
+    Object.entries(viewer.pointerHandlers).forEach(([type, handler]) => mount.addEventListener(type, handler));
+
+    const resize = () => {
+      if (viewer.disposed) return;
+      const rect = mount.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+      camera.aspect = width / height;
+      camera.lookAt(0, 0.02, 0);
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    };
+    viewer.onResize = resize;
+    window.addEventListener('resize', resize);
+    if ('ResizeObserver' in window) {
+      viewer.resizeObserver = new ResizeObserver(resize);
+      viewer.resizeObserver.observe(mount);
+    }
+    resize();
+
+    const clock = new THREE.Clock();
+    const animate = () => {
+      if (viewer.disposed || episodeModelViewer !== viewer) return;
+      const delta = Math.min(0.033, clock.getDelta());
+      if (!reducedMotion && !pointerState.down) pointerState.target -= delta * 0.22;
+      pointerState.current += (pointerState.target - pointerState.current) * 0.08;
+      root.rotation.y = pointerState.current;
+      renderer.render(scene, camera);
+      viewer.frame = requestAnimationFrame(animate);
+    };
+    animate();
+  } catch (err) {
+    portal.classList.remove('is-loading');
+    portal.classList.add('is-error');
+    if (status) {
+      status.querySelector('span').textContent = getText('episode.portal_error');
+      if (progress) progress.textContent = '';
+    }
+  }
+}
+
 /** 渲染当前阶段 */
 function renderEpisodePhase() {
   if (!episodeState) return;
+  disposeEpisodeModelViewer();
   const body = document.getElementById('episode-body');
   const scroll = document.getElementById('episode-scroll');
   if (!body) return;
   const { anchor, episode, phase } = episodeState;
   const theme = THEMES[anchor.theme] || OVERVIEW_MODE;
-  if (scroll) scroll.style.setProperty('--ep-accent', theme.color);
+  if (scroll) {
+    const rpgMode = isRpgEpisode(episode);
+    scroll.style.setProperty('--ep-accent', theme.color);
+    scroll.classList.toggle('is-rpg-dialogue', rpgMode);
+    scroll.classList.toggle('has-immersive-entry', !rpgMode && phase === 'intro' && !!episode.immersiveEntry);
+  }
+  if (isRpgEpisode(episode)) {
+    renderRpgEpisodePhase();
+    return;
+  }
   renderEpisodeProgressDots();
 
   if (phase === 'intro') {
@@ -251,10 +982,7 @@ function renderEpisodePhase() {
       <div class="ep-characters">
         ${chars.map(c => `
           <div class="ep-char">
-            <div class="ep-char-avatar" style="border-color:${theme.color}">
-              <img src="${esc(c.portrait)}" alt="${esc(pick(c.name))}" onerror="this.parentElement.classList.add('no-img');this.remove()"/>
-              <span class="ep-char-fallback">${esc((pick(c.name) || '').slice(0, 1))}</span>
-            </div>
+            ${renderCharacterAvatar(c, theme, anchor.theme, 'ep-char-avatar')}
             <span class="ep-char-name">${esc(pick(c.name))}</span>
             <span class="ep-char-role">${esc(pick(c.role))}</span>
           </div>`).join('')}
@@ -277,11 +1005,13 @@ function renderEpisodePhase() {
         ${esc(pick(theme.label))} · ${esc(pick(anchor.name))}
       </div>
       <h2 class="ep-title font-brush">${esc(pick(anchor.title))}</h2>
+      ${renderEpisodeImmersiveEntry(episode.immersiveEntry)}
       ${charHtml || mascotHtml}
       <p class="ep-intro" id="ep-intro-text"></p>
       <div class="ep-actions">
         <button class="ep-btn ep-btn-primary" id="ep-continue">${esc(getText('episode.continue'))} →</button>
       </div>`;
+    if (episode.immersiveEntry) initEpisodeImmersiveEntry(episode.immersiveEntry, theme);
     const introEl = body.querySelector('#ep-intro-text');
     epTypewriter(introEl, pick(episode.intro));
     body.querySelector('#ep-continue').addEventListener('click', () => {
@@ -302,10 +1032,7 @@ function renderEpisodePhase() {
     const speaker = scene.speaker != null ? chars[scene.speaker] : (chars.length ? chars[0] : null);
     const speakerHtml = speaker ? `
       <div class="ep-speaker">
-        <div class="ep-speaker-avatar" style="border-color:${theme2.color}">
-          <img src="${esc(speaker.portrait)}" alt="${esc(pick(speaker.name))}" onerror="this.parentElement.classList.add('no-img');this.remove()"/>
-          <span class="ep-char-fallback">${esc((pick(speaker.name) || '').slice(0, 1))}</span>
-        </div>
+        ${renderCharacterAvatar(speaker, theme2, anchor.theme, 'ep-speaker-avatar')}
         <span class="ep-speaker-name">${esc(pick(speaker.name))}</span>
       </div>` : '';
     body.innerHTML = `

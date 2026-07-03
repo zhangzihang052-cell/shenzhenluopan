@@ -187,7 +187,7 @@ export const ANCHORS = [
     id: 'M02',
     name: { zh: '葛洪炼丹遗迹 · 罗浮山', en: 'Ge Hong’s Alchemy Site', ja: '葛洪錬丹遺跡', ko: '갈홍 연단 유적', ru: 'Алхимия Гэ Хуна', es: 'Sitio alquímico de Ge Hong' },
     coordinates: [114.05, 23.28],
-    theme: 'civilization',
+    theme: 'science',
     hero: { zh: '葛洪 → 屠呦呦', en: 'Ge Hong → Tu Youyou', ja: '葛洪 → 屠呦呦', ko: '갈홍 → 투유유', ru: 'Гэ Хун → Ту Юю', es: 'Ge Hong → Tu Youyou' },
     era: '4th Century',
     worldImpact: true,
@@ -247,7 +247,7 @@ export const ANCHORS = [
     id: 'M04',
     name: { zh: '大鹏所城', en: 'Dapeng Fortress', ja: '大鵬所城', ko: '다펑 요새', ru: 'Крепость Дапэн', es: 'Fortaleza de Dapeng' },
     coordinates: [114.507692, 22.5978742],
-    theme: 'awakening',
+    theme: 'navigation',
     hero: { zh: '赖恩爵', en: 'Lai Enjue', ja: '頼恩爵', ko: '라이언줴', ru: 'Лай Эньцзюэ', es: 'Lai Enjue' },
     era: '1839',
     worldImpact: false,
@@ -270,7 +270,7 @@ export const ANCHORS = [
     id: 'M05',
     name: { zh: '中英街', en: 'Zhongying Street', ja: '中英街', ko: '중영가', ru: 'Улица Чжунъин', es: 'Calle Zhongying' },
     coordinates: [114.2264134, 22.5467728],
-    theme: 'awakening',
+    theme: 'reform',
     contentType: 'landmark',
     hero: { zh: '历史界碑', en: 'The Boundary Stones', ja: '歴史の境界碑', ko: '역사 경계비', ru: 'Пограничные камни', es: 'Las piedras fronterizas' },
     era: '1898',
@@ -294,7 +294,7 @@ export const ANCHORS = [
     id: 'M06',
     name: { zh: '蛇口工业区', en: 'Shekou Industrial Zone', ja: '蛇口工業区', ko: '서커우 공업구', ru: 'Промзона Шэкоу', es: 'Zona industrial de Shekou' },
     coordinates: [113.923, 22.481],
-    theme: 'engineering',
+    theme: 'reform',
     hero: { zh: '袁庚', en: 'Yuan Geng', ja: '袁庚', ko: '위안겅', ru: 'Юань Гэн', es: 'Yuan Geng' },
     era: '1979',
     worldImpact: true,
@@ -331,7 +331,7 @@ export const ANCHORS = [
     id: 'M07',
     name: { zh: '深圳河 · 红树林', en: 'Mangrove Wetlands', ja: 'マングローブ湿地', ko: '맹그로브 습지', ru: 'Мангровые болота', es: 'Humedales de manglar' },
     coordinates: [114.005, 22.524],
-    theme: 'navigation',
+    theme: 'awakening',
     contentType: 'theme',
     hero: { zh: '黑脸琵鹭', en: 'The Black-faced Spoonbill', ja: 'クロツラヘラサギ', ko: '저어새', ru: 'Колпица', es: 'Espátula carinegra' },
     era: 'Ongoing',
@@ -355,7 +355,7 @@ export const ANCHORS = [
     id: 'M08',
     name: { zh: '前海深港合作区', en: 'Qianhai Cooperation Zone', ja: '前海深港協力区', ko: '첸하이 협력구', ru: 'Зона Цяньхай', es: 'Zona de cooperación Qianhai' },
     coordinates: [113.899, 22.53],
-    theme: 'engineering',
+    theme: 'reform',
     contentType: 'theme',
     hero: { zh: '湾区引擎', en: 'The Bay Area Engine', ja: '湾区エンジン', ko: '베이 에어리어 엔진', ru: 'Двигатель Большого залива', es: 'El motor de la Gran Bahía' },
     era: '2010–Now',
@@ -438,7 +438,7 @@ export const ANCHORS = [
     id: 'M11',
     name: { zh: '莲花山 · 改革开放', en: 'Lianhua Mountain', ja: '蓮花山', ko: '롄화산', ru: 'Гора Ляньхуа', es: 'Montaña Lianhua' },
     coordinates: [114.057, 22.556],
-    theme: 'awakening',
+    theme: 'reform',
     hero: { zh: '邓小平', en: 'Deng Xiaoping', ja: '鄧小平', ko: '덩샤오핑', ru: 'Дэн Сяопин', es: 'Deng Xiaoping' },
     era: '1992',
     worldImpact: true,
@@ -498,7 +498,7 @@ export const ANCHORS = [
 
   // ====================== v3 新增锚点：每主题 4 个 ======================
 
-  // ---- civilization 千年文脉 · 古代文化 ----
+  // ---- civilization 千年文脉与岭南文明 ----
   {
     id: 'N-CV01',
     name: { zh: '东莞可园', en: 'Keyuan Garden', ja: '可園', ko: '커위안 가든', ru: 'Сад Кэюань', es: 'Jardín Keyuan' },
@@ -603,7 +603,7 @@ export const ANCHORS = [
     ],
   },
 
-  // ---- engineering 近代化与超级工程 ----
+  // ---- engineering 现代化与超级工程 ----
   {
     id: 'N-EG01',
     name: { zh: '深圳国贸大厦', en: 'Shenzhen Int\'l Trade Center', ja: '深セン国際貿易センター', ko: '선전 국제무역센터', ru: 'МТЦ Шэньчжэня', es: 'Centro de Comercio Internacional de Shenzhen' },
@@ -627,7 +627,7 @@ export const ANCHORS = [
     id: 'N-EG02',
     name: { zh: '深圳证券交易所', en: 'Shenzhen Stock Exchange', ja: '深セン証券取引所', ko: '선전 증권거래소', ru: 'Шэньчжэньская фондовая биржа', es: 'Bolsa de Valores de Shenzhen' },
     coordinates: [114.0488149, 22.5441447],
-    theme: 'engineering',
+    theme: 'reform',
     era: '1990–Now',
     worldImpact: true,
     title: { zh: '中国资本市场的实验田', en: 'China\'s Capital Market Laboratory', ja: '中国資本市場の実験場', ko: '중국 자본시장의 실험장', ru: 'Лаборатория рынка капитала Китая', es: 'Laboratorio del mercado de capitales de China' },
@@ -789,7 +789,7 @@ export const ANCHORS = [
     openHours: '科普开放日另行通知（关注官网）',
   },
 
-  // ---- awakening 湾区风味 · 美食文化 ----
+  // ---- awakening 风味民俗与城市生活 ----
   {
     id: 'N-AW01',
     name: { zh: '沙井蚝文化园', en: 'Shajing Oyster Heritage Park', ja: '沙井カキ文化園', ko: '사징 굴 문화공원', ru: 'Парк культуры устриц Шацзин', es: 'Parque del patrimonio ostrícola Shajing' },
@@ -882,7 +882,7 @@ export const ANCHORS = [
     openHours: '全年（节庆期间为主，平时可预约定制）',
   },
 
-  // ---- navigation 和平贸易与大航海 ----
+  // ---- navigation 海路贸易与海防门户 ----
   {
     id: 'N-NA01',
     name: { zh: '屯门·唐代季风港', en: 'Tuen Mun, Tang Dynasty Monsoon Port', ja: '屯門・唐代モンスーン港', ko: '툰문, 당나라 계절풍 항구', ru: 'Тун-мун, муссонный порт эпохи Тан', es: 'Tuen Mun, puerto monzónico Tang' },
@@ -1154,7 +1154,7 @@ export const ANCHORS = [
     id: 'N-EG06',
     name: { zh: '广州南沙港', en: 'Guangzhou Nansha Port' },
     coordinates: [113.665, 22.708],
-    theme: 'engineering',
+    theme: 'navigation',
     contentType: 'theme',
     era: '2004–Now',
     title: { zh: '从内河商埠到全球集装箱节点', en: 'From River Trade to Global Container Node' },
@@ -1171,7 +1171,7 @@ export const ANCHORS = [
     id: 'N-EG07',
     name: { zh: '横琴粤澳深度合作区', en: 'Hengqin Guangdong-Macao Cooperation Zone' },
     coordinates: [113.550, 22.136],
-    theme: 'engineering',
+    theme: 'reform',
     contentType: 'theme',
     era: '2021–Now',
     title: { zh: '制度工程比土木工程更难', en: 'Institutional Engineering Is Harder than Concrete' },
@@ -1362,14 +1362,14 @@ export const ANCHORS = [
     id: 'N-AW06',
     name: { zh: '佛山南风古灶', en: 'Nanfeng Ancient Kiln' },
     coordinates: [113.0845, 23.0047],
-    theme: 'awakening',
+    theme: 'civilization',
     contentType: 'landmark',
     era: 'Ming Dynasty–Now',
     title: { zh: '一炉火烧了五百年', en: 'A Kiln Fire Burning for Five Centuries' },
     hero: { zh: '石湾陶工与岭南器物', en: 'Shiwan potters and Lingnan wares' },
     desc: {
-      zh: '南风古灶把陶土、火候和市井审美连在一起。它让湾区风味不只在餐桌上，也在碗、盏、瓦脊和日用器物里：生活方式本身，就是一门慢慢烧成的工艺。',
-      en: 'Nanfeng Ancient Kiln connects clay, fire and everyday aesthetics. Bay Area flavor lives not only on tables, but in bowls, cups, roof ridges and daily wares: lifestyle itself is a slow-fired craft.',
+      zh: '南风古灶把陶土、火候和市井审美连在一起。它让岭南文脉不只停留在祠堂、园林和书院里，也在碗、盏、瓦脊和日用器物里：生活方式本身，就是一门慢慢烧成的工艺。',
+      en: 'Nanfeng Ancient Kiln connects clay, fire and everyday aesthetics. Lingnan culture lives not only in ancestral halls, gardens and academies, but in bowls, cups, roof ridges and daily wares: lifestyle itself is a slow-fired craft.',
     },
     checkinTag: '#南风古灶 #石湾陶 #佛山',
     openHours: '景区开放时间以现场公示为准',
@@ -1519,7 +1519,7 @@ export const ANCHORS = [
     id: 'N-NA09',
     name: { zh: '香港长洲岛', en: 'Cheung Chau Island' },
     coordinates: [114.0276, 22.2088],
-    theme: 'navigation',
+    theme: 'awakening',
     contentType: 'theme',
     era: 'Fishing port–Now',
     title: { zh: '小岛节庆里的海港社会', en: 'Harbor Society in an Island Festival' },
@@ -1586,7 +1586,7 @@ export const LOCATION_AUDIT = Object.freeze({
   'N-SC04': { coordinates: [113.9597942, 22.8125516], visitPoint: { zh: '光明科学城启动区', en: 'Guangming Science City Launch Area' }, address: { zh: '深圳市光明区新湖街道新塘光明科学城启动区', en: 'Guangming Science City Launch Area, Xinhu, Guangming District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
   'N-AW01': { coordinates: [113.8169935, 22.7502822], visitPoint: { zh: '蚝乡湖公园文化展览馆', en: 'Haoxiang Lake Park Cultural Exhibition Hall' }, address: { zh: '深圳市宝安区沙井街道大浦路蚝乡湖公园文化展览馆', en: 'Haoxiang Lake Park Cultural Exhibition Hall, Dapu Road, Baoan District, Shenzhen' }, kind: 'reference', source: 'OpenStreetMap' },
   'N-AW02': { coordinates: [114.0597802, 22.3676522], visitPoint: { zh: '深井（烧鹅文化代表点）', en: 'Sham Tseng, roast goose reference point' }, address: { zh: '香港新界荃湾区深井', en: 'Sham Tseng, Tsuen Wan District, New Territories, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
-  'N-AW03': { coordinates: [113.2498286, 22.8383866], visitPoint: { zh: '清晖园（顺德美食文化代表点）', en: 'Qinghui Garden, Shunde cuisine reference point' }, address: { zh: '佛山市顺德区大良街道清晖园', en: 'Qinghui Garden, Daliang, Shunde District, Foshan' }, kind: 'reference', source: 'OpenStreetMap' },
+  'N-AW03': { coordinates: [113.2498286, 22.8383866], visitPoint: { zh: '清晖园（顺德风味文化代表点）', en: 'Qinghui Garden, Shunde cuisine reference point' }, address: { zh: '佛山市顺德区大良街道清晖园', en: 'Qinghui Garden, Daliang, Shunde District, Foshan' }, kind: 'reference', source: 'OpenStreetMap' },
   'N-AW04': { coordinates: [114.0102302, 22.4456916], visitPoint: { zh: '香港屏山邓族文物馆', en: 'Ping Shan Tang Clan Gallery' }, address: { zh: '香港元朗区屏山竹林路香港屏山邓族文物馆', en: 'Ping Shan Tang Clan Gallery, Chuk Lam Road, Yuen Long, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
   'N-NA01': { coordinates: [113.9593525, 22.3917663], visitPoint: { zh: '青山寺（屯门古港叙事访问点）', en: 'Tsing Shan Monastery, Tuen Mun port reference point' }, address: { zh: '香港屯门区青山寺径青山寺', en: 'Tsing Shan Monastery, Tsing Shan Monastery Path, Tuen Mun, Hong Kong' }, kind: 'reference', source: 'OpenStreetMap' },
   'N-NA02': { coordinates: [113.6545574, 22.8281413], visitPoint: { zh: '鸦片战争博物馆（伶仃洋叙事访问点）', en: 'Opium War Museum, Lingdingyang reference point' }, address: { zh: '东莞市虎门镇解放路鸦片战争博物馆', en: 'Opium War Museum, Jiefang Road, Humen, Dongguan' }, kind: 'reference', source: 'OpenStreetMap' },

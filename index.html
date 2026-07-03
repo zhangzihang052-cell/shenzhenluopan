@@ -3,19 +3,20 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>时空罗盘 · Space-Time Compass</title>
     <meta name="description" content="大湾区历史文化百科 —— 历史的蝴蝶效应。A 3D interactive cultural encyclopedia of the Greater Bay Area." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='12' fill='%23b23a2e'/%3E%3Ccircle cx='32' cy='32' r='18' fill='none' stroke='%23fff4dc' stroke-width='4'/%3E%3Cpath d='M39 18 34 34 20 41 27 27z' fill='%23fff4dc'/%3E%3C/svg%3E" />
 
     <!-- MapLibre GL JS：负责现有的叙事地图渲染。路线与地点校准由腾讯位置服务提供。 -->
-    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="./public/vendor/maplibre-gl.css" rel="stylesheet" />
+    <script src="./public/vendor/maplibre-gl.js"></script>
 
     <!-- deck.gl (全球影响力连线 ArcLayer · GPU 加速，与 MapLibre 联动) -->
-    <script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+    <script src="./public/vendor/deck.gl-8.9.35.min.js"></script>
 
     <!-- Tailwind CSS (CDN) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./public/vendor/tailwindcss-3.4.17.js"></script>
     <script>
       tailwind.config = {
         theme: {
@@ -48,9 +49,23 @@
       rel="stylesheet"
     />
 
-    <link rel="stylesheet" href="./src/styles.css?rev=stamp-focus-2" />
+    <link rel="stylesheet" href="./src/styles.css?rev=ink-pill-tools-5" />
+    <link rel="stylesheet" href="./src/mobile.css?rev=landscape-2" />
   </head>
   <body class="bg-compass-bg font-sans text-[#2b2118]">
+    <!-- 竖屏旋转引导：仅移动端竖屏时显示 -->
+    <div id="rotate-hint" aria-hidden="true">
+      <div class="rotate-hint__icon">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="14" y="22" width="36" height="20" rx="3" />
+          <path d="M22 32 L42 32 M34 28 L42 32 L34 36" />
+          <path d="M50 16 C54 20 56 26 56 32" opacity="0.5" />
+        </svg>
+      </div>
+      <p class="rotate-hint__text">请旋转设备至横屏浏览</p>
+      <p class="rotate-hint__sub">本体验为横屏设计</p>
+    </div>
+
     <!-- 地图容器 -->
     <div id="map"></div>
 
@@ -65,6 +80,26 @@
       <div class="vignette"></div>
       <div class="cloud-pattern"></div>
       <div class="paper-grain"></div>
+      <div class="bird-flock bird-flock-a">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div class="bird-flock bird-flock-b">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div class="bird-flock bird-flock-c">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
 
       <!-- 四角古典回纹装饰（纯 SVG） -->
       <svg class="corner-fret corner-tl" viewBox="0 0 100 100" fill="none" stroke="#7a6a4a" stroke-width="1.4">
@@ -88,6 +123,23 @@
     <!-- UI 覆盖层（由 JS 动态渲染） -->
     <div id="ui-root"></div>
 
+    <!-- 移动端开场：云雾穿越锁定动画（仅横屏移动端显示） -->
+    <div id="mobile-cloud-intro" aria-hidden="true">
+      <span class="flight-vignette"></span>
+      <span class="flight-reticle">
+        <span class="flight-ring flight-ring-a"></span>
+        <span class="flight-ring flight-ring-b"></span>
+        <span class="flight-cross flight-cross-x"></span>
+        <span class="flight-cross flight-cross-y"></span>
+        <span class="flight-dot"></span>
+      </span>
+      <span class="flight-label">锁定大湾区坐标</span>
+      <span class="mist mist-a"></span>
+      <span class="mist mist-b"></span>
+      <span class="mist mist-c"></span>
+      <span class="mist mist-d"></span>
+    </div>
+
     <!-- 启动加载遮罩：水墨晕染同心圆扩散 -->
     <div id="loading" class="loading-overlay">
       <div class="ink-ripple">
@@ -102,8 +154,9 @@
 
     <!-- 本机腾讯地图密钥配置：该文件被 git 忽略，缺失时会显示服务未配置提示。 -->
     <script src="./public/tencent-map.config.js"></script>
+    <script src="./public/supabase.config.js"></script>
 
     <!-- 应用入口（ESM） -->
-    <script type="module" src="./src/main.js?rev=anchor-images-1"></script>
+    <script type="module" src="./src/main.js?rev=landscape-1"></script>
   </body>
 </html>

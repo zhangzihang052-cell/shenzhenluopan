@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>山峰效果快照</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #333; }
+  #map { width: 1200px; height: 780px; position: absolute; left: -6000px; top: 0; }
+  #shot { width: 1000px; display: block; }
+  .lbl { position: fixed; top: 8px; left: 8px; z-index: 99; background: rgba(0,0,0,.8); color: #0f0; font: 13px monospace; padding: 4px 8px; white-space:pre-wrap; }
+</style>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<img id="shot" alt="" />
+<div class="lbl" id="lbl">LOADING</div>
+<script type="module">
+  import { BASEMAP_COLORS } from '/src/data/themes.js?rev=ink-mountains-7';
+  const lbl = document.getElementById('lbl');
+  const C = BASEMAP_COLORS;
+  const has = (id, ...ks) => ks.some((k) => id.includes(k));
+  const loadImage = (url) => new Promise((res, rej) => { const i = new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    center: [114.05, 22.62], zoom: 10.2,
+    attributionControl: false, fadeDuration: 0, interactive: false,
+    preserveDrawingBuffer: true,
+  });
+  function inkify() {
+    for (const layer of map.getStyle().layers) {
+      const id = layer.id.toLowerCase(); const type = layer.type;
+      try {
+        if (has(id,'poi','housenum','transit','aeroway','waterway_label','watername','building-top')||(has(id,'road')&&has(id,'label'))){map.setLayoutProperty(layer.id,'visibility','none');continue;}
+        if (type==='background'){map.setPaintProperty(layer.id,'background-color',C.background);continue;}
+        if (type==='fill'&&has(id,'landcover','landuse','background')){map.setPaintProperty(layer.id,'fill-color',C.background);map.setPaintProperty(layer.id,'fill-opacity',1);continue;}
+        if (type==='fill'&&has(id,'park','grass','wood','forest','vegetation','nature')){map.setPaintProperty(layer.id,'fill-color',C.green);map.setPaintProperty(layer.id,'fill-opacity',0.45);continue;}
+        if (type==='fill'&&has(id,'water')){map.setPaintProperty(layer.id,'fill-color',C.water);map.setPaintProperty(layer.id,'fill-opacity',1);continue;}
+        if (type==='line'&&has(id,'water')){map.setPaintProperty(layer.id,'line-color',C.waterLine||C.water);map.setPaintProperty(layer.id,'line-opacity',0.7);continue;}
+        if (type==='line'&&has(id,'road','bridge','tunnel','transportation')){if(has(id,'case')){map.setPaintProperty(layer.id,'line-color','#EFE6CF');map.setPaintProperty(layer.id,'line-opacity',0.55);}else{map.setPaintProperty(layer.id,'line-color',C.road);map.setPaintProperty(layer.id,'line-opacity',0.72);}continue;}
+      } catch(e){}
+    }
+  }
+  async function installMountains() {
+    const ICONS=[['ink-peak-range','peak-range'],['ink-peak-single','peak-single'],['ink-peak-double','peak-double'],['ink-peak-hill','peak-hill']];
+    for (const [id,f] of ICONS){ const img=await loadImage('/public/textures/mountains/'+f+'.png'); if(!map.hasImage(id)) map.addImage(id,img); }
+    const PEAKS=[
+      {c:[114.2233,22.5820],i:'ink-peak-range',s:1.15},{c:[114.0588,22.5560],i:'ink-peak-hill',s:0.7},
+      {c:[113.9760,22.5760],i:'ink-peak-single',s:0.8},{c:[113.9200,22.6600],i:'ink-peak-double',s:0.9},
+      {c:[113.9350,22.4870],i:'ink-peak-hill',s:0.65},{c:[114.3300,22.6400],i:'ink-peak-range',s:1.0},
+      {c:[114.1240,22.4100],i:'ink-peak-range',s:1.05},{c:[113.9200,22.2540],i:'ink-peak-double',s:1.0},
+    ];
+    map.addSource('m',{type:'geojson',data:{type:'FeatureCollection',features:PEAKS.map(p=>({type:'Feature',geometry:{type:'Point',coordinates:p.c},properties:{icon:p.i,scale:p.s}}))}});
+    map.addLayer({id:'ml',type:'symbol',source:'m',layout:{'icon-image':['get','icon'],'icon-size':['interpolate',['linear'],['zoom'],7,['*',0.05,['get','scale']],10,['*',0.11,['get','scale']],13,['*',0.24,['get','scale']]],'icon-anchor':'bottom','icon-allow-overlap':true,'icon-ignore-placement':true},paint:{'icon-opacity':0.95}});
+  }
+  const snap=()=>{const cv=document.querySelector('#map canvas');document.getElementById('shot').src=cv.toDataURL('image/png');};
+  map.on('load',async()=>{
+    inkify();
+    try { await installMountains(); lbl.textContent='mountains OK'; } catch(e){ lbl.textContent='MT-ERR '+e.message; }
+    map.once('idle',()=>setTimeout(()=>{ snap(); map.remove(); document.getElementById('map').remove(); document.title='SNAP-DONE'; },1200));
+  });
+</script>
+</body>
+</html>

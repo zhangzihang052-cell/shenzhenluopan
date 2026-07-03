@@ -1,10 +1,12 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
-import { createMap, haversineKm } from './map.js?rev=interaction-layout';
-import { ANCHORS } from './data/anchors.js?rev=anchor-images-1';
-import { THEME_ORDER, THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js';
-import { getText, pick } from './i18n.js?rev=stamp-focus-1';
-import { getEpisode, hasEpisode } from './data/episodes.js?rev=episodes-depth-1';
-import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js';
+import { createMap, haversineKm } from './map.js?rev=clean-8';
+import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
+import { THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js?rev=clean-8';
+import { getText, pick } from './i18n.js?rev=audio-sfx-1';
+import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
+import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js?rev=external-preview-1';
+import { createAuthController } from './auth.js?rev=memory-1';
+import { createMemoryController } from './memory.js?rev=memory-1';
 import {
   isTencentConfigured,
   planTencentRoute,
@@ -22,7 +24,7 @@ import {
   refreshStampBadge,
   showAchievementCard,
   handleGeofence,
-} from './game.js?rev=stamp-focus-1';
+} from './game.js?rev=audio-sfx-1';
 import {
   renderHeader,
   refreshHeader,
@@ -32,15 +34,12 @@ import {
   showToast,
   renderGeoModal,
   openGeoModal,
-  renderLayerControl,
-  refreshLayerControl,
   renderInfoPanel,
   openInfoPanel,
   openForeignPanel,
   closeInfoPanel,
   isPanelOpen,
   getCurrentAnchor,
-  computeCounts,
   updateVisibleCount,
   renderNearbyDrawer,
   openNearbyDrawer,
@@ -59,12 +58,26 @@ import {
   openCompassPanel,
   closeCompassPanel,
   isCompassOpen,
+  isCompassShowingClues,
+  getCompassClueIds,
+  focusCompassClue,
   setCompassLocation,
   setCompassPlanning,
   showItinerary,
   clearItinerary,
   refreshCompassTexts,
-} from './ui.js?rev=stamp-focus-1';
+  playClueScanTransition,
+  openClueCompleteFeedback,
+  renderRoutePlanner,
+  openRoutePlanner,
+  closeRoutePlanner,
+  isRoutePlannerOpen,
+  setRoutePlannerPlanning,
+  showRoutePlannerItinerary,
+  clearRoutePlannerItinerary,
+  refreshRoutePlannerTexts,
+  setRoutePlannerLocation,
+} from './ui.js?rev=ink-btn-1';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {
@@ -92,6 +105,176 @@ function showFullscreenError(bodyKey) {
   document.body.appendChild(el);
 }
 
+function hideLoading() {
+  const loading = document.getElementById('loading');
+  if (loading) loading.classList.add('hidden');
+}
+
+const BGM_URL = './public/audio/yiran-zide-erhu-pipa.m4a?v=bgm-1';
+const BGM_VOLUME = 0.16;
+const BGM_MUTED_KEY = 'stc_bgm_muted';
+const UI_PAGE_SFX_URL = './public/audio/ui-page-turn.wav?v=sfx-assets-1';
+const UI_CLUE_SFX_URL = './public/audio/ui-clue-discovery.mp3?v=sfx-assets-1';
+const UI_PAGE_SFX_VOLUME = 0.13;
+const UI_CLUE_SFX_VOLUME = 0.18;
+
+function getStoredBgmMuted() {
+  try {
+    return localStorage.getItem(BGM_MUTED_KEY) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
+function setStoredBgmMuted(value) {
+  try {
+    localStorage.setItem(BGM_MUTED_KEY, value ? '1' : '0');
+  } catch (e) {
+    // Ignore storage failures; the in-session control still works.
+  }
+}
+
+function initBackgroundMusic(root) {
+  if (!root || document.getElementById('bgm-toggle')) return;
+  const audio = document.createElement('audio');
+  audio.id = 'bgm-audio';
+  audio.src = BGM_URL;
+  audio.loop = true;
+  audio.preload = 'auto';
+  audio.volume = BGM_VOLUME;
+  audio.setAttribute('aria-hidden', 'true');
+
+  const btn = document.createElement('button');
+  btn.id = 'bgm-toggle';
+  btn.className = 'bgm-toggle';
+  btn.type = 'button';
+  btn.innerHTML = `
+    <span class="bgm-note" aria-hidden="true">♪</span>
+    <span class="bgm-bars" aria-hidden="true"><i></i><i></i><i></i></span>`;
+
+  let muted = getStoredBgmMuted();
+  let unlocked = false;
+
+  const update = () => {
+    const playing = !muted && !audio.paused;
+    btn.classList.toggle('is-muted', muted);
+    btn.classList.toggle('is-playing', playing);
+    btn.setAttribute('aria-pressed', String(playing));
+    const label = getText(playing ? 'bgm.pause' : 'bgm.play');
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  };
+
+  const tryPlay = () => {
+    if (muted) {
+      update();
+      return;
+    }
+    unlocked = true;
+    audio.volume = BGM_VOLUME;
+    audio.play().then(update).catch(update);
+  };
+
+  const unlockOnce = (event) => {
+    if (event && event.target && event.target.closest && event.target.closest('#bgm-toggle')) return;
+    tryPlay();
+    window.removeEventListener('pointerdown', unlockOnce);
+    window.removeEventListener('keydown', unlockOnce);
+  };
+
+  btn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    unlocked = true;
+    if (muted || audio.paused) {
+      muted = false;
+      setStoredBgmMuted(false);
+      tryPlay();
+    } else {
+      muted = true;
+      setStoredBgmMuted(true);
+      audio.pause();
+    }
+    update();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      audio.pause();
+      update();
+    } else if (unlocked && !muted) {
+      tryPlay();
+    }
+  });
+  audio.addEventListener('play', update);
+  audio.addEventListener('pause', update);
+  audio.addEventListener('volumechange', update);
+
+  root.appendChild(btn);
+  document.body.appendChild(audio);
+  update();
+  window.addEventListener('pointerdown', unlockOnce, { passive: true });
+  window.addEventListener('keydown', unlockOnce);
+}
+
+function initInteractionSounds() {
+  if (document.documentElement.dataset.uiSfxReady === '1') return;
+  document.documentElement.dataset.uiSfxReady = '1';
+
+  const makeSound = (id, src, volume) => {
+    const audio = document.createElement('audio');
+    audio.id = id;
+    audio.src = src;
+    audio.preload = 'auto';
+    audio.volume = volume;
+    audio.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(audio);
+    return audio;
+  };
+
+  const pageTurn = makeSound('ui-page-turn-sfx', UI_PAGE_SFX_URL, UI_PAGE_SFX_VOLUME);
+  const clueDiscovery = makeSound('ui-clue-discovery-sfx', UI_CLUE_SFX_URL, UI_CLUE_SFX_VOLUME);
+  const lastPlayedAt = {
+    page: 0,
+    clue: 0,
+  };
+
+  const playSound = (audio, type, minGap = 75) => {
+    const now = performance.now();
+    if (now - lastPlayedAt[type] < minGap) return;
+    lastPlayedAt[type] = now;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch (e) {
+      /* Audio playback can be blocked before user gesture; ignore. */
+    }
+  };
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const interactive = target.closest('button, [role="button"], a[href], input[type="button"], input[type="submit"]');
+      if (!interactive) return;
+      if (interactive.disabled || interactive.getAttribute('aria-disabled') === 'true') return;
+      if (interactive.closest('.rpg-hotspot')) return;
+      playSound(pageTurn, 'page');
+    },
+    true
+  );
+
+  window.addEventListener('compass-ui-sound', (event) => {
+    const type = event && event.detail && event.detail.type;
+    if (type === 'clue') {
+      playSound(clueDiscovery, 'clue', 120);
+      return;
+    }
+    playSound(pageTurn, 'page');
+  });
+}
+
 function boot() {
   if (!isWebGLSupported()) {
     showFullscreenError('webgl.body');
@@ -104,6 +287,8 @@ function boot() {
 
   const uiRoot = document.getElementById('ui-root');
   const geoSupported = 'geolocation' in navigator;
+  initBackgroundMusic(uiRoot);
+  initInteractionSounds();
 
   const state = {
     selected: null,
@@ -111,12 +296,16 @@ function boot() {
     userPos: null,
     routeRequestId: 0,
   };
+  let memoryExperience = null;
+  const authController = createAuthController();
 
-  const counts = computeCounts();
   const visibleCount = () =>
     state.activeTheme === 'all'
       ? ANCHORS.length
       : ANCHORS.filter((a) => a.theme === state.activeTheme).length;
+
+  const isMobileAppView = () =>
+    window.matchMedia('(max-width: 820px)').matches;
 
   // 注入 Haversine 给 UI 的附近计算
   setHaversine(haversineKm);
@@ -129,11 +318,7 @@ function boot() {
     geoSupported,
     onCompass: handleCompass,
     onStampBook: handleStampBook,
-  });
-  renderLayerControl(uiRoot, {
-    counts,
-    activeTheme: state.activeTheme,
-    onSwitchTheme: handleSwitchTheme,
+    onRoutePlan: handleRoutePlanButton,
   });
   // 初始化主题强调色 CSS 变量
   document.documentElement.style.setProperty('--theme-accent', OVERVIEW_MODE.accentColor);
@@ -144,9 +329,18 @@ function boot() {
   // 新玩法组件：罗盘探索面板 + 剧情副本层 + 印章册
   renderCompassPanel(uiRoot, {
     onAnchorClick: handleSelect,
+    onClueStart: handleClueStart,
+    onClueHover: handleClueHover,
+    onExploreModeChange: handleCompassModeChange,
     onPlanRoute: handlePlanRoute,
     onClearRoute: handleClearRoute,
-    onClose: () => {},
+    onClose: handleCompassClose,
+  });
+  renderRoutePlanner(uiRoot, {
+    onAnchorClick: handleRoutePlannerAnchorClick,
+    onPlanRoute: handlePlanRoute,
+    onClearRoute: handleClearRoute,
+    onOpenNearby: handleCompass,
   });
   renderEpisodeLayer(uiRoot);
   renderStampBook(uiRoot, { onPickAnchor: handleSelect });
@@ -155,20 +349,41 @@ function boot() {
   // 附近列表变化 → 地图高亮
   setNearbyChangeHandler((idSet) => controller.highlightNearby(idSet));
 
+  // 外部浏览器里底图/瓦片偶尔会慢加载；UI 已经可用时不让加载遮罩一直挡住页面。
+  const loadingFallbackDelay = isMobileAppView() ? 2400 : 4200;
+  const loadingFallbackTimer = window.setTimeout(hideLoading, loadingFallbackDelay);
+
   // ---- 创建地图 ----
   const controller = createMap({
     onSelect: handleSelect,
     onSelectForeign: handleSelectForeign,
     onReady: () => {
-      const loading = document.getElementById('loading');
-      if (loading) loading.classList.add('hidden');
+      window.clearTimeout(loadingFallbackTimer);
+      hideLoading();
       // 标记已通关锚点（点亮地图印章）
       controller.markCompleted(ANCHORS, getCompletedIds());
     },
   });
+  memoryExperience = createMemoryController({
+    root: uiRoot,
+    map: controller.map,
+    anchors: ANCHORS,
+    auth: authController,
+    showToast,
+  });
+  memoryExperience.init();
 
   // ===== 锚点选中 =====
   function handleSelect(anchor) {
+    if (isCompassOpen() && isCompassShowingClues() && getCompassClueIds().has(anchor.id)) {
+      focusCompassClue(anchor.id);
+      controller.focusClueAnchors(getCompassClueIds(), anchor.id);
+      return;
+    }
+    openAnchorDetail(anchor);
+  }
+
+  function openAnchorDetail(anchor) {
     state.selected = anchor;
     controller.selectAnchor(anchor);
     controller.clearGlobalLinks();
@@ -177,6 +392,7 @@ function boot() {
       onLinkClick: handleLinkClick,
       onEnterEpisode: handleEnterEpisode,
     });
+    if (memoryExperience) memoryExperience.mountAnchorMemorySection(anchor);
 
     // 含全球连线 → 飞行结束后渲染 ArcLayer + 建立面包屑
     if (anchor.globalLinks && anchor.globalLinks.length) {
@@ -235,11 +451,6 @@ function boot() {
     handleClose();
   }
 
-  // ===== 主题切换（单选模式）+ applyTheme =====
-  function handleSwitchTheme(key) {
-    applyTheme(key);
-  }
-
   function applyTheme(themeKey) {
     state.activeTheme = themeKey;
 
@@ -262,14 +473,22 @@ function boot() {
     // 4. 锚点显隐过滤（MapLibre filter，淡出非本主题锚点）
     controller.setThemeFilter(themeKey);
 
-    // 5. 刷新图层面板
-    refreshLayerControl(counts, themeKey);
-
-    // 6. 更新页头计数器
+    // 5. 更新页头计数器
     updateHeaderDisplay();
 
-    // 7. 所有叙事图层复用总览相机视角，不再按主题锚点自动缩放。
+    // 6. 所有叙事图层复用总览相机视角，不再按主题锚点自动缩放。
     controller.reset();
+  }
+
+  function setClueMapMood(active) {
+    const mapEl = document.getElementById('map');
+    const overlayEl = document.getElementById('theme-overlay');
+    if (mapEl) {
+      mapEl.style.filter = OVERVIEW_MODE.mapFilter;
+    }
+    if (overlayEl) {
+      overlayEl.style.backgroundColor = OVERVIEW_MODE.overlay;
+    }
   }
 
   /** 更新页头计数与主题标签（总览模式/主题模式均适用）*/
@@ -289,10 +508,11 @@ function boot() {
       code === 'zh' ? 'zh-CN' : code === 'ja' ? 'ja' : code === 'ko' ? 'ko' : code === 'ru' ? 'ru' : code === 'es' ? 'es' : 'en';
     refreshHeader(ANCHORS.length, visibleCount());
     refreshToolCluster();
-    refreshLayerControl(counts, state.activeTheme);
     updateHeaderDisplay();
     refreshNearbyTexts();
     refreshCompassTexts();
+    refreshRoutePlannerTexts();
+    if (memoryExperience) memoryExperience.refreshTexts();
     // 面包屑标签随语言刷新
     const trail = getBreadcrumbTrail();
     if (trail.length) {
@@ -314,19 +534,21 @@ function boot() {
           onLinkClick: handleLinkClick,
           onEnterEpisode: handleEnterEpisode,
         });
+      if (cur && !cur.foreign && memoryExperience) memoryExperience.mountAnchorMemorySection(cur);
     }
   }
 
   // ===== GPS 定位 =====
   function handleLocate() {
+    const mobileView = isMobileAppView();
     setGpsLoading(true);
     controller.locateUser({
       onSuccess: ({ lng, lat, inBay }) => {
         setGpsLoading(false);
         state.userPos = [lng, lat];
         showToast(inBay ? getText('gps.you') : getText('gps.outside'));
-        // 展开附近抽屉 + 高亮附近锚点
-        openNearbyDrawer([lng, lat]);
+        // 移动端先让地图镜头落到当前位置，再展开附近抽屉，避免遮挡用户定位感。
+        window.setTimeout(() => openNearbyDrawer([lng, lat]), mobileView ? 850 : 0);
         controller.highlightNearby(getNearbyIds());
       },
       onError: (reason) => {
@@ -345,23 +567,83 @@ function boot() {
     handleSelect(anchor);
   }
 
+  // ===== 右上角：路线规划 =====
+  function handleRoutePlanButton() {
+    if (isRoutePlannerOpen()) {
+      closeRoutePlanner();
+      return;
+    }
+    if (isCompassOpen()) closeCompassPanel();
+    setClueMapMood(false);
+    controller.clearClueFocus(state.activeTheme);
+    setRoutePlannerLocation(getRoutePlannerOrigin());
+    openRoutePlanner('free');
+  }
+
+  function handleRoutePlannerAnchorClick(anchor) {
+    handleSelect(anchor);
+  }
+
+  function getRoutePlannerOrigin() {
+    const pos = controller.getUserPosition() || state.userPos;
+    if (pos) return pos;
+    if (controller.map && controller.map.getCenter) {
+      const center = controller.map.getCenter();
+      if (center && Number.isFinite(center.lng) && Number.isFinite(center.lat)) return [center.lng, center.lat];
+    }
+    return null;
+  }
+
   // ===== 罗盘探索：定位（GPS 失败回退模拟）+ 打开面板 =====
   function handleCompass() {
     if (isCompassOpen()) {
       closeCompassPanel();
       return;
     }
-    openCompassPanel();
+    if (isRoutePlannerOpen()) closeRoutePlanner();
+    const scan = playClueScanTransition();
     setGpsLoading(true);
     controller.locateOrSimulate({
-      onResult: ({ lng, lat, simulated }) => {
+      onResult: async ({ lng, lat, simulated }) => {
         setGpsLoading(false);
         state.userPos = [lng, lat];
         setCompassLocation({ lng, lat, simulated });
-        controller.highlightNearby(nearestIdSet([lng, lat], 8));
-        showToast(getText(simulated ? 'compass.simulated' : 'compass.real'));
+        setClueMapMood(true);
+        controller.focusClueAnchors(getCompassClueIds());
+        showToast(getText('clues.ready'));
         checkGeofenceNow();
+        await scan;
+        if (!isCompassOpen()) openCompassPanel();
+        controller.focusClueAnchors(getCompassClueIds());
       },
+    });
+  }
+
+  function handleCompassClose() {
+    setClueMapMood(false);
+    controller.clearClueFocus(state.activeTheme);
+  }
+
+  function handleCompassModeChange(view) {
+    if (view === 'free') {
+      setClueMapMood(false);
+      controller.clearClueFocus(state.activeTheme);
+      return;
+    }
+    setClueMapMood(true);
+    controller.focusClueAnchors(getCompassClueIds());
+  }
+
+  function handleClueHover(anchorId) {
+    controller.focusClueAnchors(getCompassClueIds(), anchorId);
+  }
+
+  function handleClueStart(anchor, clue) {
+    focusCompassClue(anchor.id);
+    controller.focusClueAnchors(getCompassClueIds(), anchor.id);
+    playClueScanTransition(getText('clues.entering')).then(() => {
+      closeCompassPanel();
+      openAnchorDetail(anchor);
     });
   }
 
@@ -378,7 +660,7 @@ function boot() {
     );
   }
 
-  // ===== 腾讯地图路线规划（用户勾选锚点 + 实际道路 + 驾车智能排序）=====
+  // ===== 路线规划（有定位按距离/道路排序；无定位按用户选择顺序）=====
   function getTencentErrorText(error) {
     const message = String((error && error.message) || '');
     if (message === 'missing-key') return getText('route.service_missing');
@@ -389,31 +671,65 @@ function boot() {
     return getText('route.failed');
   }
 
-  async function handlePlanRoute(themeKey, modeKey, selectedIds = []) {
+  function buildSelectionRoute(anchors, modeKey) {
+    const mode = TRAVEL_MODES[modeKey] || TRAVEL_MODES.walk;
+    let cumKm = 0;
+    const stops = anchors.map((anchor, index) => {
+      const prev = index > 0 ? anchors[index - 1] : null;
+      const legKm = prev
+        ? haversineKm(prev.coordinates[0], prev.coordinates[1], anchor.coordinates[0], anchor.coordinates[1])
+        : 0;
+      cumKm += legKm;
+      return {
+        index: index + 1,
+        anchor,
+        legKm,
+        cumKm,
+        cumMin: (cumKm / mode.speedKmh) * 60,
+      };
+    });
+    return {
+      itinerary: {
+        modeKey: mode.key,
+        stops,
+        totalKm: cumKm,
+        totalMin: (cumKm / mode.speedKmh) * 60,
+        straight: true,
+        source: 'selection',
+        startCoord: null,
+      },
+      geometry: anchors.map((anchor) => anchor.coordinates),
+    };
+  }
+
+  async function handlePlanRoute(themeKey, modeKey, selectedIds = [], options = {}) {
     const start = controller.getUserPosition() || state.userPos;
-    if (!start) {
-      showToast(getText('compass.locating'));
-      return;
-    }
-    const pool = ANCHORS.filter((anchor) => selectedIds.includes(anchor.id));
+    const pool = selectedIds
+      .map((id) => ANCHORS.find((anchor) => anchor.id === id))
+      .filter(Boolean);
     if (!pool.length) {
-      showToast(getText('route.no_selection'));
+      showToast(getText('route_planner.no_selection'));
       return;
     }
+    const useRoutePlanner = options.source === 'routePlanner' || isRoutePlannerOpen();
     const routeRequestId = ++state.routeRequestId;
-    setCompassPlanning(true);
+    if (useRoutePlanner) setRoutePlannerPlanning(true);
+    else setCompassPlanning(true);
     const accent =
       themeKey === 'all' ? OVERVIEW_MODE.color : (THEMES[themeKey] || OVERVIEW_MODE).color;
     let planned = null;
     let tencentError = null;
-    if (isTencentConfigured()) {
+
+    if (!start) {
+      planned = buildSelectionRoute(pool, modeKey);
+    } else if (isTencentConfigured()) {
       try {
         planned = await planTencentRoute({ start, anchors: pool, modeKey });
       } catch (error) {
         tencentError = error;
       }
     }
-    if (!planned) {
+    if (!planned && start) {
       try {
         planned = await planOSRMRoute({ start, anchors: pool, modeKey });
         if (tencentError) showToast(getText('route.osrm_fallback'));
@@ -426,22 +742,35 @@ function boot() {
         showToast(getText('route.straight_fallback'));
       }
     }
+    if (planned && planned.itinerary) planned.itinerary.startCoord = start || null;
 
-    if (routeRequestId !== state.routeRequestId || !isCompassOpen()) {
-      setCompassPlanning(false);
+    if (routeRequestId !== state.routeRequestId || (useRoutePlanner ? !isRoutePlannerOpen() : !isCompassOpen())) {
+      if (useRoutePlanner) setRoutePlannerPlanning(false);
+      else setCompassPlanning(false);
       return;
     }
 
-    setCompassPlanning(false);
-    showItinerary(planned.itinerary, themeKey);
-    controller.drawRoute(planned.geometry, accent);
-    state.routeDrawn = true;
+    if (useRoutePlanner) {
+      setRoutePlannerPlanning(false);
+      showRoutePlannerItinerary(planned.itinerary, themeKey);
+    } else {
+      setCompassPlanning(false);
+      showItinerary(planned.itinerary, themeKey);
+    }
+    if (planned.geometry && planned.geometry.length >= 2) {
+      controller.drawRoute(planned.geometry, accent);
+      state.routeDrawn = true;
+    } else {
+      controller.clearRoute();
+      state.routeDrawn = false;
+    }
   }
 
   function handleClearRoute() {
     state.routeRequestId += 1;
     controller.clearRoute();
     clearItinerary();
+    clearRoutePlannerItinerary();
     state.routeDrawn = false;
   }
 
@@ -455,8 +784,32 @@ function boot() {
         // 通关即时点亮地图印章 + 刷新角标
         controller.markCompleted(ANCHORS, getCompletedIds());
         refreshStampBadge();
+        if (opts.clue) refreshCompassTexts();
       },
       onComplete: (a, res) => {
+        if (opts.clue) {
+          window.setTimeout(() => {
+            openClueCompleteFeedback(a, opts.clue, {
+              onViewAnchor: (target) => {
+                closeCompassPanel();
+                openAnchorDetail(target);
+              },
+              onContinue: (target) => {
+                openCompassPanel();
+                focusCompassClue(target.id);
+                setClueMapMood(true);
+                controller.focusClueAnchors(getCompassClueIds(), target.id);
+              },
+              onPlanRoute: () => {
+                closeCompassPanel();
+                setClueMapMood(false);
+                controller.clearClueFocus(state.activeTheme);
+                setRoutePlannerLocation(getRoutePlannerOrigin());
+                openRoutePlanner('free');
+              },
+            });
+          }, 260);
+        }
         // 关闭剧情后：若解锁图层成就 → 弹贺卡
         if (res && res.achievementUnlocked) {
           setTimeout(() => showAchievementCard(res.achievementUnlocked), 420);
@@ -490,7 +843,7 @@ function boot() {
 
   // 点击地图空白处关闭
   controller.map.on('click', (e) => {
-    const candidateLayers = ['anchor-core', 'anchor-glow'].filter((id) =>
+    const candidateLayers = ['anchor-core', 'anchor-glow', 'memory-core', 'memory-glow'].filter((id) =>
       controller.map.getLayer(id)
     );
     if (candidateLayers.length === 0) return;
@@ -507,6 +860,8 @@ function boot() {
     if (e.key === 'Escape') {
       if (isEpisodeOpen()) closeEpisode();
       else if (isStampBookOpen()) closeStampBook();
+      else if (memoryExperience && memoryExperience.isOpen()) memoryExperience.closePanel();
+      else if (isRoutePlannerOpen()) closeRoutePlanner();
       else if (isCompassOpen()) closeCompassPanel();
       else if (state.selected) handleClose();
       else if (isNearbyOpen()) closeNearbyDrawer();

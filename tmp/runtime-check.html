@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>运行时图层核验</title>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map" style="width:800px;height:600px"></div>
+<pre id="out" style="font:12px monospace">checking...</pre>
+<script type="module">
+  // 直接复用正式 map.js 的构建逻辑做运行时核验
+  import { createMap } from '/src/map.js?rev=ink-layer-3';
+  const out = document.getElementById('out');
+  try {
+    const controller = createMap({ container: 'map' });
+    const map = controller.map || controller._map || window.__map;
+  } catch (e) {
+    out.textContent = 'createMap signature differs: ' + e.message;
+  }
+  // 兜底：直接构造一个 map 并手动跑 install 逻辑不可行（函数未导出），
+  // 改为轮询正式实例。这里退化为检测全局。
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+    const cvs = document.querySelectorAll('#map canvas');
+    if (cvs.length) {
+      out.textContent = 'CANVAS-OK count=' + cvs.length + ' tries=' + tries;
+      document.title = 'CHECK-CANVAS-OK';
+      clearInterval(timer);
+    }
+    if (tries > 40) { out.textContent = 'NO-CANVAS'; document.title='CHECK-NOCANVAS'; clearInterval(timer); }
+  }, 250);
+</script>
+</body>
+</html>

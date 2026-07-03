@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>水墨对齐快照</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #333; }
+  #map { width: 1024px; height: 1024px; position: absolute; left: -3000px; top: 0; }
+  #shot { width: 1024px; height: 1024px; display: block; }
+  .lbl { position: fixed; top: 8px; left: 8px; z-index: 99; background: rgba(0,0,0,.8); color: #0f0; font: 14px monospace; padding: 4px 8px; }
+</style>
+<link href="/public/vendor/maplibre-gl.css" rel="stylesheet" />
+<script src="/public/vendor/maplibre-gl.js"></script>
+</head>
+<body>
+<div id="map"></div>
+<img id="shot" alt="" />
+<div class="lbl" id="lbl">LOADING</div>
+<script>
+  const INK = {
+    url: '/public/textures/ink-basemap-gba-clean.png',
+    west: 112.4, south: 21.4, east: 115.0, north: 23.8,
+    coords: [[112.4,23.8],[115.0,23.8],[115.0,21.4],[112.4,21.4]],
+  };
+  const map = new maplibregl.Map({
+    container: 'map',
+    style: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+    attributionControl: false, fadeDuration: 0, interactive: false,
+    preserveDrawingBuffer: true,
+  });
+  map.on('load', () => {
+    for (const layer of map.getStyle().layers) {
+      const id = layer.id.toLowerCase();
+      if (layer.type === 'background') { map.setPaintProperty(layer.id, 'background-color', '#DCD3B8'); continue; }
+      if (id.includes('water') && layer.type === 'line') {
+        map.setPaintProperty(layer.id, 'line-color', '#c0392b');
+        map.setPaintProperty(layer.id, 'line-width', 1.6);
+        map.setPaintProperty(layer.id, 'line-opacity', 1);
+        continue;
+      }
+      try { map.setLayoutProperty(layer.id, 'visibility', 'none'); } catch(e){}
+    }
+    map.addSource('ink', { type: 'image', url: INK.url, coordinates: INK.coords });
+    map.addLayer({ id: 'ink', type: 'raster', source: 'ink', paint: { 'raster-opacity': 0.7, 'raster-fade-duration': 0 } });
+    map.fitBounds([[INK.west, INK.south],[INK.east, INK.north]], { padding: 0, animate: false });
+    map.once('idle', () => {
+      // 关键：把 WebGL canvas 内容拷贝到普通 <img>，普通图片可被稳定截图
+      setTimeout(() => {
+        try {
+          const cv = document.querySelector('#map canvas');
+          document.getElementById('shot').src = cv.toDataURL('image/png');
+          map.remove();
+          const mapDiv = document.getElementById('map');
+          if (mapDiv) mapDiv.remove();
+          document.getElementById('lbl').textContent = 'SNAP-DONE';
+          document.title = 'SNAP-DONE';
+        } catch (e) {
+          document.getElementById('lbl').textContent = 'ERR ' + e.message;
+          document.title = 'SNAP-ERR';
+        }
+      }, 800);
+    });
+  });
+</script>
+</body>
+</html>
