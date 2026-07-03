@@ -78,7 +78,7 @@ import {
   refreshRoutePlannerTexts,
   setRoutePlannerLocation,
   clearActiveMainBtn,
-} from './ui.js?rev=v2-main-actions-3';
+} from './ui.js?rev=v2-main-actions-4';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {

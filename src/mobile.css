@@ -107,7 +107,7 @@
   /* ---- 工具栏：横屏靠右竖排，透明背景 ---- */
   .tool-cluster {
     top: 48px;
-    right: max(10px, calc(100vw - 280px));
+    right: 10px;
     width: min(160px, calc(100vw - 24px));
     gap: 6px;
   }

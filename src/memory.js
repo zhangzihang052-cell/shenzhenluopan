@@ -341,25 +341,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   }
 
   function installToolbar() {
-    const cluster = document.querySelector('.tool-cluster');
-    if (!cluster) return;
-    if (!document.getElementById('memory-list-btn')) {
-      const btn = document.createElement('button');
-      btn.className = 'tool-btn memory-toolbar-btn';
-      btn.id = 'memory-list-btn';
-      btn.type = 'button';
-      btn.addEventListener('click', () => openListPanel());
-      cluster.appendChild(btn);
-    }
-    if (state.auth && state.auth.configured && !document.getElementById('auth-login-btn')) {
-      const btn = document.createElement('button');
-      btn.className = 'tool-btn memory-toolbar-btn';
-      btn.id = 'auth-login-btn';
-      btn.type = 'button';
-      btn.addEventListener('click', () => openAuthPanel());
-      cluster.appendChild(btn);
-    }
-    updateToolbarTexts();
+    // V2: 底部已有三主按钮（探索/记忆/路线），右上角仅留语言选择器
+    // 不再往 tool-cluster 插入记忆/登录按钮，避免工具栏漂移
   }
 
   function updateToolbarTexts() {
