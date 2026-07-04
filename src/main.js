@@ -315,7 +315,7 @@ function initInteractionSounds() {
     '#route-planner',           // 路线规划面板
     '#stamp-book',              // 印章册
     '.memory-panel',            // 记忆面板
-    '.main-actions .main-btn',  // 底部三个主按钮
+    '.main-actions .main-action-btn',  // 底部三个主按钮
   ];
 
   const isScrollOpenButton = (el) => {
