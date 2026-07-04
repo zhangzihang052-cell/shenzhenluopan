@@ -1826,6 +1826,11 @@ body.compass-panel-open .toast.show {
   opacity: 1;
   pointer-events: auto;
 }
+/* pinned 模式：移除遮罩让用户看到地图上的金色锚点 */
+#memory-shell.memory-no-scrim .memory-scrim {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 .memory-panel {
   position: absolute;
   top: 16px;
@@ -2213,6 +2218,89 @@ body.compass-panel-open .toast.show {
     opacity: 0;
     transform: translate(-50%, -50%) scale(4.4);
   }
+}
+
+/* ===== Pinned 成功视图 ===== */
+.memory-pinned-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 4px;
+  text-align: center;
+}
+.memory-pinned-thumb {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid rgba(154, 123, 50, 0.2);
+}
+.memory-pinned-note {
+  font-size: 14px;
+  color: #3a3026;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0 8px;
+}
+.memory-pinned-voice {
+  width: 100%;
+}
+.memory-pinned-voice audio {
+  width: 100%;
+}
+.memory-pinned-coord {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8a7a5c;
+}
+.memory-pinned-mark {
+  font-size: 14px;
+}
+.memory-pinned-hint {
+  font-size: 13px;
+  color: #6b5d44;
+  line-height: 1.5;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(212, 168, 67, 0.1);
+  border-radius: 8px;
+}
+.memory-pinned-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+.memory-pinned-another {
+  flex: 1;
+  padding: 10px 16px;
+  border: 1px solid #d4a843;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a6520;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.memory-pinned-another:hover {
+  background: rgba(212, 168, 67, 0.12);
+}
+.memory-pinned-exit {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #d4a843;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.memory-pinned-exit:hover {
+  background: #c49830;
 }
 
 @media (max-width: 640px) {

@@ -569,6 +569,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     const shell = document.getElementById('memory-shell');
     if (shell) {
       shell.className = `memory-shell-open memory-mode-${type}`;
+      // pinned 模式下移除遮罩，让用户看到地图上新出现的锚点
+      if (type === 'pinned') {
+        shell.classList.add('memory-no-scrim');
+      }
     }
     renderPanel();
   }
@@ -629,6 +633,38 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       ${body}`;
   }
 
+  function renderPinnedPanel(panel, memory) {
+    if (!memory) { closePanel(); return; }
+    const isVideo = memory.mediaType === 'video';
+    const mediaHtml = isVideo && memory.photoUrl
+      ? `<video class="memory-pinned-thumb" src="${esc(memory.photoUrl)}" muted playsinline></video>`
+      : memory.photoUrl
+      ? `<img class="memory-pinned-thumb" src="${esc(memory.photoUrl)}" alt="" />`
+      : '';
+    panel.innerHTML = panelChrome(getText('memory.saved'), `
+      <div class="memory-pinned-view">
+        ${mediaHtml}
+        ${memory.note ? `<p class="memory-pinned-note">${esc(memory.note)}</p>` : ''}
+        ${memory.voiceUrl ? `<div class="memory-pinned-voice"><audio controls src="${esc(memory.voiceUrl)}"></audio></div>` : ''}
+        <div class="memory-pinned-coord">
+          <span class="memory-pinned-mark" aria-hidden="true">📍</span>
+          <span>${esc(Number(memory.lat).toFixed(5))}, ${esc(Number(memory.lng).toFixed(5))}</span>
+        </div>
+        <p class="memory-pinned-hint">${esc(getText('memory.pinned_hint'))}</p>
+        <div class="memory-pinned-actions">
+          <button class="memory-pinned-another" type="button" id="memory-pinned-another">${esc(getText('memory.pinned_another'))}</button>
+          <button class="memory-pinned-exit" type="button" data-memory-close>${esc(getText('memory.pinned_exit'))}</button>
+        </div>
+      </div>`);
+    // 「继续留下」按钮 → 重新打开创建面板
+    const anotherBtn = panel.querySelector('#memory-pinned-another');
+    if (anotherBtn) {
+      anotherBtn.addEventListener('click', () => {
+        openCreatePanel({ lat: memory.lat, lng: memory.lng, linkedAnchorId: memory.linkedAnchorId || null });
+      });
+    }
+  }
+
   function renderPanel() {
     const panel = document.getElementById('memory-panel');
     if (!panel || !state.panel) return;
@@ -637,6 +673,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (type === 'detail') renderDetailPanel(panel, data.id);
     if (type === 'list') renderListPanel(panel);
     if (type === 'auth') renderAuthPanel(panel);
+    if (type === 'pinned') renderPinnedPanel(panel, data.memory);
     panel.querySelectorAll('[data-memory-close]').forEach((btn) => btn.addEventListener('click', closePanel));
   }
 
@@ -1108,7 +1145,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       return;
     }
     playPinRipple(memory.lng, memory.lat);
-    closePanel();
+    // 不直接关闭面板，切换到"已钉下"成功视图，让用户看到地图上的锚点
+    openPanel('pinned', { memory });
     toast('memory.saved');
   }
 
