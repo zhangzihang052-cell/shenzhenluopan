@@ -159,7 +159,25 @@
     <script src="./public/tencent-map.config.js"></script>
     <script src="./public/supabase.config.js"></script>
 
+    <!-- 音频停止保险层：在页面卸载/隐藏时强制停止所有音频，内联确保不被缓存跳过 -->
+    <script>
+      (function() {
+        function killAllAudio() {
+          document.querySelectorAll('audio, video').forEach(function(el) {
+            el.pause();
+            el.currentTime = 0;
+          });
+        }
+        window.addEventListener('pagehide', killAllAudio);
+        window.addEventListener('beforeunload', killAllAudio);
+        window.addEventListener('blur', killAllAudio);
+        document.addEventListener('visibilitychange', function() {
+          if (document.hidden) killAllAudio();
+        });
+      })();
+    </script>
+
     <!-- 应用入口（ESM） -->
-    <script type="module" src="./src/main.js?rev=v2-bgm-exit-stop-2"></script>
+    <script type="module" src="./src/main.js?rev=v2-bgm-exit-stop-3"></script>
   </body>
 </html>

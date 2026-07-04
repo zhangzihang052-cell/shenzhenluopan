@@ -212,6 +212,7 @@ function initBackgroundMusic(root) {
       muted = true;
       setStoredBgmMuted(true);
       audio.pause();
+      audio.currentTime = 0;
     }
     update();
   });
@@ -221,19 +222,16 @@ function initBackgroundMusic(root) {
       audio.pause();
       playRequested = false;
       update();
-    } else if (unlocked && !muted) {
-      tryPlay();
     }
+    // 注意：不在页面恢复可见时自动恢复播放，避免用户关闭后又被自动打开
   });
 
-  // 窗口失去焦点时也暂停（桌面端切换窗口、最小化等场景）
+  // 窗口失去焦点时暂停（桌面端切换窗口、最小化等场景）
   window.addEventListener('blur', () => {
     audio.pause();
     playRequested = false;
   });
-  window.addEventListener('focus', () => {
-    if (unlocked && !muted) tryPlay();
-  });
+  // 注意：不在 focus 时自动恢复播放，避免用户关闭后又被自动打开
 
   // 退出软件/关闭页面时确保音乐停止
   const stopOnExit = () => {
@@ -245,9 +243,7 @@ function initBackgroundMusic(root) {
   window.addEventListener('beforeunload', stopOnExit);
   window.addEventListener('unload', stopOnExit);
   document.addEventListener('freeze', stopOnExit);
-  document.addEventListener('resume', () => {
-    if (unlocked && !muted) tryPlay();
-  });
+  // 注意：不在 resume 时自动恢复播放，避免用户关闭后又被自动打开
   audio.addEventListener('play', update);
   audio.addEventListener('pause', update);
   audio.addEventListener('volumechange', update);
