@@ -573,8 +573,26 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     renderPanel();
   }
 
+  // 清理正在进行的录音（模块级状态）
+  let activeMediaRecorder = null;
+  let activeVoiceStream = null;
+  let activeVoiceTimer = null;
+
+  function cleanupRecording() {
+    if (activeVoiceTimer) { clearInterval(activeVoiceTimer); activeVoiceTimer = null; }
+    if (activeMediaRecorder && activeMediaRecorder.state === 'recording') {
+      try { activeMediaRecorder.stop(); } catch (_) {}
+    }
+    activeMediaRecorder = null;
+    if (activeVoiceStream) {
+      activeVoiceStream.getTracks().forEach((t) => t.stop());
+      activeVoiceStream = null;
+    }
+  }
+
   function closePanel() {
     const wasOpen = !!state.panel;
+    cleanupRecording();
     state.panel = null;
     state.selectedFile = null;
     const shell = document.getElementById('memory-shell');
@@ -733,23 +751,45 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     const listBtn = panel.querySelector('#memory-show-list');
     if (listBtn) listBtn.addEventListener('click', () => openListPanel());
 
-    // 语音录制
+    // 语音录制（点击切换模式，比按住模式更可靠）
     const voiceBtn = panel.querySelector('#memory-voice-record');
     const voiceTimerEl = panel.querySelector('#memory-voice-timer');
     const voicePlayback = panel.querySelector('#memory-voice-playback');
+    let voiceStream = null;  // 保留 stream 引用以便清理
 
     const startRecording = async () => {
+      // 安全上下文检测
+      if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast('memory.voice_failed');
+        return;
+      }
+      // MediaRecorder 兼容检测
+      if (typeof MediaRecorder === 'undefined') {
+        toast('memory.voice_failed');
+        return;
+      }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
+        voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        activeVoiceStream = voiceStream;
+        // 选择兼容的 mimeType
+        const mimeOptions = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+        const mimeType = mimeOptions.find((m) => MediaRecorder.isTypeSupported(m)) || '';
+        mediaRecorder = new MediaRecorder(voiceStream, mimeType ? { mimeType } : undefined);
+        activeMediaRecorder = mediaRecorder;
         const chunks = [];
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
         mediaRecorder.onstop = () => {
-          voiceBlob = new Blob(chunks, { type: 'audio/webm' });
+          voiceBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
           voiceUrl = URL.createObjectURL(voiceBlob);
           voicePlayback.src = voiceUrl;
           voicePlayback.hidden = false;
-          stream.getTracks().forEach((t) => t.stop());
+          // 停止所有轨道释放麦克风
+          if (voiceStream) {
+            voiceStream.getTracks().forEach((t) => t.stop());
+            voiceStream = null;
+          }
+          activeMediaRecorder = null;
+          activeVoiceStream = null;
           voiceBtn.textContent = getText('memory.voice_playing');
           voiceBtn.classList.remove('recording');
           // 添加播放和删除按钮
@@ -762,7 +802,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
             playBtn.type = 'button';
             playBtn.textContent = getText('memory.voice_playing');
             voiceArea.querySelector('.memory-create-voice-bar').appendChild(playBtn);
-            playBtn.addEventListener('click', () => {
+            playBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
               voicePlayback.currentTime = 0;
               voicePlayback.play();
             });
@@ -773,7 +814,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
             delBtn.type = 'button';
             delBtn.textContent = getText('memory.voice_delete');
             voiceArea.querySelector('.memory-create-voice-bar').appendChild(delBtn);
-            delBtn.addEventListener('click', () => {
+            delBtn.addEventListener('click', (ev) => {
+              ev.preventDefault();
               voiceBlob = null;
               voiceUrl = null;
               voicePlayback.src = '';
@@ -785,6 +827,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
             });
           }
         };
+        mediaRecorder.onerror = () => {
+          toast('memory.voice_failed');
+          stopRecording();
+        };
         mediaRecorder.start();
         voiceBtn.textContent = getText('memory.voice_release');
         voiceBtn.classList.add('recording');
@@ -795,26 +841,40 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
           voiceTimerEl.textContent = `${voiceSeconds}s`;
           if (voiceSeconds >= MAX_VOICE_SECONDS) stopRecording();
         }, 1000);
+        activeVoiceTimer = voiceTimer;
       } catch (error) {
+        // 清理可能已获取的 stream
+        if (voiceStream) {
+          voiceStream.getTracks().forEach((t) => t.stop());
+          voiceStream = null;
+        }
+        activeMediaRecorder = null;
+        activeVoiceStream = null;
+        voiceBtn.classList.remove('recording');
+        voiceBtn.textContent = getText('memory.voice_hint');
         toast('memory.voice_failed');
       }
     };
 
     const stopRecording = () => {
       if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
+        try { mediaRecorder.stop(); } catch (_) { /* already stopped */ }
       }
       if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = 0; }
+      activeVoiceTimer = null;
     };
 
-    // 按住录音
-    voiceBtn.addEventListener('pointerdown', (e) => {
+    // 点击切换模式：第一次点击开始录音，第二次点击停止
+    voiceBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      startRecording();
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopRecording();
+      } else if (!voiceBlob) {
+        // 还没有录音 → 开始
+        startRecording();
+      }
+      // 如果已有录音（voiceBlob 存在），忽略点击，用播放/删除按钮操作
     });
-    voiceBtn.addEventListener('pointerup', stopRecording);
-    voiceBtn.addEventListener('pointerleave', stopRecording);
-    voiceBtn.addEventListener('pointercancel', stopRecording);
 
     // 表单提交
     panel.querySelector('#memory-create-form').addEventListener('submit', async (event) => {
