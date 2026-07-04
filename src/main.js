@@ -741,7 +741,18 @@ function boot() {
     // 打开发帖式记忆创建界面，使用用户当前 GPS 位置
     if (memoryExperience && memoryExperience.openCreatePanel) {
       const origin = getRoutePlannerOrigin();
-      memoryExperience.openCreatePanel({ lat: origin.lat, lng: origin.lng });
+      // origin 是 [lng, lat] 数组或 null
+      if (Array.isArray(origin) && origin.length >= 2 && Number.isFinite(origin[0]) && Number.isFinite(origin[1])) {
+        memoryExperience.openCreatePanel({ lat: origin[1], lng: origin[0] });
+      } else {
+        // GPS 未定位，使用地图中心作为回退
+        const center = controller.map && controller.map.getCenter ? controller.map.getCenter() : null;
+        if (center && Number.isFinite(center.lng) && Number.isFinite(center.lat)) {
+          memoryExperience.openCreatePanel({ lat: center.lat, lng: center.lng });
+        } else {
+          memoryExperience.openCreatePanel({ lat: 22.5431, lng: 114.0579 }); // 深圳中心回退
+        }
+      }
     }
   }
 

@@ -83,7 +83,25 @@ function readLocalMemories() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.map(normalizeMemory).filter(Boolean) : [];
+    if (!Array.isArray(parsed)) return [];
+    const valid = parsed.map(normalizeMemory).filter(Boolean);
+    // 自动清理无效 blob: URL（刷新后断链）
+    const cleaned = valid.map((m) => {
+      let changed = false;
+      const next = { ...m };
+      if (typeof next.photoUrl === 'string' && next.photoUrl.startsWith('blob:')) {
+        next.photoUrl = '';
+        next.pendingSync = true;
+        changed = true;
+      }
+      if (typeof next.voiceUrl === 'string' && next.voiceUrl.startsWith('blob:')) {
+        next.voiceUrl = '';
+        next.pendingSync = true;
+        changed = true;
+      }
+      return changed ? next : m;
+    });
+    return cleaned;
   } catch (e) {
     return [];
   }
@@ -611,6 +629,9 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     const disabled = remaining <= 0 ? 'disabled' : '';
 
     panel.innerHTML = panelChrome(getText('memory.create_title'), `
+      <div class="memory-create-list-entry">
+        <button type="button" id="memory-show-list">${esc(getText('memory.btn'))} (${state.memories.length})</button>
+      </div>
       ${quotaHtml}
       <form class="memory-form" id="memory-create-form">
         <div class="memory-create-media" id="memory-media-area">
@@ -705,6 +726,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         else if (kind === 'video') videoInput.click();
       });
     });
+
+    // 我的记忆列表入口
+    const listBtn = panel.querySelector('#memory-show-list');
+    if (listBtn) listBtn.addEventListener('click', () => openListPanel());
 
     // 语音录制
     const voiceBtn = panel.querySelector('#memory-voice-record');
@@ -964,24 +989,19 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         return;
       }
     } else if (mediaType === 'video' && file) {
-      // 视频在访客模式存为 data URL（大小受限），登录模式上传 Supabase
+      // 视频在访客模式不支持本地存储（太大），登录模式上传 Supabase
       if (!loggedIn()) {
         toast('memory.video_not_supported');
         return;
       }
-      // 视频暂存为 object URL，saveRemote 时上传
+      // 视频暂存为 object URL，saveRemote 时上传；若上传失败则本地不保存（避免断链）
       photoUrl = URL.createObjectURL(file);
     }
 
     // 处理语音
     if (voiceBlob) {
-      if (loggedIn()) {
-        // 上传在 saveRemote 中处理
-        voiceUrl = URL.createObjectURL(voiceBlob);
-      } else {
-        // 访客模式语音转 base64 存储
-        voiceUrl = await blobToDataUrl(voiceBlob);
-      }
+      // 语音统一转 data URL 存储，确保刷新后可用；登录后 saveRemote 再上传替换
+      voiceUrl = await blobToDataUrl(voiceBlob);
     }
 
     const currentUser = user();
@@ -1004,6 +1024,11 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       try {
         memory = await saveRemote(memory, photoUrl, voiceBlob);
       } catch (error) {
+        // 视频上传失败时不保存到本地（blob URL 刷新后失效）
+        if (mediaType === 'video') {
+          toast('memory.save_failed');
+          return;
+        }
         memory = { ...memory, pendingSync: true };
         toast('memory.sync_pending');
         scheduleSyncRetry();

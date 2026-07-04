@@ -2238,6 +2238,26 @@ body.compass-panel-open .toast.show {
 /* ===== Phase 2「留下记忆」发帖式创建界面 ====================== */
 /* ============================================================= */
 
+.memory-create-list-entry {
+  text-align: right;
+  margin-bottom: 4px;
+}
+
+.memory-create-list-entry button {
+  background: none;
+  border: none;
+  color: #8a7a5c;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 4px 0;
+}
+
+.memory-create-list-entry button:hover {
+  color: #d4a843;
+}
+
 .memory-create-quota {
   text-align: center;
   padding: 8px;
