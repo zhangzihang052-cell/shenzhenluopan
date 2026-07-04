@@ -738,9 +738,11 @@ function boot() {
     if (isCompassOpen()) closeCompassPanel();
     if (isRoutePlannerOpen()) closeRoutePlanner();
     if (isPanelOpen()) handleClose();
-    // 触发记忆创建流程（复用现有 memory.js 的 openListPanel）
-    const memoryBtn = document.getElementById('memory-list-btn');
-    if (memoryBtn) memoryBtn.click();
+    // 打开发帖式记忆创建界面，使用用户当前 GPS 位置
+    if (memoryExperience && memoryExperience.openCreatePanel) {
+      const origin = getRoutePlannerOrigin();
+      memoryExperience.openCreatePanel({ lat: origin.lat, lng: origin.lng });
+    }
   }
 
   function handleCompassModeChange(view) {

@@ -1834,7 +1834,8 @@ body.compass-panel-open .toast.show {
   display: flex;
   width: min(410px, calc(100vw - 32px));
   flex-direction: column;
-  overflow: auto;
+  max-height: min(calc(100vh - 32px), 820px);
+  overflow-y: auto;
   border: 1px solid rgba(154, 123, 50, 0.24);
   border-radius: 10px;
   background: #f7f4ec;
@@ -2230,6 +2231,173 @@ body.compass-panel-open .toast.show {
   }
   .memory-pin-ripple {
     opacity: 0;
+  }
+}
+
+/* ============================================================= */
+/* ===== Phase 2「留下记忆」发帖式创建界面 ====================== */
+/* ============================================================= */
+
+.memory-create-quota {
+  text-align: center;
+  padding: 8px;
+  color: #8a7a5c;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.memory-create-media {
+  position: relative;
+  width: 100%;
+  min-height: 160px;
+  border-radius: 12px;
+  background: #ede8d8;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+}
+
+.memory-create-media-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #b5a884;
+  font-size: 13px;
+}
+
+.memory-create-media-empty .ink-cam-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+}
+
+.memory-create-media-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.memory-create-media-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.memory-create-media-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1px solid #d4c9a8;
+  border-radius: 8px;
+  background: #f7f4ec;
+  font-size: 13px;
+  color: #5a4e35;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.memory-create-media-btn:hover {
+  background: #ede8d8;
+}
+
+.memory-create-media-btn.active {
+  border-color: #d4a843;
+  background: #fdf6e3;
+}
+
+.memory-create-voice {
+  margin-top: 12px;
+}
+
+.memory-create-voice-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #d4c9a8;
+  border-radius: 8px;
+  background: #f7f4ec;
+  min-height: 44px;
+}
+
+.memory-create-voice-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  background: #d4a843;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.2s ease;
+}
+
+.memory-create-voice-btn.recording {
+  background: #c0392b;
+  animation: voice-pulse 1.4s infinite;
+}
+
+.memory-create-voice-timer {
+  font-size: 13px;
+  color: #8a7a5c;
+  min-width: 40px;
+}
+
+.memory-create-voice-play {
+  padding: 6px 12px;
+  border: 1px solid #d4c9a8;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-create-voice-delete {
+  padding: 6px 12px;
+  border: 1px solid #e0c0c0;
+  border-radius: 16px;
+  background: #fdf0f0;
+  color: #c0392b;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-create-publish {
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px;
+  border: none;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(180deg, #5a4e35, #3d3422);
+  transition: opacity 0.2s ease;
+}
+
+.memory-create-publish:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.memory-create-publish.ink-brush {
+  background: transparent;
+}
+
+@keyframes voice-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(192, 57, 43, 0);
   }
 }
 
@@ -6818,4 +6986,29 @@ body.compass-panel-open #geofence-toast.show {
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================= */
+/* ===== Phase 2「留下记忆」创建界面 — 移动端响应式 ============= */
+/* ============================================================= */
+
+@media (max-width: 768px) {
+  .memory-create-media {
+    min-height: 140px;
+  }
+  .memory-create-media-btn {
+    font-size: 12px;
+    padding: 8px 6px;
+  }
+  .memory-create-publish {
+    font-size: 15px;
+    padding: 12px;
+  }
+  .memory-create-voice-btn {
+    font-size: 12px;
+    padding: 7px 14px;
+  }
+  .memory-create-voice-timer {
+    font-size: 12px;
+  }
 }

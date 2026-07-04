@@ -7,11 +7,15 @@ const SOURCE_ID = 'memory-source';
 const GLOW_LAYER = 'memory-glow';
 const CORE_LAYER = 'memory-core';
 const BUCKET = 'memory-photos';
+const VOICE_BUCKET = 'memory-voices';
 const TABLE = 'memory_anchors';
 const MAX_NOTE_LENGTH = 200;
 const MAX_IMAGE_WIDTH = 1280;
 const JPEG_QUALITY = 0.75;
 const TARGET_LOCAL_BYTES = 200 * 1024;
+const MAX_DAILY_MEMORIES = 5;
+const MAX_VOICE_SECONDS = 60;
+const MAX_VIDEO_SECONDS = 15;
 
 const PHONE_REGIONS = ['+86', '+852', '+853', '+886', '+1', '+81', '+82'];
 
@@ -53,18 +57,25 @@ function ensureDeviceId() {
 
 function normalizeMemory(item) {
   if (!item || !Number.isFinite(Number(item.lat)) || !Number.isFinite(Number(item.lng))) return null;
+  const createdAt = item.createdAt || item.created_at || new Date().toISOString();
   return {
     id: item.id || randomId(),
     lat: Number(item.lat),
     lng: Number(item.lng),
+    mediaType: item.mediaType || item.media_type || 'photo',
     photoUrl: item.photoUrl || item.photo_url || '',
+    voiceUrl: item.voiceUrl || item.voice_url || '',
     note: String(item.note || '').slice(0, MAX_NOTE_LENGTH),
-    createdAt: item.createdAt || item.created_at || new Date().toISOString(),
-    updatedAt: item.updatedAt || item.updated_at || item.createdAt || item.created_at || new Date().toISOString(),
+    createdAt,
+    dateKey: item.dateKey || item.date_key || createdAt.slice(0, 10),
+    updatedAt: item.updatedAt || item.updated_at || createdAt,
     linkedAnchorId: item.linkedAnchorId || item.linked_anchor_id || null,
+    authorId: item.authorId || item.author_id || null,
+    authorName: item.authorName || item.author_name || '',
     migrated: !!item.migrated,
     pendingSync: !!item.pendingSync,
     storagePath: item.storagePath || null,
+    voiceStoragePath: item.voiceStoragePath || item.voice_storage_path || null,
   };
 }
 
@@ -84,6 +95,22 @@ function writeLocalMemories(memories) {
 
 function sortMemories(memories) {
   return [...memories].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+function getDateKey() {
+  // UTC+8 自然日
+  const now = new Date();
+  const utc8 = new Date(now.getTime() + 8 * 3600 * 1000);
+  return utc8.toISOString().slice(0, 10);
+}
+
+function countTodayMemories(memories) {
+  const today = getDateKey();
+  return memories.filter((m) => m.dateKey === today).length;
+}
+
+function getRemainingQuota(memories) {
+  return Math.max(0, MAX_DAILY_MEMORIES - countTodayMemories(memories));
 }
 
 function loadImage(url) {
@@ -129,6 +156,15 @@ async function compressPhoto(file) {
 async function dataUrlToBlob(dataUrl) {
   const res = await fetch(dataUrl);
   return res.blob();
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 function formatDate(iso) {
@@ -234,8 +270,13 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       user_id: currentUser.id,
       lat: memory.lat,
       lng: memory.lng,
+      media_type: memory.mediaType || 'photo',
       photo_url: memory.photoUrl,
+      voice_url: memory.voiceUrl || null,
       note: memory.note || '',
+      date_key: memory.dateKey,
+      author_id: memory.authorId || currentUser.id,
+      author_name: memory.authorName || '',
       linked_anchor_id: memory.linkedAnchorId || null,
       created_at: memory.createdAt,
       updated_at: new Date().toISOString(),
@@ -244,14 +285,49 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (error) throw error;
   }
 
-  async function saveRemote(memory, sourceDataUrl) {
+  async function saveRemote(memory, sourceDataUrl, voiceBlob) {
     let next = { ...memory };
-    if (sourceDataUrl && isDataUrl(sourceDataUrl)) {
-      const uploaded = await uploadPhoto(memory.id, sourceDataUrl);
+    if (sourceDataUrl && (isDataUrl(sourceDataUrl) || sourceDataUrl.startsWith('blob:'))) {
+      const uploaded = await uploadPhoto(memory.id, sourceDataUrl, memory.mediaType);
       next = { ...next, photoUrl: uploaded.publicUrl, storagePath: uploaded.storagePath };
+    }
+    if (voiceBlob) {
+      const voiceUploaded = await uploadVoice(memory.id, voiceBlob);
+      next = { ...next, voiceUrl: voiceUploaded.publicUrl, voiceStoragePath: voiceUploaded.storagePath };
     }
     await upsertRemote(next);
     return { ...next, migrated: true, pendingSync: false };
+  }
+
+  async function uploadPhoto(memoryId, sourceUrl, mediaType) {
+    const currentUser = user();
+    const supabase = client();
+    if (!currentUser || !supabase) throw new Error('supabase-unavailable');
+    const blob = sourceUrl.startsWith('blob:') ? await (await fetch(sourceUrl)).blob() : await dataUrlToBlob(sourceUrl);
+    const ext = mediaType === 'video' ? 'mp4' : 'jpg';
+    const contentType = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
+    const path = `${currentUser.id}/${memoryId}.${ext}`;
+    const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+      contentType,
+      upsert: true,
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return { publicUrl: data.publicUrl, storagePath: path };
+  }
+
+  async function uploadVoice(memoryId, voiceBlob) {
+    const currentUser = user();
+    const supabase = client();
+    if (!currentUser || !supabase) throw new Error('supabase-unavailable');
+    const path = `${currentUser.id}/${memoryId}.webm`;
+    const { error } = await supabase.storage.from(VOICE_BUCKET).upload(path, voiceBlob, {
+      contentType: voiceBlob.type || 'audio/webm',
+      upsert: true,
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from(VOICE_BUCKET).getPublicUrl(path);
+    return { publicUrl: data.publicUrl, storagePath: path };
   }
 
   async function fetchRemoteMemories() {
@@ -528,43 +604,207 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   function renderCreatePanel(panel, data) {
     const anchor = data.linkedAnchorId ? anchorById(data.linkedAnchorId) : null;
-    panel.innerHTML = panelChrome(getText('memory.create'), `
+    const remaining = getRemainingQuota(state.memories);
+    const quotaHtml = remaining > 0
+      ? `<div class="memory-create-quota">${esc(getText('memory.remaining_today', { n: remaining }))}</div>`
+      : `<div class="memory-create-quota">${esc(getText('memory.limit_reached'))}</div>`;
+    const disabled = remaining <= 0 ? 'disabled' : '';
+
+    panel.innerHTML = panelChrome(getText('memory.create_title'), `
+      ${quotaHtml}
       <form class="memory-form" id="memory-create-form">
-        <p class="memory-hint">${esc(getText('memory.create_hint'))}</p>
-        <label class="memory-photo-picker">
-          <input id="memory-photo-input" type="file" accept="image/*" capture="environment" />
-          <span class="memory-photo-empty">${esc(getText('memory.photo_label'))}</span>
-          <img id="memory-photo-preview" alt="" hidden />
-        </label>
+        <div class="memory-create-media" id="memory-media-area">
+          <div class="memory-create-media-empty" id="memory-media-empty">
+            <span class="ink-cam-icon" aria-hidden="true">📷</span>
+            <span>${esc(getText('memory.create_hint'))}</span>
+          </div>
+          <img class="memory-create-media-preview" id="memory-media-preview" alt="" hidden />
+          <video class="memory-create-media-preview" id="memory-video-preview" hidden muted playsinline></video>
+        </div>
+        <div class="memory-create-media-actions">
+          <button class="memory-create-media-btn" type="button" data-media="photo" ${disabled}>${esc(getText('memory.media_photo'))}</button>
+          <button class="memory-create-media-btn" type="button" data-media="album" ${disabled}>${esc(getText('memory.media_album'))}</button>
+          ${loggedIn() ? `<button class="memory-create-media-btn" type="button" data-media="video" ${disabled}>${esc(getText('memory.media_video'))}</button>` : ''}
+        </div>
+        <input type="file" id="memory-photo-input" accept="image/*" capture="environment" hidden />
+        <input type="file" id="memory-album-input" accept="image/*" hidden />
+        <input type="file" id="memory-video-input" accept="video/*" capture="environment" hidden />
+
+        <div class="memory-create-voice" id="memory-voice-area">
+          <div class="memory-create-voice-bar">
+            <button class="memory-create-voice-btn" type="button" id="memory-voice-record" ${disabled}>${esc(getText('memory.voice_hint'))}</button>
+            <span class="memory-create-voice-timer" id="memory-voice-timer">0s</span>
+            <span class="memory-create-voice-max">${esc(getText('memory.voice_max'))}</span>
+          </div>
+          <audio id="memory-voice-playback" hidden></audio>
+        </div>
+
         <label class="memory-field">
           <span>${esc(getText('memory.note_label'))}</span>
-          <textarea id="memory-note-input" maxlength="${MAX_NOTE_LENGTH}" placeholder="${esc(getText('memory.note_placeholder'))}"></textarea>
+          <textarea id="memory-note-input" maxlength="${MAX_NOTE_LENGTH}" placeholder="${esc(getText('memory.note_placeholder'))}" ${disabled}></textarea>
         </label>
         <div class="memory-meta-line">
           <span>${esc(Number(data.lat).toFixed(5))}, ${esc(Number(data.lng).toFixed(5))}</span>
           ${anchor ? `<span>${esc(getText('memory.linked_anchor'))}: ${esc(pick(anchor.name))}</span>` : ''}
         </div>
-        <button class="memory-primary" type="submit">${esc(getText('memory.save'))}</button>
+        <button class="memory-create-publish" type="submit" ${disabled}>${esc(getText('memory.publish'))}</button>
       </form>`);
-    const input = panel.querySelector('#memory-photo-input');
-    input.addEventListener('change', () => {
-      state.selectedFile = input.files && input.files[0] ? input.files[0] : null;
-      const img = panel.querySelector('#memory-photo-preview');
-      const empty = panel.querySelector('.memory-photo-empty');
-      if (!state.selectedFile || !img) return;
-      img.src = URL.createObjectURL(state.selectedFile);
-      img.hidden = false;
-      if (empty) empty.hidden = true;
+
+    // 临时状态
+    let selectedMedia = null;   // { type: 'photo'|'video', file: File }
+    let voiceBlob = null;       // Blob
+    let voiceUrl = null;        // String (object URL or data URL)
+    let mediaRecorder = null;
+    let voiceTimer = 0;
+    let voiceSeconds = 0;
+
+    // 媒体选择
+    const photoInput = panel.querySelector('#memory-photo-input');
+    const albumInput = panel.querySelector('#memory-album-input');
+    const videoInput = panel.querySelector('#memory-video-input');
+    const mediaPreview = panel.querySelector('#memory-media-preview');
+    const videoPreview = panel.querySelector('#memory-video-preview');
+    const mediaEmpty = panel.querySelector('#memory-media-empty');
+
+    const handleFile = (file, type) => {
+      if (!file) return;
+      if (type === 'video') {
+        // 视频时长检查（通过 metadata）
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => {
+          if (v.duration > MAX_VIDEO_SECONDS + 1) {
+            toast('memory.video_too_long');
+            return;
+          }
+          selectedMedia = { type: 'video', file };
+          videoPreview.src = URL.createObjectURL(file);
+          videoPreview.hidden = false;
+          mediaPreview.hidden = true;
+          mediaEmpty.hidden = true;
+        };
+        v.src = URL.createObjectURL(file);
+      } else {
+        selectedMedia = { type: 'photo', file };
+        mediaPreview.src = URL.createObjectURL(file);
+        mediaPreview.hidden = false;
+        videoPreview.hidden = true;
+        mediaEmpty.hidden = true;
+      }
+    };
+
+    photoInput.addEventListener('change', () => handleFile(photoInput.files[0], 'photo'));
+    albumInput.addEventListener('change', () => handleFile(albumInput.files[0], 'photo'));
+    videoInput.addEventListener('change', () => handleFile(videoInput.files[0], 'video'));
+
+    panel.querySelectorAll('.memory-create-media-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const kind = btn.dataset.media;
+        if (kind === 'photo') photoInput.click();
+        else if (kind === 'album') albumInput.click();
+        else if (kind === 'video') videoInput.click();
+      });
     });
+
+    // 语音录制
+    const voiceBtn = panel.querySelector('#memory-voice-record');
+    const voiceTimerEl = panel.querySelector('#memory-voice-timer');
+    const voicePlayback = panel.querySelector('#memory-voice-playback');
+
+    const startRecording = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        const chunks = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          voiceBlob = new Blob(chunks, { type: 'audio/webm' });
+          voiceUrl = URL.createObjectURL(voiceBlob);
+          voicePlayback.src = voiceUrl;
+          voicePlayback.hidden = false;
+          stream.getTracks().forEach((t) => t.stop());
+          voiceBtn.textContent = getText('memory.voice_playing');
+          voiceBtn.classList.remove('recording');
+          // 添加播放和删除按钮
+          const voiceArea = panel.querySelector('#memory-voice-area');
+          let playBtn = voiceArea.querySelector('.memory-create-voice-play');
+          let delBtn = voiceArea.querySelector('.memory-create-voice-delete');
+          if (!playBtn) {
+            playBtn = document.createElement('button');
+            playBtn.className = 'memory-create-voice-play';
+            playBtn.type = 'button';
+            playBtn.textContent = getText('memory.voice_playing');
+            voiceArea.querySelector('.memory-create-voice-bar').appendChild(playBtn);
+            playBtn.addEventListener('click', () => {
+              voicePlayback.currentTime = 0;
+              voicePlayback.play();
+            });
+          }
+          if (!delBtn) {
+            delBtn = document.createElement('button');
+            delBtn.className = 'memory-create-voice-delete';
+            delBtn.type = 'button';
+            delBtn.textContent = getText('memory.voice_delete');
+            voiceArea.querySelector('.memory-create-voice-bar').appendChild(delBtn);
+            delBtn.addEventListener('click', () => {
+              voiceBlob = null;
+              voiceUrl = null;
+              voicePlayback.src = '';
+              voicePlayback.hidden = true;
+              playBtn.remove();
+              delBtn.remove();
+              voiceBtn.textContent = getText('memory.voice_hint');
+              voiceTimerEl.textContent = '0s';
+            });
+          }
+        };
+        mediaRecorder.start();
+        voiceBtn.textContent = getText('memory.voice_release');
+        voiceBtn.classList.add('recording');
+        voiceSeconds = 0;
+        voiceTimerEl.textContent = '0s';
+        voiceTimer = setInterval(() => {
+          voiceSeconds += 1;
+          voiceTimerEl.textContent = `${voiceSeconds}s`;
+          if (voiceSeconds >= MAX_VOICE_SECONDS) stopRecording();
+        }, 1000);
+      } catch (error) {
+        toast('memory.voice_failed');
+      }
+    };
+
+    const stopRecording = () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = 0; }
+    };
+
+    // 按住录音
+    voiceBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startRecording();
+    });
+    voiceBtn.addEventListener('pointerup', stopRecording);
+    voiceBtn.addEventListener('pointerleave', stopRecording);
+    voiceBtn.addEventListener('pointercancel', stopRecording);
+
+    // 表单提交
     panel.querySelector('#memory-create-form').addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (!selectedMedia) {
+        toast('memory.media_required');
+        return;
+      }
       const note = panel.querySelector('#memory-note-input').value;
       await createMemory({
         lat: Number(data.lat),
         lng: Number(data.lng),
         linkedAnchorId: data.linkedAnchorId || null,
         note,
-        file: state.selectedFile,
+        file: selectedMedia.file,
+        mediaType: selectedMedia.type,
+        voiceBlob,
       });
     });
   }
@@ -576,9 +816,17 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       return;
     }
     const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+    const isVideo = memory.mediaType === 'video';
+    const mediaHtml = isVideo
+      ? `<video class="memory-detail-photo" src="${esc(memory.photoUrl)}" controls playsinline></video>`
+      : `<img class="memory-detail-photo" src="${esc(memory.photoUrl)}" alt="" />`;
+    const voiceHtml = memory.voiceUrl
+      ? `<div class="memory-detail-voice"><audio controls src="${esc(memory.voiceUrl)}"></audio></div>`
+      : '';
     panel.innerHTML = panelChrome(getText('memory.detail_title'), `
       <article class="memory-detail">
-        <img class="memory-detail-photo" src="${esc(memory.photoUrl)}" alt="" />
+        ${mediaHtml}
+        ${voiceHtml}
         <p class="memory-detail-note">${esc(memory.note || getText('memory.note_placeholder'))}</p>
         <div class="memory-detail-meta">
           <span>${esc(formatDate(memory.createdAt))}</span>
@@ -688,33 +936,73 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     }
   }
 
-  async function createMemory({ lat, lng, linkedAnchorId, note, file }) {
-    if (!file) {
-      toast('memory.photo_required');
+  async function createMemory({ lat, lng, linkedAnchorId, note, file, mediaType, voiceBlob }) {
+    // 每日限额检查
+    if (getRemainingQuota(state.memories) <= 0) {
+      toast('memory.limit_reached');
       return;
     }
+
+    // 媒体校验
+    if (!file && !mediaType) {
+      toast('memory.media_required');
+      return;
+    }
+
     const now = new Date().toISOString();
     const id = randomId();
+    const dateKey = getDateKey();
     let photoUrl = '';
-    try {
-      photoUrl = await compressPhoto(file);
-    } catch (error) {
-      toast('memory.save_failed');
-      return;
+    let voiceUrl = '';
+
+    // 处理图片
+    if (mediaType === 'photo' && file) {
+      try {
+        photoUrl = await compressPhoto(file);
+      } catch (error) {
+        toast('memory.save_failed');
+        return;
+      }
+    } else if (mediaType === 'video' && file) {
+      // 视频在访客模式存为 data URL（大小受限），登录模式上传 Supabase
+      if (!loggedIn()) {
+        toast('memory.video_not_supported');
+        return;
+      }
+      // 视频暂存为 object URL，saveRemote 时上传
+      photoUrl = URL.createObjectURL(file);
     }
+
+    // 处理语音
+    if (voiceBlob) {
+      if (loggedIn()) {
+        // 上传在 saveRemote 中处理
+        voiceUrl = URL.createObjectURL(voiceBlob);
+      } else {
+        // 访客模式语音转 base64 存储
+        voiceUrl = await blobToDataUrl(voiceBlob);
+      }
+    }
+
+    const currentUser = user();
     let memory = normalizeMemory({
       id,
       lat,
       lng,
+      mediaType: mediaType || 'photo',
       photoUrl,
+      voiceUrl,
       note: String(note || '').slice(0, MAX_NOTE_LENGTH),
       createdAt: now,
+      dateKey,
       updatedAt: now,
       linkedAnchorId,
+      authorId: currentUser ? currentUser.id : ensureDeviceId(),
+      authorName: currentUser ? (currentUser.phone || '') : '',
     });
     if (loggedIn()) {
       try {
-        memory = await saveRemote(memory, photoUrl);
+        memory = await saveRemote(memory, photoUrl, voiceBlob);
       } catch (error) {
         memory = { ...memory, pendingSync: true };
         toast('memory.sync_pending');
@@ -741,6 +1029,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         if (error) throw error;
         const storagePath = memory.storagePath || publicUrlToStoragePath(memory.photoUrl);
         if (storagePath) await client().storage.from(BUCKET).remove([storagePath]);
+        if (memory.voiceStoragePath) await client().storage.from(VOICE_BUCKET).remove([memory.voiceStoragePath]);
       } catch (error) {
         toast('memory.delete_failed');
         return;
@@ -825,6 +1114,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   return {
     closePanel,
+    openCreatePanel,
+    openListPanel,
     init() {
       ensureDeviceId();
       renderShell();
