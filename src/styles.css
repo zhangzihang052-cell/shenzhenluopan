@@ -2015,6 +2015,28 @@ body.compass-panel-open .toast.show {
 .memory-danger:hover {
   background: rgba(178, 58, 46, 0.13);
 }
+.memory-danger-confirm {
+  background: rgba(178, 58, 46, 0.22) !important;
+  color: #fff !important;
+  border-color: rgba(178, 58, 46, 0.6) !important;
+  animation: memory-confirm-pulse 1s ease-in-out infinite;
+}
+@keyframes memory-confirm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.memory-list-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: rgba(212, 168, 67, 0.15);
+  color: #8a7a5c;
+  font-size: 18px;
+  flex-shrink: 0;
+}
 .memory-detail-photo {
   width: 100%;
   max-height: 360px;

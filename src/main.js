@@ -453,6 +453,7 @@ function boot() {
     anchors: ANCHORS,
     auth: authController,
     showToast,
+    onClose: handleMemoryClose,
   });
   memoryExperience.init();
 
@@ -733,26 +734,112 @@ function boot() {
   }
 
   // ===== 留下记忆 =====
+  let memoryLocating = false;
+  let memoryPrevCamera = null;
+
   function handleMemoryButton() {
     // 先关闭其他面板
     if (isCompassOpen()) closeCompassPanel();
     if (isRoutePlannerOpen()) closeRoutePlanner();
     if (isPanelOpen()) handleClose();
-    // 打开发帖式记忆创建界面，使用用户当前 GPS 位置
+    if (memoryLocating) return;
+
+    // 保存当前视角，退出时恢复
+    if (controller.map && controller.map.getCenter) {
+      memoryPrevCamera = {
+        center: controller.map.getCenter().toArray(),
+        zoom: controller.map.getZoom(),
+        pitch: controller.map.getPitch(),
+        bearing: controller.map.getBearing(),
+      };
+    }
+
+    // 隐藏锚点（在记忆模式下淡出）
+    controller.setVisibleThemes(new Set());
+
+    // 立即打开面板，不让用户干等
     if (memoryExperience && memoryExperience.openCreatePanel) {
-      const origin = getRoutePlannerOrigin();
-      // origin 是 [lng, lat] 数组或 null
-      if (Array.isArray(origin) && origin.length >= 2 && Number.isFinite(origin[0]) && Number.isFinite(origin[1])) {
-        memoryExperience.openCreatePanel({ lat: origin[1], lng: origin[0] });
-      } else {
-        // GPS 未定位，使用地图中心作为回退
-        const center = controller.map && controller.map.getCenter ? controller.map.getCenter() : null;
-        if (center && Number.isFinite(center.lng) && Number.isFinite(center.lat)) {
-          memoryExperience.openCreatePanel({ lat: center.lat, lng: center.lng });
-        } else {
-          memoryExperience.openCreatePanel({ lat: 22.5431, lng: 114.0579 }); // 深圳中心回退
-        }
+      memoryExperience.openCreatePanel({});
+    }
+    setGpsLoading(true);
+    memoryLocating = true;
+
+    let settled = false;
+    const guardTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      memoryLocating = false;
+      finishMemoryLocate(DEFAULT_LOCATION.center[0], DEFAULT_LOCATION.center[1], true);
+    }, 3000);
+
+    function finishMemoryLocate(lng, lat, simulated) {
+      setGpsLoading(false);
+      state.userPos = [lng, lat];
+      // 飞行到用户位置，缩放级别比"开始探索"略远一点
+      flyToMemoryLocation(lng, lat);
+      // 更新已打开的创建面板坐标
+      if (memoryExperience && memoryExperience.isOpen()) {
+        memoryExperience.openCreatePanel({ lat, lng });
       }
+    }
+
+    controller.locateOrSimulate({
+      onResult: ({ lng, lat, simulated }) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(guardTimer);
+        memoryLocating = false;
+        finishMemoryLocate(lng, lat, simulated);
+      },
+    });
+  }
+
+  /** 记忆模式专用飞行：比开始探索略远一点，覆盖面更广 */
+  function flyToMemoryLocation(lng, lat) {
+    const map = controller.map;
+    if (!map) return;
+    const mobileView = isMobileAppView ? isMobileAppView() : false;
+    const zeroPadding = { top: 0, bottom: 0, left: 0, right: 0 };
+    if (typeof map.stop === 'function') map.stop();
+    if (typeof map.resize === 'function') map.resize();
+    if (typeof map.setPadding === 'function') map.setPadding(zeroPadding);
+
+    // 比开始探索的 zoom 13.2 略低（12.4），覆盖面更广
+    const camera = {
+      center: [lng, lat],
+      zoom: mobileView ? 12.4 : 11.8,
+      pitch: mobileView ? 22 : 40,
+      bearing: 0,
+      essential: true,
+      offset: [0, 0],
+      padding: zeroPadding,
+    };
+    if (mobileView && typeof map.easeTo === 'function') {
+      map.easeTo({ ...camera, duration: 1050, easing: (t) => 1 - Math.pow(1 - t, 4) });
+    } else {
+      map.flyTo({ ...camera, duration: 1500, curve: 1.45 });
+    }
+  }
+
+  function handleMemoryClose() {
+    clearActiveMainBtn();
+    setGpsLoading(false);
+    // 恢复锚点显示
+    const visibleSet = new Set(Object.keys(THEMES).filter((k) => k !== 'all'));
+    controller.setVisibleThemes(visibleSet);
+    // 恢复视角
+    if (memoryPrevCamera && controller.map) {
+      const map = controller.map;
+      if (typeof map.stop === 'function') map.stop();
+      map.flyTo({
+        ...memoryPrevCamera,
+        duration: 1200,
+        curve: 1,
+        essential: true,
+      });
+      memoryPrevCamera = null;
+    } else {
+      controller.reset();
     }
   }
 

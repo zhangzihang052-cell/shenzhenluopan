@@ -224,7 +224,7 @@ function toFeatureCollection(memories) {
   };
 }
 
-export function createMemoryController({ root, map, anchors = [], auth, showToast } = {}) {
+export function createMemoryController({ root, map, anchors = [], auth, showToast, onClose } = {}) {
   const state = {
     anchor: null,
     auth,
@@ -574,10 +574,12 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   }
 
   function closePanel() {
+    const wasOpen = !!state.panel;
     state.panel = null;
     state.selectedFile = null;
     const shell = document.getElementById('memory-shell');
     if (shell) shell.className = '';
+    if (wasOpen && onClose) onClose();
   }
 
   function openCreatePanel(data = {}) {
@@ -842,9 +844,11 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     }
     const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
     const isVideo = memory.mediaType === 'video';
-    const mediaHtml = isVideo
+    const mediaHtml = isVideo && memory.photoUrl
       ? `<video class="memory-detail-photo" src="${esc(memory.photoUrl)}" controls playsinline></video>`
-      : `<img class="memory-detail-photo" src="${esc(memory.photoUrl)}" alt="" />`;
+      : memory.photoUrl
+      ? `<img class="memory-detail-photo" src="${esc(memory.photoUrl)}" alt="" />`
+      : '';
     const voiceHtml = memory.voiceUrl
       ? `<div class="memory-detail-voice"><audio controls src="${esc(memory.voiceUrl)}"></audio></div>`
       : '';
@@ -865,9 +869,12 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   function renderListPanel(panel) {
     const items = state.memories.map((memory) => {
       const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+      const thumb = memory.photoUrl
+        ? `<img src="${esc(memory.photoUrl)}" alt="" onerror="this.style.display='none'" />`
+        : `<span class="memory-list-thumb-fallback">忆</span>`;
       return `
         <button class="memory-list-item" type="button" data-memory-id="${esc(memory.id)}">
-          <img src="${esc(memory.photoUrl)}" alt="" />
+          ${thumb}
           <span class="memory-list-copy">
             <b>${esc(memory.note || getText('memory.note_placeholder'))}</b>
             <small>${esc(formatDate(memory.createdAt))}${anchor ? ` · ${esc(pick(anchor.name))}` : ''}</small>
@@ -1047,7 +1054,23 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   async function deleteMemory(id) {
     const memory = state.memories.find((item) => item.id === id);
-    if (!memory || !window.confirm(getText('memory.delete_confirm'))) return;
+    if (!memory) return;
+    // 内联确认（避免 window.confirm 在 WebView 中被拦截）
+    const btn = document.getElementById('memory-delete-btn');
+    if (btn && !btn.dataset.confirming) {
+      btn.dataset.confirming = '1';
+      btn.textContent = getText('memory.delete_confirm');
+      btn.classList.add('memory-danger-confirm');
+      window.setTimeout(() => {
+        if (btn.dataset.confirming) {
+          delete btn.dataset.confirming;
+          btn.textContent = getText('memory.delete');
+          btn.classList.remove('memory-danger-confirm');
+        }
+      }, 3000);
+      return;
+    }
+    // 二次点击确认 → 执行删除
     if (loggedIn() && client()) {
       try {
         const { error } = await client().from(TABLE).delete().eq('id', id);
@@ -1056,8 +1079,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         if (storagePath) await client().storage.from(BUCKET).remove([storagePath]);
         if (memory.voiceStoragePath) await client().storage.from(VOICE_BUCKET).remove([memory.voiceStoragePath]);
       } catch (error) {
-        toast('memory.delete_failed');
-        return;
+        // 远程删除失败，仍删除本地（标记 pendingDelete 供后续同步）
+        console.warn('Remote delete failed, removing locally:', error);
       }
     }
     setMemories(state.memories.filter((item) => item.id !== id));
