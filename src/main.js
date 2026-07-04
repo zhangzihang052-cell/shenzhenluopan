@@ -78,7 +78,7 @@ import {
   refreshRoutePlannerTexts,
   setRoutePlannerLocation,
   clearActiveMainBtn,
-} from './ui.js?rev=v2-main-actions-4';
+} from './ui.js?rev=v2-fix-explore-stamp-1';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {
@@ -640,6 +640,7 @@ function boot() {
   function handleCompassClose() {
     setClueMapMood(false);
     controller.clearClueFocus(state.activeTheme);
+    clearActiveMainBtn();
   }
 
   // ===== 留下记忆 =====

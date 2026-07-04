@@ -112,6 +112,18 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
     </div>`;
 
   el.appendChild(langWrap);
+
+  // 印章册按钮
+  const stampBtn = document.createElement('button');
+  stampBtn.className = 'tool-btn';
+  stampBtn.id = 'stampbook-btn';
+  stampBtn.title = getText('stamp.title');
+  stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count"></span>`;
+  stampBtn.addEventListener('click', () => {
+    if (onStampBook) onStampBook();
+  });
+  el.appendChild(stampBtn);
+
   root.appendChild(el);
 
   // 交互：语言菜单开合
@@ -233,6 +245,14 @@ export function refreshToolCluster() {
   if (langTrigger) langTrigger.title = getText('lang.switch');
   const langLabel = document.getElementById('lang-label');
   if (langLabel) langLabel.textContent = getText('lang.switch');
+  // 印章册按钮文案
+  const stampBtn = document.getElementById('stampbook-btn');
+  if (stampBtn) {
+    stampBtn.title = getText('stamp.title');
+    const badgeEl = document.getElementById('stamp-count');
+    const badgeText = badgeEl ? badgeEl.textContent : '';
+    stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+  }
 }
 
 export function setGpsLoading(loading) {
