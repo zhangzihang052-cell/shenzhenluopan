@@ -213,8 +213,21 @@ function initBackgroundMusic(root) {
   root.appendChild(btn);
   document.body.appendChild(audio);
   update();
-  window.addEventListener('pointerdown', unlockOnce, { passive: true });
-  window.addEventListener('keydown', unlockOnce);
+
+  // 一进来就尝试播放 BGM；如果被浏览器自动播放策略拦截，则保留首次交互兜底
+  if (!muted) {
+    audio.play().then(() => {
+      unlocked = true;
+      update();
+    }).catch(() => {
+      // 浏览器要求用户交互后才能播放，注册兜底监听
+      window.addEventListener('pointerdown', unlockOnce, { passive: true });
+      window.addEventListener('keydown', unlockOnce);
+    });
+  } else {
+    window.addEventListener('pointerdown', unlockOnce, { passive: true });
+    window.addEventListener('keydown', unlockOnce);
+  }
 }
 
 function initInteractionSounds() {
