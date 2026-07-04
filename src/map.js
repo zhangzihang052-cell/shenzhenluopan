@@ -818,12 +818,15 @@ function buildController(ctx) {
     reset() {
       ctx.setSelectedId(null);
       ctx.setThemeBoost(false); // 清除主题增强，恢复总览默认视觉
+      if (typeof map.stop === 'function') map.stop();
+      if (typeof map.setPadding === 'function') map.setPadding({ top: 0, bottom: 0, left: 0, right: 0 });
       map.flyTo({
         center: GLOBAL_VIEW.center,
         zoom: GLOBAL_VIEW.zoom,
         pitch: GLOBAL_VIEW.pitch,
         bearing: GLOBAL_VIEW.bearing,
-        duration: 2000,
+        duration: 1500,
+        curve: 1,
         essential: true,
       });
       resetHighlight();
