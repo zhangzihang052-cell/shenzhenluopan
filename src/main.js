@@ -171,6 +171,7 @@ function initBackgroundMusic(root) {
       update();
       return;
     }
+    if (!audio.paused) return; // 正在播放时不重复调用 play()，防止重启
     unlocked = true;
     audio.volume = BGM_VOLUME;
     audio.play().then(update).catch(update);
