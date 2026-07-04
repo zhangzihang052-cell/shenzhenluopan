@@ -1056,7 +1056,7 @@ function buildController(ctx) {
         const inBay =
           lng >= BAY_AREA_BOUNDS.minLng && lng <= BAY_AREA_BOUNDS.maxLng &&
           lat >= BAY_AREA_BOUNDS.minLat && lat <= BAY_AREA_BOUNDS.maxLat;
-        flyToUserLocation(lng, lat, { inBay, duration: 2400 });
+        flyToUserLocation(lng, lat, { inBay, duration: 1200 });
         if (onResult) onResult({ lng, lat, simulated, inBay });
       };
       const fallback = () =>
@@ -1065,7 +1065,7 @@ function buildController(ctx) {
       navigator.geolocation.getCurrentPosition(
         (pos) => settle(pos.coords.longitude, pos.coords.latitude, false),
         () => fallback(),
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
       );
     },
 
