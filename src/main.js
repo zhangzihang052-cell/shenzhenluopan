@@ -225,6 +225,19 @@ function initBackgroundMusic(root) {
       tryPlay();
     }
   });
+
+  // 退出软件/关闭页面时确保音乐停止
+  const stopOnExit = () => {
+    audio.pause();
+    audio.currentTime = 0;
+    playRequested = false;
+  };
+  window.addEventListener('pagehide', stopOnExit);
+  window.addEventListener('beforeunload', stopOnExit);
+  document.addEventListener('freeze', stopOnExit);
+  document.addEventListener('resume', () => {
+    if (unlocked && !muted) tryPlay();
+  });
   audio.addEventListener('play', update);
   audio.addEventListener('pause', update);
   audio.addEventListener('volumechange', update);
