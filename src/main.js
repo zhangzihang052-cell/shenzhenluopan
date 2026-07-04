@@ -614,15 +614,13 @@ function boot() {
   // ===== 罗盘探索：定位（GPS 失败回退模拟）+ 打开面板 =====
   function handleCompass() {
     if (isCompassOpen()) {
-      closeCompassPanel();
-      clearActiveMainBtn();
+      closeCompassPanel(); // closeCompassPanel 内部会触发 onClose → handleCompassClose
       return;
     }
     if (isRoutePlannerOpen()) closeRoutePlanner();
-    const scan = playClueScanTransition();
     setGpsLoading(true);
     controller.locateOrSimulate({
-      onResult: async ({ lng, lat, simulated }) => {
+      onResult: ({ lng, lat, simulated }) => {
         setGpsLoading(false);
         state.userPos = [lng, lat];
         setCompassLocation({ lng, lat, simulated });
@@ -630,7 +628,6 @@ function boot() {
         controller.focusClueAnchors(getCompassClueIds());
         showToast(getText('clues.ready'));
         checkGeofenceNow();
-        await scan;
         if (!isCompassOpen()) openCompassPanel();
         controller.focusClueAnchors(getCompassClueIds());
       },
@@ -641,6 +638,8 @@ function boot() {
     setClueMapMood(false);
     controller.clearClueFocus(state.activeTheme);
     clearActiveMainBtn();
+    // 拉回主视觉全局视角
+    controller.reset();
   }
 
   // ===== 留下记忆 =====
@@ -892,7 +891,7 @@ function boot() {
       else if (isStampBookOpen()) closeStampBook();
       else if (memoryExperience && memoryExperience.isOpen()) memoryExperience.closePanel();
       else if (isRoutePlannerOpen()) closeRoutePlanner();
-      else if (isCompassOpen()) closeCompassPanel();
+      else if (isCompassOpen()) closeCompassPanel(); // closeCompassPanel 内部触发 onClose → handleCompassClose
       else if (state.selected) handleClose();
       else if (isNearbyOpen()) closeNearbyDrawer();
       // 关闭面板时清除主按钮激活态
