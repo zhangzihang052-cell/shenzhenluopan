@@ -155,6 +155,7 @@ function initBackgroundMusic(root) {
 
   let muted = getStoredBgmMuted();
   let unlocked = false;
+  let playRequested = false; // 确保 audio.play() 只被调用一次，杜绝竞态双播放
 
   const update = () => {
     const playing = !muted && !audio.paused;
@@ -166,15 +167,26 @@ function initBackgroundMusic(root) {
     btn.setAttribute('aria-label', label);
   };
 
+  const doPlay = () => {
+    if (playRequested) return; // 已经请求过播放，不重复调用
+    playRequested = true;
+    unlocked = true;
+    audio.volume = BGM_VOLUME;
+    audio.play().then(() => {
+      update();
+    }).catch(() => {
+      playRequested = false; // 播放失败，重置标志允许后续重试
+      update();
+    });
+  };
+
   const tryPlay = () => {
     if (muted) {
       update();
       return;
     }
-    if (!audio.paused) return; // 正在播放时不重复调用 play()，防止重启
-    unlocked = true;
-    audio.volume = BGM_VOLUME;
-    audio.play().then(update).catch(update);
+    if (!audio.paused) return; // 正在播放时不重复调用 play()
+    doPlay();
   };
 
   const unlockOnce = (event) => {
@@ -190,7 +202,12 @@ function initBackgroundMusic(root) {
     if (muted || audio.paused) {
       muted = false;
       setStoredBgmMuted(false);
-      tryPlay();
+      if (playRequested && !audio.paused) {
+        // 已经在播放，不需要重新请求
+      } else {
+        playRequested = false; // 允许重新播放
+        tryPlay();
+      }
     } else {
       muted = true;
       setStoredBgmMuted(true);
@@ -202,6 +219,7 @@ function initBackgroundMusic(root) {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       audio.pause();
+      playRequested = false; // 暂停后重置，允许恢复时重新播放
       update();
     } else if (unlocked && !muted) {
       tryPlay();
@@ -217,14 +235,14 @@ function initBackgroundMusic(root) {
 
   // 一进来就尝试播放 BGM；如果被浏览器自动播放策略拦截，则保留首次交互兜底
   if (!muted) {
-    audio.play().then(() => {
-      unlocked = true;
-      update();
-    }).catch(() => {
-      // 浏览器要求用户交互后才能播放，注册兜底监听
-      window.addEventListener('pointerdown', unlockOnce, { passive: true });
-      window.addEventListener('keydown', unlockOnce);
-    });
+    doPlay();
+    // 如果 doPlay 的 play() 失败，注册兜底监听等用户交互
+    setTimeout(() => {
+      if (audio.paused && !muted) {
+        window.addEventListener('pointerdown', unlockOnce, { passive: true });
+        window.addEventListener('keydown', unlockOnce);
+      }
+    }, 500);
   } else {
     window.addEventListener('pointerdown', unlockOnce, { passive: true });
     window.addEventListener('keydown', unlockOnce);
