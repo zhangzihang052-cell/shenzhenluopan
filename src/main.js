@@ -111,7 +111,7 @@ function hideLoading() {
   if (loading) loading.classList.add('hidden');
 }
 
-const BGM_URL = './public/audio/yiran-zide-erhu-pipa.m4a?v=bgm-1';
+const BGM_URL = './public/audio/yiran-zide-erhu-pipa.m4a?v=bgm-2';
 const BGM_VOLUME = 0.16;
 const BGM_MUTED_KEY = 'stc_bgm_muted';
 const UI_PAGE_SFX_URL = './public/audio/ui-page-turn.wav?v=sfx-assets-1';
@@ -219,11 +219,20 @@ function initBackgroundMusic(root) {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       audio.pause();
-      playRequested = false; // 暂停后重置，允许恢复时重新播放
+      playRequested = false;
       update();
     } else if (unlocked && !muted) {
       tryPlay();
     }
+  });
+
+  // 窗口失去焦点时也暂停（桌面端切换窗口、最小化等场景）
+  window.addEventListener('blur', () => {
+    audio.pause();
+    playRequested = false;
+  });
+  window.addEventListener('focus', () => {
+    if (unlocked && !muted) tryPlay();
   });
 
   // 退出软件/关闭页面时确保音乐停止
@@ -234,6 +243,7 @@ function initBackgroundMusic(root) {
   };
   window.addEventListener('pagehide', stopOnExit);
   window.addEventListener('beforeunload', stopOnExit);
+  window.addEventListener('unload', stopOnExit);
   document.addEventListener('freeze', stopOnExit);
   document.addEventListener('resume', () => {
     if (unlocked && !muted) tryPlay();
