@@ -116,8 +116,10 @@ const BGM_VOLUME = 0.16;
 const BGM_MUTED_KEY = 'stc_bgm_muted';
 const UI_PAGE_SFX_URL = './public/audio/ui-page-turn.wav?v=sfx-assets-1';
 const UI_CLUE_SFX_URL = './public/audio/ui-clue-discovery.mp3?v=sfx-assets-1';
+const UI_TAP_SFX_URL = './public/audio/ui-tap-soft.wav?v=sfx-tap-1';
 const UI_PAGE_SFX_VOLUME = 0.13;
 const UI_CLUE_SFX_VOLUME = 0.18;
+const UI_TAP_SFX_VOLUME = 0.10;
 
 function getStoredBgmMuted() {
   try {
@@ -285,9 +287,11 @@ function initInteractionSounds() {
 
   const pageTurn = makeSound('ui-page-turn-sfx', UI_PAGE_SFX_URL, UI_PAGE_SFX_VOLUME);
   const clueDiscovery = makeSound('ui-clue-discovery-sfx', UI_CLUE_SFX_URL, UI_CLUE_SFX_VOLUME);
+  const tapSoft = makeSound('ui-tap-sfx', UI_TAP_SFX_URL, UI_TAP_SFX_VOLUME);
   const lastPlayedAt = {
     page: 0,
     clue: 0,
+    tap: 0,
   };
 
   const playSound = (audio, type, minGap = 75) => {
@@ -303,6 +307,21 @@ function initInteractionSounds() {
     }
   };
 
+  // 卷轴展开类按钮 selector — 进入副本、展开面板等"重量级"交互
+  const SCROLL_OPEN_SELECTORS = [
+    '#compass-panel',           // 罗盘探索面板
+    '.episode-scroll',          // 副本卷轴
+    '.rpg-episode',             // RPG 副本
+    '#route-planner',           // 路线规划面板
+    '#stamp-book',              // 印章册
+    '.memory-panel',            // 记忆面板
+    '.main-actions .main-btn',  // 底部三个主按钮
+  ];
+
+  const isScrollOpenButton = (el) => {
+    return SCROLL_OPEN_SELECTORS.some((sel) => el.closest(sel));
+  };
+
   document.addEventListener(
     'click',
     (event) => {
@@ -312,7 +331,13 @@ function initInteractionSounds() {
       if (!interactive) return;
       if (interactive.disabled || interactive.getAttribute('aria-disabled') === 'true') return;
       if (interactive.closest('.rpg-hotspot')) return;
-      playSound(pageTurn, 'page');
+
+      // 卷轴展开类按钮播放展开音效；其余按钮播放轻量点击音效
+      if (isScrollOpenButton(interactive)) {
+        playSound(pageTurn, 'page');
+      } else {
+        playSound(tapSoft, 'tap', 50);
+      }
     },
     true
   );
@@ -321,6 +346,10 @@ function initInteractionSounds() {
     const type = event && event.detail && event.detail.type;
     if (type === 'clue') {
       playSound(clueDiscovery, 'clue', 120);
+      return;
+    }
+    if (type === 'tap') {
+      playSound(tapSoft, 'tap', 50);
       return;
     }
     playSound(pageTurn, 'page');
