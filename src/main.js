@@ -1,7 +1,7 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
 import { createMap, haversineKm } from './map.js?rev=clean-8';
 import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
-import { THEMES, OVERVIEW_MODE, TRAVEL_MODES } from './data/themes.js?rev=clean-8';
+import { THEMES, OVERVIEW_MODE, TRAVEL_MODES, DEFAULT_LOCATION } from './data/themes.js?rev=clean-8';
 import { getText, pick } from './i18n.js?rev=audio-sfx-1';
 import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
 import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js?rev=external-preview-1';
@@ -612,24 +612,45 @@ function boot() {
   }
 
   // ===== 罗盘探索：定位（GPS 失败回退模拟）+ 打开面板 =====
+  let compassLocating = false; // 防止 GPS 回调不触发时卡死
   function handleCompass() {
     if (isCompassOpen()) {
       closeCompassPanel(); // closeCompassPanel 内部会触发 onClose → handleCompassClose
       return;
     }
     if (isRoutePlannerOpen()) closeRoutePlanner();
+    if (compassLocating) return; // 正在定位中，忽略重复点击
+    compassLocating = true;
     setGpsLoading(true);
+
+    // 超时兜底：GPS 回调迟迟不来时用模拟定位继续，避免卡死
+    let settled = false;
+    const guardTimer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      compassLocating = false;
+      proceedCompass(DEFAULT_LOCATION.center[0], DEFAULT_LOCATION.center[1], true);
+    }, 6000);
+
+    function proceedCompass(lng, lat, simulated) {
+      setGpsLoading(false);
+      state.userPos = [lng, lat];
+      setCompassLocation({ lng, lat, simulated });
+      setClueMapMood(true);
+      controller.focusClueAnchors(getCompassClueIds());
+      showToast(getText('clues.ready'));
+      checkGeofenceNow();
+      if (!isCompassOpen()) openCompassPanel();
+      controller.focusClueAnchors(getCompassClueIds());
+    }
+
     controller.locateOrSimulate({
       onResult: ({ lng, lat, simulated }) => {
-        setGpsLoading(false);
-        state.userPos = [lng, lat];
-        setCompassLocation({ lng, lat, simulated });
-        setClueMapMood(true);
-        controller.focusClueAnchors(getCompassClueIds());
-        showToast(getText('clues.ready'));
-        checkGeofenceNow();
-        if (!isCompassOpen()) openCompassPanel();
-        controller.focusClueAnchors(getCompassClueIds());
+        if (settled) return; // 超时已兜底，忽略迟到回调
+        settled = true;
+        clearTimeout(guardTimer);
+        compassLocating = false;
+        proceedCompass(lng, lat, simulated);
       },
     });
   }
