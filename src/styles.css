@@ -683,6 +683,11 @@ body.info-panel-open .tool-cluster {
   65% { transform: translateX(-50%) scale(1.01); }
   100% { transform: translateX(-50%) scale(1); }
 }
+@keyframes mainBtnPress {
+  0% { transform: scale(0.96); }
+  60% { transform: scale(1.01); }
+  100% { transform: scale(1); }
+}
 @keyframes exploreRipple {
   0% { opacity: 0.38; transform: translate(-50%, -50%) scale(0); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(14); }
@@ -799,7 +804,7 @@ body.route-planner-open .main-actions {
   transform: translate(-50%, -50%) scale(0);
 }
 .main-actions .main-action-btn.is-pressing {
-  animation: explorePress 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+  animation: mainBtnPress 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 .main-actions .main-action-btn.is-rippling::before {
   animation: exploreRipple 0.42s ease-out;
