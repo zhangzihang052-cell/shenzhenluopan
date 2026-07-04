@@ -461,116 +461,105 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     btn.innerHTML = `<span class="tool-ico">${authIcon()}</span><span>${esc(label)}</span>`;
   }
 
-  // ===== 记忆锚点图标：水墨印章风格（canvas 动态生成） =====
-  function createMemoryIcon() {
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
+  // ===== 记忆锚点图标：复用主锚点的菱形视觉语言，金色区分 =====
+  const MEMORY_INK = '#2B1C0E';   // 深墨描边（与主锚点一致）
+  const MEMORY_GOLD = '#C9A84C';  // 金色填充（记忆专属色）
+  const MEMORY_GLOW = '#D8B866';  // 金色光晕
 
-    // 外圆 — 深棕色印章边框
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#3d2b1f';
-    ctx.fill();
-
-    // 内圆 — 金色底
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2 - 12, 0, Math.PI * 2);
-    ctx.fillStyle = '#d4a843';
-    ctx.fill();
-
-    // 中心 — 水墨毛笔笔触（"忆"字简化为抽象图案）
-    ctx.save();
-    ctx.translate(size / 2, size / 2);
-    ctx.fillStyle = '#fff8e7';
-    // 竖笔
-    ctx.fillRect(-3, -28, 6, 36);
-    // 左点
-    ctx.beginPath();
-    ctx.ellipse(-12, -22, 5, 7, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    // 右点
-    ctx.beginPath();
-    ctx.ellipse(12, -22, 5, 7, 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    // 底部横折
-    ctx.beginPath();
-    ctx.moveTo(-14, 12);
-    ctx.lineTo(14, 12);
-    ctx.lineTo(14, 26);
-    ctx.lineTo(-14, 26);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-
-    return { image: ctx.getImageData(0, 0, size, size), pixelRatio: 2 };
+  function makeMemoryDiamondIcon(size, fill, stroke) {
+    const c = size / 2;
+    return (
+      'data:image/svg+xml;charset=utf-8,' +
+      encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
+          `<path d="M${c} 1 L${size - 1} ${c} L${c} ${size - 1} L1 ${c} Z" fill="#FFFFFF"/>` +
+          `<path d="M${c} 5 L${size - 5} ${c} L${c} ${size - 5} L5 ${c} Z" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>` +
+          `</svg>`
+      )
+    );
   }
 
-  function createAuraIcon() {
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-
-    // 径向渐变 — 柔和金色光晕
-    const grad = ctx.createRadialGradient(size / 2, size / 2, 8, size / 2, size / 2, size / 2);
-    grad.addColorStop(0, 'rgba(212, 168, 67, 0.6)');
-    grad.addColorStop(0.4, 'rgba(212, 168, 67, 0.3)');
-    grad.addColorStop(1, 'rgba(212, 168, 67, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-
-    return { image: ctx.getImageData(0, 0, size, size), pixelRatio: 2 };
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
   }
 
-  function addMapLayers() {
+  async function addMapLayers() {
     if (!state.map || state.map.getSource(SOURCE_ID)) return;
     state.map.addSource(SOURCE_ID, { type: 'geojson', data: toFeatureCollection(state.memories) });
 
-    // 生成水墨印章风格图标（不依赖外部工具，用 canvas 绘制）
-    if (!state.map.hasImage('memory-seal')) {
-      const seal = createMemoryIcon();
-      state.map.addImage('memory-seal', seal.image, { pixelRatio: seal.pixelRatio });
+    // 烘焙金色菱形图标（与主锚点 diamond-{theme} 完全同构，仅颜色不同）
+    try {
+      if (!state.map.hasImage('diamond-memory')) {
+        const img = await loadImage(makeMemoryDiamondIcon(32, MEMORY_GOLD, MEMORY_INK));
+        state.map.addImage('diamond-memory', img);
+      }
+    } catch (e) {
+      /* 图标载入失败，降级用圆点 */
     }
 
-    // 光晕层：柔和的金色光圈
-    if (!state.map.hasImage('memory-aura')) {
-      const aura = createAuraIcon();
-      state.map.addImage('memory-aura', aura.image, { pixelRatio: aura.pixelRatio });
-    }
-
+    // 1) 柔光层：金色模糊光晕（与主锚点 GLOW_LAYER 同构）
     state.map.addLayer({
       id: GLOW_LAYER,
-      type: 'symbol',
+      type: 'circle',
       source: SOURCE_ID,
-      layout: {
-        'icon-image': 'memory-aura',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 1.0, 14, 1.4],
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
-      },
       paint: {
-        'icon-opacity': 0.85,
+        'circle-color': MEMORY_GLOW,
+        'circle-blur': 1,
+        'circle-opacity': 0.35,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 8, 14, 18],
       },
     });
 
+    // 2) 脉冲环：深墨描边（与主锚点 PULSE_LAYER 同构）
     state.map.addLayer({
-      id: CORE_LAYER,
-      type: 'symbol',
+      id: 'memory-pulse',
+      type: 'circle',
       source: SOURCE_ID,
-      layout: {
-        'icon-image': 'memory-seal',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.65, 14, 0.85],
-        'icon-allow-overlap': true,
-        'icon-ignore-placement': true,
-      },
       paint: {
-        'icon-opacity': 1,
+        'circle-color': 'rgba(0,0,0,0)',
+        'circle-stroke-color': MEMORY_INK,
+        'circle-stroke-width': 1,
+        'circle-stroke-opacity': 0.36,
+        'circle-radius': 6,
       },
     });
+
+    // 3) 核心：金色菱形 symbol（与主锚点 CORE_LAYER 同构）
+    if (state.map.hasImage('diamond-memory')) {
+      state.map.addLayer({
+        id: CORE_LAYER,
+        type: 'symbol',
+        source: SOURCE_ID,
+        layout: {
+          'icon-image': 'diamond-memory',
+          'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.55, 14, 1.05],
+          'icon-allow-overlap': true,
+          'icon-rotate': 0,
+        },
+        paint: {
+          'icon-opacity': 0.92,
+        },
+      });
+    } else {
+      // 降级：金色圆点 + 深墨描边
+      state.map.addLayer({
+        id: CORE_LAYER,
+        type: 'circle',
+        source: SOURCE_ID,
+        paint: {
+          'circle-color': MEMORY_GOLD,
+          'circle-stroke-color': MEMORY_INK,
+          'circle-stroke-width': 2,
+          'circle-opacity': 0.92,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8],
+        },
+      });
+    }
     const openMemory = (event) => {
       const feature = event.features && event.features[0];
       if (!feature) return;
@@ -590,14 +579,19 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     installLongPress();
     state.map.once('idle', () => {
       if (state.map.getLayer(GLOW_LAYER)) state.map.moveLayer(GLOW_LAYER);
+      if (state.map.getLayer('memory-pulse')) state.map.moveLayer('memory-pulse');
       if (state.map.getLayer(CORE_LAYER)) state.map.moveLayer(CORE_LAYER);
     });
   }
 
   function installMap() {
     if (!state.map) return;
-    if (state.map.isStyleLoaded && state.map.isStyleLoaded()) addMapLayers();
-    else state.map.once('load', addMapLayers);
+    const doAdd = async () => {
+      await addMapLayers();
+      updateMapSource();
+    };
+    if (state.map.isStyleLoaded && state.map.isStyleLoaded()) doAdd();
+    else state.map.once('load', doAdd);
   }
 
   function updateMapSource() {
@@ -606,7 +600,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   }
 
   function pointHasFeature(point) {
-    const layers = ['anchor-core', 'anchor-glow', CORE_LAYER, GLOW_LAYER].filter((id) => state.map.getLayer(id));
+    const layers = ['anchor-core', 'anchor-glow', 'memory-pulse', CORE_LAYER, GLOW_LAYER].filter((id) => state.map.getLayer(id));
     if (!layers.length) return false;
     return state.map.queryRenderedFeatures(point, { layers }).length > 0;
   }
@@ -1353,12 +1347,6 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       installToolbar();
       installMap();
       initAuth();
-      // 等 map layers 添加完成后再刷新数据
-      if (state.map && state.map.getSource(SOURCE_ID)) {
-        updateMapSource();
-      } else if (state.map) {
-        state.map.once('idle', updateMapSource);
-      }
     },
     isOpen() {
       return !!state.panel;
