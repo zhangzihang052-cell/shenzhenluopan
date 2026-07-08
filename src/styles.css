@@ -10266,8 +10266,8 @@ body.compass-panel-open #geofence-toast.show {
     background: rgba(15, 21, 20, 0.58) !important;
   }
   .account-content {
-    width: min(300px, 42vw) !important;
-    max-width: min(300px, 42vw) !important;
+    width: min(260px, 36vw) !important;
+    max-width: min(260px, 36vw) !important;
     max-height: calc(100dvh - 12px) !important;
     border-radius: 8px !important;
     padding: 0 !important;
