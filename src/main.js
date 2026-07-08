@@ -1,6 +1,6 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
 import { createMap, haversineKm } from './map.js?rev=index-mobile-1';
-import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
+import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
 import { THEMES, OVERVIEW_MODE, TRAVEL_MODES, DEFAULT_LOCATION } from './data/themes.js?rev=clean-8';
 import { getText, pick } from './i18n.js?rev=account-1';
 import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
@@ -28,7 +28,7 @@ import {
   handleGeofence,
   initCloudSync,
   clearSync,
-} from './game.js?rev=mobile-modal-1';
+} from './game.js?rev=v2-mobile-audit-1';
 import {
   renderHeader,
   refreshHeader,
@@ -83,7 +83,7 @@ import {
   setRoutePlannerLocation,
   clearActiveMainBtn,
   updateAuthBtn,
-} from './ui.js?rev=v2-fix-explore-stamp-1';
+} from './ui.js?rev=v2-mobile-audit-1';
 import { initWantToVisitSync, clearWantToVisitSync } from './want-to-visit.js?rev=cloud-1';
 
 /** WebGL 支持检测 */

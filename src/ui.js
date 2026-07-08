@@ -1,11 +1,11 @@
 // UI 模块 v2：标题栏 / 语言下拉 / GPS / 图层 / 附近抽屉 / 面包屑 / 信息面板 / 降级弹窗
 // build: 2026-06-18
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
-import { ANCHORS } from './data/anchors.js?rev=classification-1';
+import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
 import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=audio-sfx-1';
 import { hasEpisode } from './data/episodes.js?rev=audio-sfx-1';
-import { isCompleted } from './game.js?rev=audio-sfx-1';
-import { nearbyClues } from './data/nearby-clues.js?rev=audio-sfx-1';
+import { isCompleted } from './game.js?rev=v2-mobile-audit-1';
+import { nearbyClues } from './data/nearby-clues.js?rev=v2-mobile-audit-1';
 import {
   addWantToVisit,
   removeWantToVisit,
@@ -572,12 +572,16 @@ export function openInfoPanel(anchor, handlers = {}) {
     ? `<p class="panel-want-sub">${esc(getText('panel.visit'))}：${esc(anchor.visitTips)}</p>`
     : '';
 
-  // 人物 / 地点配图（优先 heroImage，其次 placeImage）；加载失败自动降级隐藏整块
-  const imgSrc = anchor.heroImage || anchor.placeImage || '';
+  // 人物 / 地点配图（优先 heroImage，其次 placeImage）；加载失败保留可理解占位。
+  const imgSrc = resolveAssetUrl(anchor.heroImage || anchor.placeImage || '');
+  const imageFallback = getLang() === 'zh'
+    ? '配图暂未加载，内容可继续阅读'
+    : 'Image is temporarily unavailable; the story remains readable.';
   const imageHtml = imgSrc
     ? `<figure class="panel-image impact-image fade-in-up" style="animation-delay:.36s">
-        <img src="${esc(imgSrc)}" alt="${esc(anchor.imageCaption || pick(anchor.hero))}" loading="lazy"
-          onerror="this.closest('.panel-image').style.display='none'" />
+        <img src="${esc(imgSrc)}" alt="${esc(anchor.imageCaption || pick(anchor.hero))}" loading="lazy" decoding="async"
+          onerror="this.closest('.panel-image').classList.add('is-failed');this.remove()" />
+        <span class="panel-image-fallback">${esc(imageFallback)}</span>
         ${anchor.imageCaption ? `<figcaption class="panel-image-cap">${esc(anchor.imageCaption)}</figcaption>` : ''}
         ${anchor.imageLicense ? `<span class="panel-image-license">${esc(anchor.imageLicense)}</span>` : ''}
       </figure>`
@@ -1957,19 +1961,29 @@ function clueVisualTag(clue) {
   return String(pickClueText(clue.visualStyleTag) || clue.type || 'quest').trim();
 }
 
-function cssAssetUrl(path) {
+function normalizeAssetPath(path) {
   const value = String(path || '').trim();
   if (!value) return '';
   if (/^(https?:|data:)/i.test(value)) return value;
-  const normalized = value.replace(/^\.?\//, '');
-  const publicPath = normalized.startsWith('assets/')
-    ? `public/${normalized}`
-    : normalized;
+  let normalized = value.replace(/^\.?\//, '');
+  if (normalized.startsWith('assets/')) normalized = `public/${normalized}`;
+  normalized = normalized.replace(/^(public\/anchors\/generated\/[^?#]+)\.webp([?#].*)?$/i, '$1.jpg$2');
+  return normalized;
+}
+
+function resolveAssetUrl(path) {
+  const normalized = normalizeAssetPath(path);
+  if (!normalized) return '';
+  if (/^(https?:|data:)/i.test(normalized)) return normalized;
   try {
-    return new URL(publicPath, document.baseURI).href;
+    return new URL(normalized, document.baseURI).href;
   } catch (e) {
-    return publicPath;
+    return normalized;
   }
+}
+
+function cssAssetUrl(path) {
+  return resolveAssetUrl(path);
 }
 
 function clueCoverImage(anchor, clue) {

@@ -2,6 +2,9 @@
 /public/assets/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
+/assets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
 /public/textures/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
@@ -25,4 +28,10 @@
 
 # HTML/JS/CSS 保持即时刷新，确保代码更新立即生效
 /
+  Cache-Control: public, max-age=0, must-revalidate
+
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/src/*
   Cache-Control: public, max-age=0, must-revalidate
