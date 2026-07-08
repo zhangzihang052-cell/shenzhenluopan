@@ -188,7 +188,7 @@ export const BASEMAP_COLORS = {
  * coordinates 顺序：左上(TL) → 右上(TR) → 右下(BR) → 左下(BL)。
  */
 export const INK_BASEMAP = {
-url: './public/textures/ink-basemap-hd-clean.png?rev=hq-restore',
+url: './public/textures/ink-basemap-hd-clean.webp',
   west: 112.4,
   south: 21.4,
   east: 115.0,

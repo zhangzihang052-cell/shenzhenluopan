@@ -15,7 +15,7 @@ export const nearbyClues = [
       en: "Why did China's capital market experiment begin in Shenzhen?",
     },
     coverImage: '/assets/clues/N-EG02-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-szse.png?rev=hq-restore',
+backgroundImage: './public/clue-backgrounds/quest-szse.webp',
     accentColor: '#2f8f80',
     visualStyleTag: 'sealed_archive',
     backgroundPrompt: {
@@ -61,7 +61,7 @@ export const nearbyClues = [
       en: "Why did Shenzhen become China's window of reform and opening?",
     },
     coverImage: '/assets/clues/M11-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-lianhua.png?rev=hq-restore',
+backgroundImage: './public/clue-backgrounds/quest-lianhua.webp',
     accentColor: '#b06b36',
     visualStyleTag: 'reform_witness',
     backgroundPrompt: {
@@ -107,7 +107,7 @@ export const nearbyClues = [
       en: 'Why did Shenzhen become a major city for global hardware innovation?',
     },
     coverImage: '/assets/clues/N-SC01-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-huaqiangbei.png?rev=hq-restore',
+backgroundImage: './public/clue-backgrounds/quest-huaqiangbei.webp',
     accentColor: '#287f8f',
     visualStyleTag: 'component_network',
     backgroundPrompt: {
@@ -153,7 +153,7 @@ export const nearbyClues = [
       en: 'Why can one drone connect to the global sky?',
     },
     coverImage: '/assets/clues/N-SC03-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-dji.png?rev=hq-restore',
+backgroundImage: './public/clue-backgrounds/quest-dji.webp',
     accentColor: '#287f8f',
     visualStyleTag: 'drone_supply_network',
     backgroundPrompt: {
@@ -383,7 +383,7 @@ export const nearbyClues = [
       zh: '从一盆菜看迁徙、宗族与围村礼序如何被端上桌。',
       en: 'Read migration, clans and walled-village ritual through one shared basin feast.',
     },
-    coverImage: './public/anchors/generated/N-AW04.jpg',
+    coverImage: './public/anchors/generated/N-AW04.webp',
     accentColor: '#b5762a',
     visualStyleTag: 'poon_choi_memory',
     softBackground: true,
@@ -422,7 +422,7 @@ export const nearbyClues = [
       en: 'Why would a fast-growing city keep a wetland at its center?',
     },
     coverImage: '/assets/clues/M07-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-mangrove.png?rev=hq-restore',
+backgroundImage: './public/clue-backgrounds/quest-mangrove.webp',
     accentColor: '#3f7d6e',
     visualStyleTag: 'green_question',
     backgroundPrompt: {

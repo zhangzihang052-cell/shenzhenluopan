@@ -14,7 +14,7 @@
   --c-amber: #b5762a;      /* 赭石橙 */
   --c-cinnabar: #b23a2e;   /* 朱砂红（印章）*/
   --c-cyan: #3f7d6e;       /* 黛青 */
-  --ink-brush-button: url("../public/textures/ink-brush-button.png");
+  --ink-brush-button: url("../public/textures/ink-brush-button.webp");
   /* 主题强调色（由 applyTheme JS Tween 实时更新）*/
   --theme-accent: #9a7b32;
 }
@@ -76,7 +76,7 @@ body {
 .ink-map-paper {
   position: absolute;
   inset: 0;
-  background-image: url('../public/textures/ink-paper.png?rev=hq-restore');
+  background-image: url('../public/textures/ink-paper.webp');
   background-size: cover;
   background-position: center;
   mix-blend-mode: multiply;
@@ -86,7 +86,7 @@ body {
 .ink-map-wash {
   position: absolute;
   inset: -6%;
-  background-image: url('../public/textures/ink-wash.png?rev=hq-restore');
+  background-image: url('../public/textures/ink-wash.webp');
   background-size: 120% 120%;
   background-position: center;
   mix-blend-mode: soft-light;
@@ -7806,7 +7806,7 @@ body.compass-panel-open #geofence-toast.show {
   border: 1px solid rgba(154, 123, 50, 0.34);
   background:
     linear-gradient(180deg, rgba(247, 242, 228, 0.97), rgba(235, 224, 197, 0.98)),
-    url('../public/textures/ink-paper.png?rev=hq-restore');
+    url('../public/textures/ink-paper.webp');
   background-size: cover;
   background-blend-mode: multiply;
   box-shadow: 0 26px 64px rgba(43, 33, 24, 0.42);
@@ -10258,25 +10258,26 @@ body.compass-panel-open #geofence-toast.show {
     max-height: calc(100dvh - 80px) !important;
   }
 
-  /* ═══ 认证欢迎面板（welcome.js 渲染，独立于 #memory-shell）═══ */
+  /* ═══ 认证欢迎面板（welcome.js 渲染，独立于 #memory-shell）═══
+     横屏下居中大卡片 + 舒适阅读区，避免右贴边窄卡导致文字被挡 */
   .account-overlay {
-    align-items: flex-end !important;
-    justify-content: flex-end !important;
-    padding: 6px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
     background: rgba(15, 21, 20, 0.58) !important;
   }
   .account-content {
-    width: min(260px, 36vw) !important;
-    max-width: min(260px, 36vw) !important;
-    max-height: calc(100dvh - 12px) !important;
-    border-radius: 8px !important;
+    width: min(440px, 80vw) !important;
+    max-width: min(440px, 80vw) !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 16px !important;
     padding: 0 !important;
     overflow-y: auto !important;
   }
   .account-card {
     min-height: auto !important;
-    padding: 10px 12px !important;
-    text-align: left !important;
+    padding: 26px 30px 28px !important;
+    text-align: center !important;
   }
   .account-card::before,
   .account-card::after {
@@ -10284,81 +10285,82 @@ body.compass-panel-open #geofence-toast.show {
   }
   .account-seal {
     position: static !important;
-    width: 28px !important;
-    height: 28px !important;
-    margin: 0 0 4px !important;
-    border-radius: 4px !important;
-    font-size: 12px !important;
+    width: 64px !important;
+    height: 64px !important;
+    margin: 0 auto 14px !important;
+    border-radius: 50% !important;
+    font-size: 22px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
   }
   .account-title {
-    font-size: 14px !important;
-    margin: 0 0 2px !important;
+    font-size: 24px !important;
+    margin: 0 0 6px !important;
   }
   .account-sub {
-    font-size: 9px !important;
-    margin: 0 0 6px !important;
-    line-height: 1.3 !important;
+    font-size: 13px !important;
+    margin: 0 0 18px !important;
+    line-height: 1.5 !important;
   }
   .account-benefits {
-    gap: 2px !important;
-    margin: 0 0 6px !important;
+    gap: 4px !important;
+    margin: 0 0 16px !important;
   }
   .account-benefits span {
-    font-size: 9px !important;
-    padding: 1px 0 !important;
+    font-size: 12px !important;
+    padding: 2px 0 !important;
   }
   .account-benefits span::before {
-    width: 8px !important;
+    width: 11px !important;
     height: 8px !important;
     margin-right: 4px !important;
   }
   .account-actions {
-    gap: 4px !important;
-    margin-bottom: 4px !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
   }
   .account-btn-primary,
   .account-btn-guest {
-    padding: 6px 8px !important;
-    font-size: 11px !important;
-    border-radius: 5px !important;
+    padding: 13px !important;
+    font-size: 17px !important;
+    border-radius: 10px !important;
     border-width: 1px !important;
   }
   .account-guest-hint {
-    font-size: 8px !important;
-    line-height: 1.3 !important;
+    font-size: 12px !important;
+    line-height: 1.6 !important;
     margin: 0 !important;
   }
   .account-close,
   .account-back {
-    width: 22px !important;
-    height: 22px !important;
-    font-size: 11px !important;
-    border-radius: 4px !important;
-    top: 4px !important;
-    right: 4px !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 18px !important;
+    border-radius: 50% !important;
+    top: 12px !important;
+    right: 12px !important;
   }
   .account-back {
-    left: 4px !important;
-    top: 4px !important;
+    left: 12px !important;
+    top: 12px !important;
   }
   .account-form {
-    gap: 4px !important;
+    gap: 14px !important;
+    text-align: left !important;
   }
   .account-field span {
-    font-size: 9px !important;
+    font-size: 13px !important;
   }
   .account-field input {
-    min-height: 26px !important;
-    font-size: 11px !important;
-    padding: 3px 6px !important;
-    border-radius: 4px !important;
+    min-height: 44px !important;
+    font-size: 15px !important;
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
     border-width: 1px !important;
   }
   .account-hint {
-    font-size: 8px !important;
-    margin: 2px 0 0 !important;
+    font-size: 12px !important;
+    margin: 8px 0 0 !important;
   }
 }
