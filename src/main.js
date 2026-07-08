@@ -28,7 +28,7 @@ import {
   handleGeofence,
   initCloudSync,
   clearSync,
-} from './game.js?rev=audio-sfx-1';
+} from './game.js?rev=mobile-modal-1';
 import {
   renderHeader,
   refreshHeader,

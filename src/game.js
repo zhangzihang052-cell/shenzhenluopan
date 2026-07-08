@@ -951,8 +951,11 @@ export function renderStampBook(root, handlers = {}) {
   stampHandlers = handlers;
   const el = document.createElement('div');
   el.id = 'stamp-modal';
-  el.innerHTML = `<div class="stamp-card" id="stamp-card"></div>`;
+  el.innerHTML = `
+    <button class="close-btn stamp-modal-close" id="stamp-close" aria-label="close">✕</button>
+    <div class="stamp-card" id="stamp-card"></div>`;
   root.appendChild(el);
+  el.querySelector('#stamp-close').addEventListener('click', closeStampBook);
   // 点击遮罩关闭
   el.addEventListener('click', (e) => {
     if (e.target === el) closeStampBook();
@@ -1021,7 +1024,6 @@ export function openStampBook(opts = {}) {
     .join('');
 
   card.innerHTML = `
-    <button class="close-btn" id="stamp-close" aria-label="close">✕</button>
     <div class="stamp-header">
       <div class="stamp-seal">印</div>
       <div>
@@ -1038,7 +1040,6 @@ export function openStampBook(opts = {}) {
     <div class="stamp-sections">${sections}</div>`;
 
   modal.classList.add('open');
-  card.querySelector('#stamp-close').addEventListener('click', closeStampBook);
   card.querySelectorAll('.stamp-cell').forEach((cell) => {
     cell.addEventListener('mouseenter', () => cell.classList.add('is-hovered'));
     cell.addEventListener('mouseleave', () => cell.classList.remove('is-hovered'));

@@ -1273,11 +1273,24 @@
     padding: 18px 14px max(18px, env(safe-area-inset-bottom));
   }
 
+  #stamp-modal .stamp-modal-close {
+    position: fixed !important;
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    z-index: 90;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0;
+    background: rgba(255, 252, 244, 0.88);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
   .stamp-header {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 44px;
+    grid-template-columns: 42px minmax(0, 1fr);
     gap: 10px;
-    padding-right: 38px;
+    padding-right: 52px;
   }
 
   .stamp-title {
@@ -1684,6 +1697,24 @@
     transition: none !important;
   }
 
+  body.mobile-app #stamp-modal.open .stamp-card {
+    transform: none !important;
+  }
+
+  body.mobile-app #stamp-modal.open .stamp-modal-close {
+    position: fixed !important;
+    top: max(10px, env(safe-area-inset-top)) !important;
+    right: max(10px, env(safe-area-inset-right)) !important;
+    z-index: 90;
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    background: rgba(255, 252, 244, 0.9);
+    box-shadow: 0 10px 24px -18px rgba(40, 30, 16, 0.75);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
   body.mobile-app .episode-scroll.is-rpg-dialogue .episode-body,
   body.mobile-app .rpg-episode {
     height: 100%;
@@ -1761,7 +1792,7 @@
     max-height: min(46dvh, 230px) !important;
     border: 0 !important;
     border-radius: 12px 12px 0 0 !important;
-    padding: 24px 16px max(12px, env(safe-area-inset-bottom)) !important;
+    padding: 62px 16px max(12px, env(safe-area-inset-bottom)) !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     box-sizing: border-box;
@@ -1773,12 +1804,12 @@
   }
 
   body.mobile-app .rpg-dialogue-npc {
-    padding-top: 28px !important;
+    padding-top: 62px !important;
   }
 
   body.mobile-app .rpg-speaker-tab {
     left: 14px;
-    top: -18px;
+    top: 8px !important;
     min-width: 0;
     max-width: calc(100% - 72px);
     gap: 6px;
@@ -1787,7 +1818,7 @@
   }
 
   body.mobile-app .rpg-speaker-tab-npc {
-    top: -22px;
+    top: 8px !important;
   }
 
   body.mobile-app .rpg-speaker-avatar-mini {
@@ -1864,6 +1895,7 @@
   }
 
   body.mobile-app .rpg-hotspot-label {
+    display: inline-block !important;
     max-width: 96px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2085,7 +2117,7 @@
   body.mobile-app .rpg-dialogue-player,
   body.mobile-app .rpg-dialogue-narration {
     max-height: min(49dvh, 190px) !important;
-    padding: 21px 12px max(9px, env(safe-area-inset-bottom)) !important;
+    padding: 62px 12px max(9px, env(safe-area-inset-bottom)) !important;
   }
 
   body.mobile-app .rpg-npc {
