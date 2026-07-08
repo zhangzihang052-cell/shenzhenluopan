@@ -15,7 +15,7 @@ export const nearbyClues = [
       en: "Why did China's capital market experiment begin in Shenzhen?",
     },
     coverImage: '/assets/clues/N-EG02-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-szse.jpg',
+    backgroundImage: './public/clue-backgrounds/quest-szse.png?rev=hq-restore',
     accentColor: '#2f8f80',
     visualStyleTag: 'sealed_archive',
     backgroundPrompt: {
@@ -61,7 +61,7 @@ export const nearbyClues = [
       en: "Why did Shenzhen become China's window of reform and opening?",
     },
     coverImage: '/assets/clues/M11-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-lianhua.jpg',
+    backgroundImage: './public/clue-backgrounds/quest-lianhua.png?rev=hq-restore',
     accentColor: '#b06b36',
     visualStyleTag: 'reform_witness',
     backgroundPrompt: {
@@ -107,7 +107,7 @@ export const nearbyClues = [
       en: 'Why did Shenzhen become a major city for global hardware innovation?',
     },
     coverImage: '/assets/clues/N-SC01-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-huaqiangbei.jpg',
+    backgroundImage: './public/clue-backgrounds/quest-huaqiangbei.png?rev=hq-restore',
     accentColor: '#287f8f',
     visualStyleTag: 'component_network',
     backgroundPrompt: {
@@ -153,7 +153,7 @@ export const nearbyClues = [
       en: 'Why can one drone connect to the global sky?',
     },
     coverImage: '/assets/clues/N-SC03-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-dji.jpg',
+    backgroundImage: './public/clue-backgrounds/quest-dji.png?rev=hq-restore',
     accentColor: '#287f8f',
     visualStyleTag: 'drone_supply_network',
     backgroundPrompt: {
@@ -422,7 +422,7 @@ export const nearbyClues = [
       en: 'Why would a fast-growing city keep a wetland at its center?',
     },
     coverImage: '/assets/clues/M07-cover.webp',
-    backgroundImage: './public/clue-backgrounds/quest-mangrove.jpg',
+    backgroundImage: './public/clue-backgrounds/quest-mangrove.png?rev=hq-restore',
     accentColor: '#3f7d6e',
     visualStyleTag: 'green_question',
     backgroundPrompt: {

@@ -2075,13 +2075,13 @@ export const EPISODES = {
 Object.assign(EPISODES, {
   'N-SC02': makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '数字生态观察员', en: 'Digital Ecosystem Observer' }, role: { zh: '南山科技生态讲述人', en: 'Nanshan Tech Ecosystem Guide' }, portrait: './public/assets/episodes/tencent/npc-cutout.jpg' },
+      { name: { zh: '数字生态观察员', en: 'Digital Ecosystem Observer' }, role: { zh: '南山科技生态讲述人', en: 'Nanshan Tech Ecosystem Guide' }, portrait: './public/assets/episodes/tencent/npc-cutout.png?rev=hq-restore' },
     ],
     intro: {
       zh: '2017年，腾讯滨海大厦在深圳湾畔落成，双塔连廊如同一道直指海面的信号。你站在楼外，海风从深圳湾吹来。1998年，马化腾和同学在深圳华强北一间办公室里写出OICQ第一个版本时，南山还只是刚起步的科技园区。二十多年后，从这里生长出的社交、支付、游戏、云服务已经渗透进数亿人的日常——你不只是在看一座总部大楼，而是在看一套从深圳南山扩散到全球的数字生态系统如何长成。',
       en: 'In 2017, Tencent Binhai Building rose on the shore of Shenzhen Bay, its twin-tower skybridge like a signal pointing seaward. You stand outside as the bay wind arrives. In 1998, when Pony Ma and classmates wrote the first version of OICQ in a small office in Huaqiangbei, Nanshan was barely a tech district. Over two decades later, the social, payment, gaming, and cloud services grown from here have permeated the daily lives of hundreds of millions — you are not just looking at a headquarters, but at how a digital ecosystem grew from Nanshan to span the globe.',
     },
-    background: './public/assets/episodes/tencent/stage-bg.jpg',
+    background: './public/assets/episodes/tencent/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '腾讯滨海 · 数字海岸', en: 'Tencent Binhai · Digital Coast' },
     subtitle: { zh: '科学星火 · 腾讯滨海大厦', en: 'Scientific Spark · Tencent Binhai Building' },
     chapterTitle: { zh: '从寻呼到超级生态', en: 'From Pager to Super Ecosystem' },
@@ -2210,10 +2210,10 @@ Object.assign(EPISODES, {
 
   'N-AW04': makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '围村宴席记录人', en: 'Walled Village Banquet Keeper' }, role: { zh: '元朗盆菜文化讲述人', en: 'Yuen Long Poon Choi Guide' }, portrait: './public/assets/episodes/yuenlong/npc-cutout.jpg' },
+      { name: { zh: '围村宴席记录人', en: 'Walled Village Banquet Keeper' }, role: { zh: '元朗盆菜文化讲述人', en: 'Yuen Long Poon Choi Guide' }, portrait: './public/assets/episodes/yuenlong/npc-cutout.png?rev=hq-restore' },
     ],
     intro: { zh: '1279年，南宋末帝赵昺南逃，途经中国香港新界元朗。你走进围村祠堂前的空地，木盆、蒸汽、族谱与节庆锣鼓交织。盆菜不是一道菜——萝卜垫底，肉菜层叠，口味与礼序同在一盆。七百多年来，围村客家族群在宗族节庆时制作盆菜，把迁徙记忆和团圆仪式叠进同一只木盆。', en: '1279. The last Song emperor flees south through Yuen Long in Hong Kong China\'s New Territories. You enter a walled village forecourt where wooden basins, steam, genealogy books, and festival drums overlap. Poon choi is not one dish — radish at the bottom, meat layered above, taste and ritual order in one basin. For over seven hundred years, Hakka walled village communities have made poon choi at clan festivals, layering migration memory and reunion ritual into the same wooden basin.' },
-    background: './public/assets/episodes/yuenlong/stage-bg.jpg',
+    background: './public/assets/episodes/yuenlong/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '元朗围村 · 盆菜宴席', en: 'Yuen Long Walled Village · Poon Choi Banquet' },
     subtitle: { zh: '文化觉醒 · 盆菜文化发源地', en: 'Cultural Awakening · Poon Choi Origin' },
     chapterTitle: { zh: '一盆里的共同体', en: 'Community in One Basin' },
@@ -2291,10 +2291,10 @@ Object.assign(EPISODES, {
 
   'N-EG02': makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '制度档案员', en: 'Market Archive Keeper' }, role: { zh: '资本市场改革讲述人', en: 'Capital Market Reform Guide' }, portrait: './public/assets/episodes/szse/npc-cutout.jpg' },
+      { name: { zh: '制度档案员', en: 'Market Archive Keeper' }, role: { zh: '资本市场改革讲述人', en: 'Capital Market Reform Guide' }, portrait: './public/assets/episodes/szse/npc-cutout.png?rev=hq-restore' },
     ],
     intro: { zh: '你走到深圳证券交易所外，玻璃幕墙映着深南大道。这里不是普通办公楼，而是中国资本市场从试点走向制度化的关键现场。', en: 'You reach Shenzhen Stock Exchange as glass reflects Shennan Avenue. This is not an ordinary office block, but a key site where China capital market moved from trial to institution.' },
-    background: './public/assets/episodes/szse/stage-bg.jpg',
+    background: './public/assets/episodes/szse/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '深圳证券交易所 · 制度大厅', en: 'SZSE · Institution Hall' },
     subtitle: { zh: '改革开放 · 深圳证券交易所', en: 'Reform and Opening · Shenzhen Stock Exchange' },
     chapterTitle: { zh: '资本市场试验田', en: 'Capital Market Test Field' },
@@ -2372,10 +2372,10 @@ Object.assign(EPISODES, {
 
   M11: makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '改革见证者', en: 'Witness of Reform' }, role: { zh: '莲花山城市记忆讲述人', en: 'Lianhua Mountain Memory Guide' }, portrait: './public/assets/episodes/lianhua/npc-cutout.jpg' },
+      { name: { zh: '改革见证者', en: 'Witness of Reform' }, role: { zh: '莲花山城市记忆讲述人', en: 'Lianhua Mountain Memory Guide' }, portrait: './public/assets/episodes/lianhua/npc-cutout.png?rev=hq-restore' },
     ],
     intro: { zh: '你登上莲花山，城市中轴线在脚下展开。铜像望向南方，提醒人们：深圳速度背后，是一次关于方向、信心和开放的历史判断。', en: 'You climb Lianhua Mountain as the city axis opens below. The statue faces south, reminding visitors that Shenzhen speed began with a judgment about direction, confidence, and openness.' },
-    background: './public/assets/episodes/lianhua/stage-bg.jpg',
+    background: './public/assets/episodes/lianhua/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '莲花山 · 南方眺望', en: 'Lianhua Mountain · Southern View' },
     subtitle: { zh: '改革开放 · 莲花山', en: 'Reform and Opening · Lianhua Mountain' },
     chapterTitle: { zh: '画一个面向未来的圈', en: 'Drawing a Circle Toward the Future' },
@@ -2453,10 +2453,10 @@ Object.assign(EPISODES, {
 
   'N-EG10': makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '跨海工程师', en: 'Cross-Sea Engineer' }, role: { zh: '深中通道现场讲述人', en: 'Shenzhen-Zhongshan Link Site Guide' }, portrait: './public/assets/episodes/shenzhong/npc-cutout.jpg' },
+      { name: { zh: '跨海工程师', en: 'Cross-Sea Engineer' }, role: { zh: '深中通道现场讲述人', en: 'Shenzhen-Zhongshan Link Site Guide' }, portrait: './public/assets/episodes/shenzhong/npc-cutout.png?rev=hq-restore' },
     ],
     intro: { zh: '你来到珠江口东岸的观测点，远处海面上桥、岛、隧和航道被重新编织。深中通道不是孤立道路，而是一笔改变东西两岸距离感的工程。', en: 'You reach an eastern Pearl River Estuary viewpoint. Bridges, islands, tunnel, and shipping lanes are rewoven offshore. The Shenzhen-Zhongshan Link is not an isolated road, but an engineering stroke that changes distance between east and west banks.' },
-    background: './public/assets/episodes/shenzhong/stage-bg.jpg',
+    background: './public/assets/episodes/shenzhong/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '深中通道 · 珠江口工程线', en: 'Shenzhen-Zhongshan Link · Estuary Engineering Line' },
     subtitle: { zh: '工程奇迹 · 深中通道', en: 'Engineering Miracle · Shenzhen-Zhongshan Link' },
     chapterTitle: { zh: '把海湾重新折叠', en: 'Folding the Bay Together' },
@@ -2534,13 +2534,13 @@ Object.assign(EPISODES, {
 
   M08: makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '金融先行者', en: 'Financial Pioneer' }, role: { zh: '前海制度试验讲述人', en: 'Qianhai Policy Experiment Guide' }, portrait: './public/assets/episodes/qianhai/npc-cutout.jpg?v=rpg-assets-fix-2' },
+      { name: { zh: '金融先行者', en: 'Financial Pioneer' }, role: { zh: '前海制度试验讲述人', en: 'Qianhai Policy Experiment Guide' }, portrait: './public/assets/episodes/qianhai/npc-cutout.png?rev=hq-restore?v=rpg-assets-fix-2' },
     ],
     intro: {
       zh: '2010年，你作为前海规划团队的现场记录员，站在尚未完全成形的滩涂边。这里要承接的不只是高楼，而是一套深港协同、金融开放与法治衔接的新规则。',
       en: 'In 2010, you stand on the edge of the still-forming Qianhai district as a field recorder. This place will carry not only towers, but new rules for Shenzhen-Hong Kong coordination, financial opening, and legal connection.',
     },
-    background: './public/assets/episodes/qianhai/stage-bg.jpg',
+    background: './public/assets/episodes/qianhai/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '前海 · 制度试验场', en: 'Qianhai · Policy Testbed' },
     subtitle: { zh: '改革开放与制度创新 · 前海深港合作区', en: 'Reform and Institutional Innovation · Qianhai' },
     chapterTitle: { zh: '从滩涂到制度新区', en: 'From Mudflat to Policy District' },
@@ -2755,13 +2755,13 @@ Object.assign(EPISODES, {
 
   M06: makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '袁庚', en: 'Yuan Geng' }, role: { zh: '蛇口工业区创始人', en: 'Founder of Shekou Industrial Zone' }, portrait: './public/assets/episodes/shekou/npc-cutout.jpg?v=rpg-assets-fix-2' },
+      { name: { zh: '袁庚', en: 'Yuan Geng' }, role: { zh: '蛇口工业区创始人', en: 'Founder of Shekou Industrial Zone' }, portrait: './public/assets/episodes/shekou/npc-cutout.png?rev=hq-restore?v=rpg-assets-fix-2' },
     ],
     intro: {
       zh: '1979年，你来到蛇口工地。远处是填海与开山的声音，近处是临时办公室、码头和第一批拓荒者。袁庚要在这里把改革变成可以被看见的现场。',
       en: 'In 1979, you arrive at the Shekou construction site. Reclamation and blasting echo in the distance; nearby are temporary offices, docks, and first pioneers. Yuan Geng wants to make reform visible here.',
     },
-    background: './public/assets/episodes/shekou/stage-bg.jpg',
+    background: './public/assets/episodes/shekou/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '蛇口工业区 · 改革工地', en: 'Shekou Industrial Zone · Reform Worksite' },
     subtitle: { zh: '近现代发展 · 蛇口工业区', en: 'Modern Development · Shekou Industrial Zone' },
     chapterTitle: { zh: '一声开山炮', en: 'A First Blast of Reform' },
@@ -2976,13 +2976,13 @@ Object.assign(EPISODES, {
 
   'N-SC03': makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '汪滔', en: 'Frank Wang' }, role: { zh: '大疆创始人', en: 'DJI Founder' }, portrait: './public/assets/episodes/dji/npc-cutout.jpg?v=rpg-assets-fix-2' },
+      { name: { zh: '汪滔', en: 'Frank Wang' }, role: { zh: '大疆创始人', en: 'DJI Founder' }, portrait: './public/assets/episodes/dji/npc-cutout.png?rev=hq-restore?v=rpg-assets-fix-2' },
     ],
     intro: {
       zh: '你来到大疆天空之城的研发现场。玻璃塔楼之间，无人机从试飞区掠过。这里的故事不是“会飞的玩具”，而是飞控、云台、供应链与工程偏执共同构成的产品系统。',
       en: 'You enter the R&D site of DJI Sky City. Drones pass through the test area between glass towers. This is not a story of flying toys, but of flight control, gimbals, supply chains, and engineering obsession.',
     },
-    background: './public/assets/episodes/dji/stage-bg.jpg',
+    background: './public/assets/episodes/dji/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '大疆天空之城 · 飞控实验室', en: 'DJI Sky City · Flight Control Lab' },
     subtitle: { zh: '科学星火 · 大疆天空之城', en: 'Scientific Spark · DJI Sky City' },
     chapterTitle: { zh: '让机器稳定飞行', en: 'Making Machines Fly Steadily' },
@@ -3197,13 +3197,13 @@ Object.assign(EPISODES, {
 
   M01: makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '郑和', en: 'Zheng He' }, role: { zh: '大明宝船统帅', en: 'Admiral of the Treasure Fleet' }, portrait: './public/assets/episodes/chiwan/npc-cutout.jpg?v=rpg-assets-fix-2' },
+      { name: { zh: '郑和', en: 'Zheng He' }, role: { zh: '大明宝船统帅', en: 'Admiral of the Treasure Fleet' }, portrait: './public/assets/episodes/chiwan/npc-cutout.png?rev=hq-restore?v=rpg-assets-fix-2' },
     ],
     intro: {
       zh: '永乐三年，你随郑和船队抵达赤湾。出航前夜，海风穿过天后宫，香火、海图、锚地与贡品把一次远航的秩序连在一起。',
       en: 'In the third year of Yongle, you arrive at Chiwan with Zheng He fleet. On the eve of departure, sea wind moves through the Tianhou Temple, linking incense, charts, anchorage, and tribute into the order of a voyage.',
     },
-    background: './public/assets/episodes/chiwan/stage-bg.jpg',
+    background: './public/assets/episodes/chiwan/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '赤湾天后宫 · 出海前夜', en: 'Chiwan Tianhou Temple · Eve of Departure' },
     subtitle: { zh: '航海贸易 · 赤湾天后宫', en: 'Maritime Trade · Chiwan Tianhou Temple' },
     chapterTitle: { zh: '宝船启航前的祈愿', en: 'Before the Treasure Fleet Sails' },
@@ -3418,13 +3418,13 @@ Object.assign(EPISODES, {
 
   M07: makeNearbyRpgEpisode({
     characters: [
-      { name: { zh: '湿地守护者', en: 'Wetland Guardian' }, role: { zh: '红树林生态讲述人', en: 'Mangrove Ecology Guide' }, portrait: './public/assets/episodes/mangrove/npc-cutout.jpg?v=rpg-assets-fix-2' },
+      { name: { zh: '湿地守护者', en: 'Wetland Guardian' }, role: { zh: '红树林生态讲述人', en: 'Mangrove Ecology Guide' }, portrait: './public/assets/episodes/mangrove/npc-cutout.png?rev=hq-restore?v=rpg-assets-fix-2' },
     ],
     intro: {
       zh: '2023年冬，你是深圳湾红树林自然保护区的巡护员。傍晚退潮，黑脸琵鹭在滩涂上觅食——这种全球濒危水鸟仅存约六千只，深圳湾是它们最重要的越冬地之一。你巡护的红树林根系固岸消浪、留泥净水。远处是福田口岸和城市天际线，高楼、口岸、湿地和海面近在咫尺。这里是东亚-澳大利西亚迁飞路线的重要中转站。',
       en: 'Winter 2023. You are a patrol ranger at the Shenzhen Bay Mangrove Nature Reserve. At dusk the tide recedes; black-faced spoonbills feed on the mudflat — this globally endangered bird numbers only about 6,000, and Shenzhen Bay is one of their key wintering grounds. The mangrove roots you patrol hold the shore, calm waves, trap sediment, and filter water. Futian Port and the city skyline rise nearby: towers, checkpoint, wetland, and sea side by side. This is a major stop on the East Asian-Australasian Flyway.',
     },
-    background: './public/assets/episodes/mangrove/stage-bg.jpg',
+    background: './public/assets/episodes/mangrove/stage-bg.png?rev=hq-restore',
     sceneName: { zh: '深圳湾红树林 · 候鸟驿站', en: 'Shenzhen Bay Mangroves · Bird Stopover' },
     subtitle: { zh: '航海贸易 · 深圳河与红树林', en: 'Maritime Trade · Shenzhen River and Mangroves' },
     chapterTitle: { zh: '给海湾留一片岸', en: 'Leaving a Shore for the Bay' },

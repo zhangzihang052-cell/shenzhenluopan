@@ -2490,17 +2490,17 @@ body.mobile-app #ui-root {
     gap: 4px !important;
   }
 
-  /* ═══ 账号面板 ═══ */
+  /* ═══ 账号面板：横屏居中、宽度合理、文字不被截断 ═══ */
   .account-overlay {
-    align-items: flex-end !important;
-    justify-content: flex-end !important;
-    padding: 6px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
   }
   .account-content {
-    width: min(300px, 40vw) !important;
-    max-height: calc(100dvh - 12px) !important;
-    border-radius: 8px !important;
-    padding: 8px 10px !important;
+    width: min(420px, 88vw) !important;
+    max-height: calc(100dvh - 24px) !important;
+    border-radius: 14px !important;
+    padding: 28px 26px !important;
     overflow-y: auto !important;
   }
 
