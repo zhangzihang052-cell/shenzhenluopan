@@ -10020,3 +10020,236 @@ body.compass-panel-open #geofence-toast.show {
     opacity: 0.6;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   横屏紧凑样式（手游级信息密度）
+   置于 styles.css 最末尾 + ID 选择器，确保最高优先级覆盖
+   ════════════════════════════════════════════════════════════════ */
+@media (orientation: landscape) and (max-height: 520px) {
+  #memory-shell .memory-panel {
+    right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+    width: min(300px, 40vw) !important;
+    max-width: min(300px, 40vw) !important;
+    max-height: calc(100dvh - 12px) !important;
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+    border-width: 1px !important;
+    transform: none !important;
+    box-shadow: 0 4px 12px -8px rgba(23,26,32,0.5) !important;
+    overscroll-behavior: contain !important;
+    -webkit-overflow-scrolling: touch;
+    font-size: 11px !important;
+  }
+  #memory-shell.memory-shell-open .memory-panel,
+  #memory-shell.memory-mode-auth .memory-panel,
+  #memory-shell.memory-mode-auth.memory-shell-open .memory-panel {
+    right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+    transform: none !important;
+    width: min(300px, 40vw) !important;
+    max-width: min(300px, 40vw) !important;
+    max-height: calc(100dvh - 12px) !important;
+  }
+  #memory-shell .memory-panel-head {
+    min-height: 20px !important;
+    padding: 0 26px 4px 0 !important;
+    margin-bottom: 4px !important;
+    border-bottom-width: 1px !important;
+  }
+  #memory-shell .memory-panel-seal {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 11px !important;
+    border-radius: 3px !important;
+  }
+  #memory-shell .memory-panel-title,
+  #memory-shell .memory-panel-head h2 {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+  #memory-shell .memory-close {
+    top: 4px !important;
+    right: 4px !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    font-size: 12px !important;
+    border-radius: 5px !important;
+  }
+  #memory-shell .memory-form {
+    gap: 5px !important;
+    margin-top: 5px !important;
+    overflow-y: auto !important;
+    max-height: calc(100dvh - 56px) !important;
+    overscroll-behavior: contain !important;
+  }
+  #memory-shell .memory-create-media-combined {
+    min-height: 48px !important;
+    border-radius: 5px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .memory-create-media-combined .memory-create-media-empty {
+    gap: 2px !important;
+    padding: 4px 8px 2px !important;
+    font-size: 9px !important;
+  }
+  #memory-shell .memory-create-media-combined .memory-create-media-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 3px !important;
+    padding: 3px 4px !important;
+  }
+  #memory-shell .memory-create-media-combined .memory-create-media-btn {
+    flex: 1 !important;
+    min-width: 0 !important;
+    min-height: 20px !important;
+    font-size: 9px !important;
+    padding: 0 3px !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .ink-cam-icon {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  #memory-shell .memory-create-voice-bar {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 3px 5px !important;
+  }
+  #memory-shell .memory-create-voice-btn {
+    min-height: 20px !important;
+    font-size: 9px !important;
+    padding: 0 5px !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .memory-create-voice-timer,
+  #memory-shell .memory-create-voice-max {
+    font-size: 8px !important;
+  }
+  #memory-shell .memory-field > span {
+    font-size: 9px !important;
+  }
+  #memory-shell .memory-field textarea {
+    min-height: 32px !important;
+    font-size: 10px !important;
+    padding: 4px 6px !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .memory-meta-line {
+    font-size: 8px !important;
+    padding-top: 3px !important;
+    border-top-width: 1px !important;
+  }
+  #memory-shell .memory-create-publish {
+    min-height: 26px !important;
+    font-size: 11px !important;
+    border-radius: 5px !important;
+    margin-top: 2px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .memory-create-list-entry button {
+    min-height: 22px !important;
+    font-size: 9px !important;
+    border-radius: 4px !important;
+    padding: 0 6px !important;
+  }
+  #memory-shell .memory-pinned-actions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 3px !important;
+  }
+  #memory-shell .memory-pinned-another,
+  #memory-shell .memory-pinned-browse,
+  #memory-shell .memory-pinned-exit {
+    flex: 1 !important;
+    min-height: 20px !important;
+    font-size: 9px !important;
+    border-radius: 4px !important;
+    padding: 0 3px !important;
+  }
+  #memory-shell .memory-list {
+    gap: 4px !important;
+    margin-top: 6px !important;
+  }
+  #memory-shell .memory-list-item {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    gap: 6px !important;
+    min-height: 40px !important;
+    padding: 4px !important;
+    border-radius: 5px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .memory-list-item img,
+  #memory-shell .memory-list-thumb-fallback {
+    width: 40px !important;
+    height: 36px !important;
+    border-radius: 4px !important;
+  }
+  #memory-shell .memory-list-copy b { font-size: 10px !important; }
+  #memory-shell .memory-list-copy small { font-size: 9px !important; }
+  #memory-shell .memory-empty {
+    padding: 8px !important;
+    font-size: 10px !important;
+    border-radius: 5px !important;
+    border-width: 1px !important;
+  }
+  #memory-shell .recollect-summary { gap: 6px !important; margin: 4px 0 6px !important; }
+  #memory-shell .recollect-stat { padding: 4px 3px !important; border-radius: 6px !important; border-width: 1px !important; }
+  #memory-shell .recollect-stat-num { font-size: 16px !important; }
+  #memory-shell .recollect-stat-label { font-size: 8px !important; }
+  .friends-panel,
+  .friend-detail-panel {
+    right: 6px !important;
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
+    left: auto !important;
+    top: max(6px, env(safe-area-inset-top)) !important;
+    width: min(300px, 40vw) !important;
+    max-width: min(300px, 40vw) !important;
+    max-height: calc(100dvh - 12px) !important;
+    padding: 8px 10px !important;
+    border-radius: 8px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+  .friend-search-btn, .friend-add-btn, .friend-accept-btn, .friend-reject-btn, .friend-remove-btn {
+    min-height: 22px !important;
+    font-size: 9px !important;
+    border-radius: 4px !important;
+    padding: 0 6px !important;
+  }
+  .auth-phone-row, .friend-add-form { grid-template-columns: 1fr !important; gap: 4px !important; }
+  .account-overlay { align-items: flex-end !important; justify-content: flex-end !important; padding: 6px !important; }
+  .account-content {
+    width: min(300px, 40vw) !important;
+    max-height: calc(100dvh - 12px) !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    overflow-y: auto !important;
+  }
+  #info-panel, #compass-panel, #route-planner-panel, #nearby-drawer {
+    right: 6px !important;
+    left: auto !important;
+    width: min(300px, 40vw) !important;
+    max-width: min(300px, 40vw) !important;
+    padding: 6px !important;
+    border-radius: 8px !important;
+  }
+  .glass-card, .compass-card, .route-planner-card, .nearby-card {
+    max-height: calc(100dvh - 24px) !important;
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+  }
+  .compass-content, .route-planner-content, .nearby-list {
+    max-height: calc(100dvh - 80px) !important;
+  }
+}

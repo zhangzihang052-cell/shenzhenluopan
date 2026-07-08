@@ -6,7 +6,7 @@ import { getText, pick } from './i18n.js?rev=account-1';
 import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
 import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js?rev=external-preview-1';
 import { createAuthController } from './auth.js?rev=memory-2';
-import { createMemoryController } from './memory.js?rev=memory-4';
+import { createMemoryController } from './memory.js?rev=memory-5';
 import { createFriendsController } from './friends.js?rev=friends-3';
 import { createWelcomeController } from './welcome.js?rev=welcome-5';
 import {

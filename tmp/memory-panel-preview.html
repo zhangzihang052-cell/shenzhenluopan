@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>记忆面板预览</title>
+<link rel="stylesheet" href="./src/styles.css?rev=v2-compact-3" />
+  <link rel="stylesheet" href="./src/mobile.css?rev=v2-compact-3" />
+<style>
+  body { margin: 0; overflow: hidden; background: #1a1a2e; }
+  #memory-shell { position: fixed; inset: 0; z-index: 1000; }
+  #memory-shell.memory-shell-open .memory-panel { transform: none; opacity: 1; pointer-events: auto; }
+</style>
+</head>
+<body class="mobile-app">
+<div id="memory-shell" class="memory-shell-open memory-mode-create memory-no-scrim memory-shell-transparent">
+  <aside class="memory-panel" id="memory-panel" aria-live="polite">
+    <button class="memory-close" type="button" aria-label="关闭">×</button>
+    <div class="memory-panel-head">
+      <span class="memory-panel-seal" aria-hidden="true">忆</span>
+      <h2 class="memory-panel-title">留下记忆</h2>
+    </div>
+    <div class="memory-create-list-entry">
+      <button type="button">我的记忆 (0)</button>
+    </div>
+    <form class="memory-form">
+      <div class="memory-create-media-combined" id="memory-media-area">
+        <div class="memory-create-media-empty">
+          <span class="ink-cam-icon" aria-hidden="true"></span>
+          <span>拍照或选择照片</span>
+        </div>
+        <div class="memory-create-media-actions">
+          <button class="memory-create-media-btn" type="button">拍照</button>
+          <button class="memory-create-media-btn" type="button">相册</button>
+          <button class="memory-create-media-btn" type="button">视频</button>
+        </div>
+      </div>
+      <div class="memory-create-voice">
+        <div class="memory-create-voice-bar">
+          <button class="memory-create-voice-btn" type="button">按住录音</button>
+          <span class="memory-create-voice-timer">0s</span>
+          <span class="memory-create-voice-max">最长60秒</span>
+        </div>
+      </div>
+      <label class="memory-field">
+        <span>备注</span>
+        <textarea maxlength="200" placeholder="此刻的感受..."></textarea>
+      </label>
+      <div class="memory-meta-line">
+        <span>22.54321, 113.94567</span>
+      </div>
+      <button class="memory-create-publish" type="submit">发布记忆</button>
+    </form>
+  </aside>
+</div>
+</body>
+</html>
