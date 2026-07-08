@@ -1,1 +1,2 @@
 /assets/*  /public/assets/:splat  200
+/public/anchors/generated/:anchor.webp  /public/anchors/generated/:anchor.jpg  302
