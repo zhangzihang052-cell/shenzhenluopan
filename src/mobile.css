@@ -1548,7 +1548,7 @@ body.mobile-app #ui-root {
 }
 
 /* 记忆、好友、账号等二级面板的手机安全区与小屏排版。 */
-@media (max-width: 640px) {
+@media (max-width: 640px) and (orientation: portrait) {
   .memory-panel,
   .friends-panel,
   .friend-detail-panel {

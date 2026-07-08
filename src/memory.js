@@ -500,15 +500,6 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     );
   }
 
-  function loadImage(url) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-    });
-  }
-
   async function addMapLayers() {
     if (!state.map || state.map.getSource(SOURCE_ID)) return;
     state.map.addSource(SOURCE_ID, { type: 'geojson', data: toFeatureCollection(state.memories) });
@@ -1503,6 +1494,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       } catch (error) {
         // 视频上传失败时不保存到本地（blob URL 刷新后失效）
         if (mediaType === 'video') {
+          URL.revokeObjectURL(photoUrl);
           toast('memory.save_failed');
           return;
         }

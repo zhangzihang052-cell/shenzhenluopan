@@ -59,15 +59,60 @@ export async function fetchCloudData() {
 export async function pushCloudData(progress, wantToVisit) {
   if (!isCloudReady()) return;
   try {
-    const { error } = await _supabase.from(TABLE).upsert({
+    const row = {
       user_id: _userId,
       progress,
-      want_to_visit: wantToVisit || [],
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
+    };
+    // 仅在显式传入 wantToVisit 时才更新该字段，避免 null/undefined 被写成 []
+    if (wantToVisit !== null && wantToVisit !== undefined) {
+      row.want_to_visit = wantToVisit;
+    }
+    const { error } = await _supabase.from(TABLE).upsert(row, { onConflict: 'user_id' });
     if (error) console.warn('[cloud-sync] 推送失败:', error.message);
   } catch (e) {
     console.warn('[cloud-sync] 推送异常:', e);
+  }
+}
+
+/**
+ * 仅推送进度到云端（只更新 progress 字段，不触碰 want_to_visit）
+ * upsert + onConflict 在行已存在时只 SET 指定列，want_to_visit 保持不变
+ * @param {object} progress {completed, achievements}
+ */
+export async function pushProgressOnly(progress) {
+  if (!isCloudReady()) return;
+  try {
+    const { error } = await _supabase
+      .from(TABLE)
+      .upsert({
+        user_id: _userId,
+        progress,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    if (error) console.warn('[cloud-sync] 推送进度失败:', error.message);
+  } catch (e) {
+    console.warn('[cloud-sync] 推送进度异常:', e);
+  }
+}
+
+/**
+ * 仅推送想去标记到云端（只更新 want_to_visit 字段，不触碰 progress）
+ * @param {string[]} wantToVisit
+ */
+export async function pushWantToVisitOnly(wantToVisit) {
+  if (!isCloudReady()) return;
+  try {
+    const { error } = await _supabase
+      .from(TABLE)
+      .upsert({
+        user_id: _userId,
+        want_to_visit: wantToVisit || [],
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    if (error) console.warn('[cloud-sync] 推送去想去标记失败:', error.message);
+  } catch (e) {
+    console.warn('[cloud-sync] 推送去想去标记异常:', e);
   }
 }
 

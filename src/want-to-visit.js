@@ -1,5 +1,5 @@
 import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
-import { fetchCloudData, pushCloudData, mergeWantToVisit, setCloudConfig as setProgressCloudConfig, isCloudReady } from './cloud-sync.js?rev=cloud-1';
+import { fetchCloudData, mergeWantToVisit, setCloudConfig as setProgressCloudConfig, isCloudReady, pushWantToVisitOnly } from './cloud-sync.js?rev=cloud-1';
 
 export const WANT_TO_VISIT_KEY = 'bayareaCompass.wantToVisit';
 let _currentUserId = null;
@@ -56,20 +56,7 @@ function syncToCloud() {
 async function pushWantToVisitCloud() {
   if (!(_supabase && _userId)) return;
   try {
-    // 先读取当前云端 progress，再把 want_to_visit 一起写回
-    const { data } = await _supabase
-      .from('user_progress')
-      .select('progress')
-      .eq('user_id', _userId)
-      .maybeSingle();
-    const progress = (data && data.progress) || { completed: {}, achievements: [] };
-    const { error } = await _supabase.from('user_progress').upsert({
-      user_id: _userId,
-      progress,
-      want_to_visit: readIds(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
-    if (error) console.warn('[want-to-visit] 云端推送失败:', error.message);
+    await pushWantToVisitOnly(readIds());
   } catch (e) {
     console.warn('[want-to-visit] 云端推送异常:', e);
   }
