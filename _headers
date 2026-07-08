@@ -1,0 +1,28 @@
+# 静态资源长效缓存：图片/字体/音频体积大且版本化，缓存1天，分享后二次访问秒开
+/public/assets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/textures/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/clue-backgrounds/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/hero/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/anchors/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/mascots/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/audio/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/public/vendor/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# HTML/JS/CSS 保持即时刷新，确保代码更新立即生效
+/
+  Cache-Control: public, max-age=0, must-revalidate
