@@ -214,9 +214,9 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
     if (onRoutePlan) onRoutePlan();
   });
 
+  mainActions.appendChild(routeBtn);
   mainActions.appendChild(exploreBtn);
   mainActions.appendChild(memoryBtn);
-  mainActions.appendChild(routeBtn);
   root.appendChild(mainActions);
 }
 
