@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>📱 湾区罗盘 · 手机预览台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #1a1a2e;
+    --panel: #16213e;
+    --accent: #e94560;
+    --text: #eee;
+    --muted: #8892b0;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    z-index: 10;
+    flex-wrap: wrap;
+  }
+  .toolbar h1 { font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .toolbar h1 span { color: var(--accent); }
+  .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .url-bar {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 5px 10px;
+  }
+  .url-bar input {
+    background: none; border: none; color: var(--text); font-size: 12px;
+    width: 260px; outline: none; font-family: "SF Mono", monospace;
+  }
+  .url-bar input::placeholder { color: var(--muted); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 14px; border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; background: rgba(255,255,255,0.04);
+    color: var(--text); font-size: 12px; cursor: pointer;
+    transition: all 0.15s ease; white-space: nowrap; user-select: none;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-icon { padding: 6px 8px; font-size: 14px; }
+  .stage {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 32px; overflow: auto; position: relative;
+  }
+  .stage::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, rgba(233,69,96,0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .phone-frame {
+    position: relative;
+    flex-shrink: 0;
+    /* outer wrapper uses scaled dimensions so it doesn't take up full screen */
+  }
+  .phone-bezel {
+    background: #0d0d0d;
+    border-radius: 38px; padding: 8px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 30px 80px -20px rgba(0,0,0,0.7);
+    position: relative;
+    /* real device dimensions, then scaled down visually */
+    transform-origin: top left;
+    transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+  }
+  .phone-notch {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 22px; background: #0d0d0d;
+    border-radius: 0 0 14px 14px; z-index: 5;
+    display: flex; align-items: center; justify-content: center; gap: 50px;
+  }
+  .phone-notch::before, .phone-notch::after {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: #1a1a2e;
+  }
+  .phone-frame.landscape .phone-notch {
+    top: 50%; left: 8px; transform: translateY(-50%);
+    width: 22px; height: 120px; border-radius: 0 14px 14px 0;
+    flex-direction: column; gap: 50px;
+  }
+  .phone-screen {
+    border-radius: 30px;
+    overflow: hidden; background: #fff; position: relative;
+  }
+  /* iframe keeps REAL device resolution — no scaling on the iframe itself */
+  .phone-screen iframe { border: none; display: block; }
+  .info-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 6px 24px; background: var(--panel);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex; align-items: center; gap: 16px;
+    font-size: 11px; color: var(--muted); z-index: 10;
+  }
+  .info-bar .dimension { font-family: "SF Mono", monospace; color: var(--accent); font-weight: 600; }
+  .info-bar .badge { padding: 1px 8px; border-radius: 4px; background: rgba(255,255,255,0.06); font-size: 10px; }
+  .select-wrap { position: relative; }
+  .select-wrap select {
+    appearance: none; -webkit-appearance: none;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px; color: var(--text); font-size: 12px;
+    padding: 6px 28px 6px 12px; cursor: pointer; outline: none;
+  }
+  .select-wrap::after {
+    content: '\25BE'; position: absolute; right: 10px; top: 50%;
+    transform: translateY(-50%); font-size: 10px; color: var(--muted); pointer-events: none;
+  }
+  .select-wrap select option { background: var(--panel); color: var(--text); }
+  .divider { width: 1px; height: 20px; background: rgba(255,255,255,0.1); }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>📱 湾区罗盘 · <span>手机预览台</span></h1>
+    <div class="divider"></div>
+    <button class="btn" id="btn-rotate">🔄 横屏</button>
+    <button class="btn btn-icon" id="btn-reload" title="刷新">&#x27F3;</button>
+    <div class="select-wrap">
+      <select id="select-device">
+        <option value="iphone13">iPhone 13/14 (390&times;844)</option>
+        <option value="iphone-se">iPhone SE (375&times;667)</option>
+        <option value="iphone14-pro">iPhone 14 Pro Max (430&times;932)</option>
+        <option value="pixel7">Pixel 7 (412&times;915)</option>
+        <option value="ipad">iPad Mini (768&times;1024)</option>
+      </select>
+    </div>
+    <div class="toolbar-right">
+      <div class="url-bar">
+        <span style="color:var(--muted);font-size:12px;">&#128279;</span>
+        <input type="text" id="url-input" placeholder="输入预览URL..." value="" />
+      </div>
+      <button class="btn" id="btn-local">&#127968; 本地</button>
+      <button class="btn" id="btn-online">&#9729; 线上</button>
+      <button class="btn active" id="btn-go">加载</button>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="phone-frame portrait" id="phone-frame">
+      <div class="phone-bezel">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <iframe id="preview-iframe" src="" allow="geolocation; autoplay; fullscreen"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="info-bar">
+    <span>当前尺寸：<span class="dimension" id="dim-display">390 &times; 844</span></span>
+    <span class="badge" id="orient-badge">竖屏</span>
+    <span class="badge" id="device-badge">iPhone 13</span>
+    <span style="margin-left:auto">提示：切换横屏可验证 RPG 副本手机适配效果</span>
+  </div>
+<script>
+(function() {
+  var DEVICES = {
+    'iphone13':     { name: 'iPhone 13',         w: 390, h: 844 },
+    'iphone-se':    { name: 'iPhone SE',         w: 375, h: 667 },
+    'iphone14-pro': { name: 'iPhone 14 Pro Max', w: 430, h: 932 },
+    'pixel7':       { name: 'Pixel 7',           w: 412, h: 915 },
+    'ipad':         { name: 'iPad Mini',         w: 768, h: 1024 }
+  };
+  var LOCAL_URL  = './mobile-app.html';
+  var ONLINE_URL = 'https://feature-product-v2.bay-compass.pages.dev/mobile-app.html';
+  var frame = document.getElementById('phone-frame');
+  var bezel = document.querySelector('.phone-bezel');
+  var screen = document.querySelector('.phone-screen');
+  var iframe = document.getElementById('preview-iframe');
+  var btnRotate = document.getElementById('btn-rotate');
+  var btnReload = document.getElementById('btn-reload');
+  var btnLocal = document.getElementById('btn-local');
+  var btnOnline = document.getElementById('btn-online');
+  var btnGo = document.getElementById('btn-go');
+  var urlInput = document.getElementById('url-input');
+  var select = document.getElementById('select-device');
+  var dimDisplay = document.getElementById('dim-display');
+  var orientBadge = document.getElementById('orient-badge');
+  var deviceBadge = document.getElementById('device-badge');
+  var isLandscape = false;
+  var currentDevice = 'iphone13';
+
+  // Compute a scale that fits the device within the available stage area
+  function computeScale(devW, devH) {
+    var stage = document.querySelector('.stage');
+    var availW = stage.clientWidth - 64;  // padding
+    var availH = stage.clientHeight - 64;
+    var sx = availW / devW;
+    var sy = availH / devH;
+    return Math.min(sx, sy, 1); // never scale up beyond 100%
+  }
+
+  function applySize() {
+    var dev = DEVICES[currentDevice];
+    var realW = isLandscape ? dev.h : dev.w;
+    var realH = isLandscape ? dev.w : dev.h;
+
+    // 1. Set iframe to REAL device resolution (this is the key fix!)
+    iframe.style.width  = realW + 'px';
+    iframe.style.height = realH + 'px';
+
+    // 2. Set screen container to real device size
+    screen.style.width  = realW + 'px';
+    screen.style.height = realH + 'px';
+
+    // 3. Set bezel to real device size + padding
+    bezel.style.width  = (realW + 16) + 'px';
+    bezel.style.height = (realH + 16) + 'px';
+
+    // 4. Compute scale to fit on screen
+    var scale = computeScale(realW + 16, realH + 16);
+    bezel.style.transform = 'scale(' + scale + ')';
+
+    // 5. Outer frame uses scaled dimensions for layout
+    frame.style.width  = ((realW + 16) * scale) + 'px';
+    frame.style.height = ((realH + 16) * scale) + 'px';
+
+    dimDisplay.textContent = realW + ' \u00d7 ' + realH;
+    orientBadge.textContent = isLandscape ? '横屏' : '竖屏';
+    deviceBadge.textContent = dev.name;
+    frame.className = 'phone-frame ' + (isLandscape ? 'landscape' : 'portrait');
+  }
+
+  function loadUrl(url) {
+    iframe.src = url;
+    urlInput.value = url;
+  }
+
+  btnRotate.addEventListener('click', function() {
+    isLandscape = !isLandscape;
+    btnRotate.textContent = isLandscape ? '\uD83D\uDCF1 竖屏' : '\uD83D\uDD04 横屏';
+    btnRotate.classList.toggle('active', isLandscape);
+    applySize();
+  });
+  btnReload.addEventListener('click', function() { iframe.src = iframe.src; });
+  select.addEventListener('change', function() { currentDevice = select.value; applySize(); });
+  btnLocal.addEventListener('click', function() {
+    loadUrl(LOCAL_URL); btnLocal.classList.add('active'); btnOnline.classList.remove('active');
+  });
+  btnOnline.addEventListener('click', function() {
+    loadUrl(ONLINE_URL); btnOnline.classList.add('active'); btnLocal.classList.remove('active');
+  });
+  btnGo.addEventListener('click', function() {
+    var url = urlInput.value.trim() || LOCAL_URL; loadUrl(url);
+  });
+  urlInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') btnGo.click(); });
+
+  // Recompute scale on window resize
+  window.addEventListener('resize', applySize);
+
+  urlInput.value = LOCAL_URL;
+  btnLocal.classList.add('active');
+  applySize();
+  loadUrl(LOCAL_URL);
+})();
+</script>
+</body>
+</html>

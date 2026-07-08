@@ -1,4 +1,5 @@
 .agent/
+.wrangler/
 .DS_Store
 public/tencent-map.config.js
 public/supabase.config.js

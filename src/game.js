@@ -5,8 +5,13 @@ import { getMascot } from './data/mascots.js?rev=mascot-set-1';
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
 import { ANCHORS } from './data/anchors.js?rev=classification-1';
 import { getText, pick } from './i18n.js?rev=audio-sfx-1';
+import { fetchCloudData, pushCloudData, mergeProgress, setCloudConfig, clearCloudConfig, isCloudReady } from './cloud-sync.js?rev=cloud-1';
 
 const STORAGE_KEY = 'stc_progress';
+let _currentUserId = null;
+function getStorageKey() {
+  return _currentUserId ? `${STORAGE_KEY}:${_currentUserId}` : STORAGE_KEY;
+}
 const RPG_LABELS = {
   task: { zh: '任务', en: 'Objective' },
   clues: { zh: '已获得线索', en: 'Clues found' },
@@ -108,13 +113,47 @@ function renderCharacterAvatar(character, theme, themeKey, className = 'ep-char-
 }
 
 /* ============================================================= */
-/* ===== 进度持久化模块（localStorage）========================= */
+/* ===== 进度持久化模块（localStorage + 云端同步）=============== */
 /* ============================================================= */
+
+let _cloudDebounceTimer = null;
+
+/** 登录时调用：设置云端配置并拉取云端数据合并到本地 */
+export async function initCloudSync(supabaseClient, userId) {
+  setCloudConfig(supabaseClient, userId);
+  // 切换到用户专属 key，并迁移游客数据
+  if (_currentUserId !== userId) {
+    _currentUserId = userId;
+  }
+  const cloud = await fetchCloudData();
+  if (cloud && cloud.progress) {
+    const local = loadProgress();
+    const merged = mergeProgress(local, cloud.progress);
+    saveProgress(merged);
+  }
+}
+
+/** 登出时调用：清除云端配置 */
+export function clearSync() {
+  // 清除当前用户专属 key，防止下一个用户读到
+  try { localStorage.removeItem(getStorageKey()); } catch (_) {}
+  _currentUserId = null;
+  clearCloudConfig();
+}
+
+/** 异步推送进度到云端（防抖 1.5 秒） */
+function syncToCloud() {
+  if (!isCloudReady()) return;
+  clearTimeout(_cloudDebounceTimer);
+  _cloudDebounceTimer = setTimeout(() => {
+    pushCloudData(loadProgress(), null);
+  }, 1500);
+}
 
 /** 读取进度（容错：损坏 / 缺失 → 返回初始结构）*/
 export function loadProgress() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey());
     if (!raw) return { completed: {}, achievements: [] };
     const p = JSON.parse(raw);
     return {
@@ -129,7 +168,7 @@ export function loadProgress() {
 /** 写入进度 */
 function saveProgress(p) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(p));
+    localStorage.setItem(getStorageKey(), JSON.stringify(p));
   } catch (e) {
     /* 隐私模式 / 配额满 → 静默降级（本次会话内仍可玩）*/
   }
@@ -180,6 +219,7 @@ export function markComplete(anchorId, opts = {}) {
     }
   }
   saveProgress(p);
+  syncToCloud();
   return { newlyCompleted: !already, achievementUnlocked };
 }
 
@@ -218,7 +258,6 @@ export function getTotalProgress() {
 
 let episodeState = null;
 let epTypewriterToken = 0;
-let episodeModelViewer = null;
 
 /** 创建剧情层容器（仅一次）*/
 export function renderEpisodeLayer(root) {
@@ -247,7 +286,6 @@ export function isEpisodeOpen() {
  * @param {{onComplete?:(anchor,opts)=>void, onOpenStampBook?:(anchor,opts)=>void, onClose?:()=>void, onsite?:boolean}} handlers
  */
 export function openEpisode(anchor, episode, handlers = {}) {
-  disposeEpisodeModelViewer();
   episodeState = {
     anchor,
     episode,
@@ -269,7 +307,6 @@ export function openEpisode(anchor, episode, handlers = {}) {
 /** 关闭剧情层 */
 export function closeEpisode() {
   epTypewriterToken += 1;
-  disposeEpisodeModelViewer();
   const layer = document.getElementById('episode-layer');
   if (layer) layer.classList.remove('open');
   const h = episodeState && episodeState.handlers;
@@ -712,252 +749,9 @@ function renderRpgEpisodePhase() {
   if (nextBtn) nextBtn.addEventListener('click', advanceRpgBeat);
 }
 
-function disposeObject3D(obj) {
-  if (!obj || !obj.traverse) return;
-  obj.traverse((child) => {
-    if (child.geometry && child.geometry.dispose) child.geometry.dispose();
-    const materials = Array.isArray(child.material) ? child.material : child.material ? [child.material] : [];
-    materials.forEach((material) => {
-      Object.keys(material || {}).forEach((key) => {
-        const value = material[key];
-        if (value && value.isTexture && value.dispose) value.dispose();
-      });
-      if (material && material.dispose) material.dispose();
-    });
-  });
-}
-
-function disposeEpisodeModelViewer() {
-  if (!episodeModelViewer) return;
-  const viewer = episodeModelViewer;
-  viewer.disposed = true;
-  if (viewer.frame) cancelAnimationFrame(viewer.frame);
-  if (viewer.resizeObserver) viewer.resizeObserver.disconnect();
-  if (viewer.onResize) window.removeEventListener('resize', viewer.onResize);
-  if (viewer.mount && viewer.pointerHandlers) {
-    Object.entries(viewer.pointerHandlers).forEach(([type, handler]) => {
-      viewer.mount.removeEventListener(type, handler);
-    });
-  }
-  disposeObject3D(viewer.model);
-  if (viewer.renderer) {
-    viewer.renderer.dispose();
-    if (viewer.renderer.domElement && viewer.renderer.domElement.parentNode) {
-      viewer.renderer.domElement.parentNode.removeChild(viewer.renderer.domElement);
-    }
-  }
-  episodeModelViewer = null;
-}
-
-function renderEpisodeImmersiveEntry(entry) {
-  if (!entry || entry.type !== 'glb') return '';
-  return `
-    <section class="ep-portal is-loading" id="ep-portal" aria-label="${esc(pick(entry.title))}">
-      <div class="ep-portal-stage">
-        <div class="ep-portal-canvas" id="ep-portal-canvas"></div>
-        <div class="ep-portal-veil"></div>
-        <div class="ep-portal-scan" aria-hidden="true"></div>
-        <div class="ep-portal-status" id="ep-portal-status">
-          <span>${esc(getText('episode.portal_loading'))}</span>
-          <b id="ep-portal-progress">0%</b>
-        </div>
-      </div>
-      <div class="ep-portal-caption">
-        <span>${esc(pick(entry.label))}</span>
-        <strong>${esc(pick(entry.title))}</strong>
-        <em>${esc(pick(entry.desc))}</em>
-      </div>
-    </section>`;
-}
-
-async function initEpisodeImmersiveEntry(entry, theme) {
-  const portal = document.getElementById('ep-portal');
-  const mount = document.getElementById('ep-portal-canvas');
-  const status = document.getElementById('ep-portal-status');
-  const progress = document.getElementById('ep-portal-progress');
-  if (!portal || !mount || !entry || entry.type !== 'glb') return;
-
-  const viewer = {
-    disposed: false,
-    mount,
-    frame: 0,
-    model: null,
-    renderer: null,
-    resizeObserver: null,
-    onResize: null,
-    pointerHandlers: null,
-  };
-  episodeModelViewer = viewer;
-
-  try {
-    const [THREE, { GLTFLoader }] = await Promise.all([
-      import('../public/vendor/three/three.module.js'),
-      import('../public/vendor/three/GLTFLoader.js'),
-    ]);
-    if (viewer.disposed || episodeModelViewer !== viewer) return;
-
-    const scene = new THREE.Scene();
-    scene.background = null;
-    scene.fog = new THREE.FogExp2(0xf3ecd9, 0.045);
-
-    const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 120);
-    camera.position.set(0.15, 0.72, 4.2);
-    camera.lookAt(0, 0.02, 0);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
-    mount.appendChild(renderer.domElement);
-    viewer.renderer = renderer;
-
-    const root = new THREE.Group();
-    scene.add(root);
-
-    const hemi = new THREE.HemisphereLight(0xfff7e2, 0x27322d, 2.4);
-    scene.add(hemi);
-    const key = new THREE.DirectionalLight(0xfff0cf, 2.2);
-    key.position.set(4, 5, 3);
-    scene.add(key);
-    const rim = new THREE.DirectionalLight(theme.color || 0x3f7d6e, 0.9);
-    rim.position.set(-3, 2, -4);
-    scene.add(rim);
-
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(2.9, 96),
-      new THREE.MeshBasicMaterial({ color: 0x3f7d6e, transparent: true, opacity: 0.08, depthWrite: false })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.42;
-    scene.add(floor);
-
-    const loader = new GLTFLoader();
-    loader.load(
-      entry.model,
-      (gltf) => {
-        if (viewer.disposed || episodeModelViewer !== viewer) {
-          disposeObject3D(gltf.scene);
-          return;
-        }
-        const model = gltf.scene;
-        viewer.model = model;
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = false;
-            child.receiveShadow = true;
-            if (child.material) {
-              const materials = Array.isArray(child.material) ? child.material : [child.material];
-              materials.forEach((material) => {
-                material.roughness = Math.min(1, (material.roughness || 0.6) + 0.12);
-                material.metalness = Math.max(0, (material.metalness || 0) - 0.08);
-              });
-            }
-          }
-        });
-
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const center = box.getCenter(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z) || 1;
-        const scale = 2.75 / maxDim;
-        model.position.sub(center);
-        model.scale.setScalar(scale);
-        root.add(model);
-        root.rotation.y = -0.34;
-        portal.classList.remove('is-loading', 'is-error');
-        portal.classList.add('is-ready');
-        if (status) {
-          status.querySelector('span').textContent = getText('episode.portal_ready');
-          if (progress) progress.textContent = '';
-        }
-      },
-      (event) => {
-        if (!progress) return;
-        if (event.total) progress.textContent = `${Math.min(99, Math.round((event.loaded / event.total) * 100))}%`;
-        else progress.textContent = `${Math.round(event.loaded / 1024 / 1024)}MB`;
-      },
-      () => {
-        portal.classList.remove('is-loading');
-        portal.classList.add('is-error');
-        if (status) {
-          status.querySelector('span').textContent = getText('episode.portal_error');
-          if (progress) progress.textContent = '';
-        }
-      }
-    );
-
-    const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const pointerState = { down: false, x: 0, target: -0.34, current: -0.34 };
-    const onPointerDown = (event) => {
-      pointerState.down = true;
-      pointerState.x = event.clientX;
-      mount.setPointerCapture && mount.setPointerCapture(event.pointerId);
-      portal.classList.add('is-dragging');
-    };
-    const onPointerMove = (event) => {
-      if (!pointerState.down) return;
-      const dx = event.clientX - pointerState.x;
-      pointerState.x = event.clientX;
-      pointerState.target += dx * 0.008;
-    };
-    const onPointerUp = (event) => {
-      pointerState.down = false;
-      mount.releasePointerCapture && mount.releasePointerCapture(event.pointerId);
-      portal.classList.remove('is-dragging');
-    };
-    viewer.pointerHandlers = {
-      pointerdown: onPointerDown,
-      pointermove: onPointerMove,
-      pointerup: onPointerUp,
-      pointercancel: onPointerUp,
-      pointerleave: onPointerUp,
-    };
-    Object.entries(viewer.pointerHandlers).forEach(([type, handler]) => mount.addEventListener(type, handler));
-
-    const resize = () => {
-      if (viewer.disposed) return;
-      const rect = mount.getBoundingClientRect();
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      camera.aspect = width / height;
-      camera.lookAt(0, 0.02, 0);
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height, false);
-    };
-    viewer.onResize = resize;
-    window.addEventListener('resize', resize);
-    if ('ResizeObserver' in window) {
-      viewer.resizeObserver = new ResizeObserver(resize);
-      viewer.resizeObserver.observe(mount);
-    }
-    resize();
-
-    const clock = new THREE.Clock();
-    const animate = () => {
-      if (viewer.disposed || episodeModelViewer !== viewer) return;
-      const delta = Math.min(0.033, clock.getDelta());
-      if (!reducedMotion && !pointerState.down) pointerState.target -= delta * 0.22;
-      pointerState.current += (pointerState.target - pointerState.current) * 0.08;
-      root.rotation.y = pointerState.current;
-      renderer.render(scene, camera);
-      viewer.frame = requestAnimationFrame(animate);
-    };
-    animate();
-  } catch (err) {
-    portal.classList.remove('is-loading');
-    portal.classList.add('is-error');
-    if (status) {
-      status.querySelector('span').textContent = getText('episode.portal_error');
-      if (progress) progress.textContent = '';
-    }
-  }
-}
-
 /** 渲染当前阶段 */
 function renderEpisodePhase() {
   if (!episodeState) return;
-  disposeEpisodeModelViewer();
   const body = document.getElementById('episode-body');
   const scroll = document.getElementById('episode-scroll');
   if (!body) return;
@@ -967,7 +761,6 @@ function renderEpisodePhase() {
     const rpgMode = isRpgEpisode(episode);
     scroll.style.setProperty('--ep-accent', theme.color);
     scroll.classList.toggle('is-rpg-dialogue', rpgMode);
-    scroll.classList.toggle('has-immersive-entry', !rpgMode && phase === 'intro' && !!episode.immersiveEntry);
   }
   if (isRpgEpisode(episode)) {
     renderRpgEpisodePhase();
@@ -1005,13 +798,11 @@ function renderEpisodePhase() {
         ${esc(pick(theme.label))} · ${esc(pick(anchor.name))}
       </div>
       <h2 class="ep-title font-brush">${esc(pick(anchor.title))}</h2>
-      ${renderEpisodeImmersiveEntry(episode.immersiveEntry)}
       ${charHtml || mascotHtml}
       <p class="ep-intro" id="ep-intro-text"></p>
       <div class="ep-actions">
         <button class="ep-btn ep-btn-primary" id="ep-continue">${esc(getText('episode.continue'))} →</button>
       </div>`;
-    if (episode.immersiveEntry) initEpisodeImmersiveEntry(episode.immersiveEntry, theme);
     const introEl = body.querySelector('#ep-intro-text');
     epTypewriter(introEl, pick(episode.intro));
     body.querySelector('#ep-continue').addEventListener('click', () => {

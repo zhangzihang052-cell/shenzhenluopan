@@ -2,11 +2,13 @@
 import { createMap, haversineKm } from './map.js?rev=v2-instant-open-1';
 import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
 import { THEMES, OVERVIEW_MODE, TRAVEL_MODES, DEFAULT_LOCATION } from './data/themes.js?rev=clean-8';
-import { getText, pick } from './i18n.js?rev=audio-sfx-1';
+import { getText, pick } from './i18n.js?rev=account-1';
 import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
 import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js?rev=external-preview-1';
-import { createAuthController } from './auth.js?rev=memory-1';
-import { createMemoryController } from './memory.js?rev=memory-1';
+import { createAuthController } from './auth.js?rev=memory-2';
+import { createMemoryController } from './memory.js?rev=memory-4';
+import { createFriendsController } from './friends.js?rev=friends-3';
+import { createWelcomeController } from './welcome.js?rev=welcome-5';
 import {
   isTencentConfigured,
   planTencentRoute,
@@ -24,6 +26,8 @@ import {
   refreshStampBadge,
   showAchievementCard,
   handleGeofence,
+  initCloudSync,
+  clearSync,
 } from './game.js?rev=audio-sfx-1';
 import {
   renderHeader,
@@ -78,7 +82,9 @@ import {
   refreshRoutePlannerTexts,
   setRoutePlannerLocation,
   clearActiveMainBtn,
+  updateAuthBtn,
 } from './ui.js?rev=v2-fix-explore-stamp-1';
+import { initWantToVisitSync, clearWantToVisitSync } from './want-to-visit.js?rev=cloud-1';
 
 /** WebGL 支持检测 */
 function isWebGLSupported() {
@@ -111,7 +117,7 @@ function hideLoading() {
   if (loading) loading.classList.add('hidden');
 }
 
-const BGM_URL = './public/audio/yiran-zide-erhu-pipa.m4a?v=bgm-2';
+const BGM_URL = './public/audio/yiran-zide-erhu-pipa.m4a?v=bgm-3';
 const BGM_VOLUME = 0.16;
 const BGM_MUTED_KEY = 'stc_bgm_muted';
 const UI_PAGE_SFX_URL = './public/audio/ui-page-turn.wav?v=sfx-assets-1';
@@ -156,8 +162,7 @@ function initBackgroundMusic(root) {
     <span class="bgm-bars" aria-hidden="true"><i></i><i></i><i></i></span>`;
 
   let muted = getStoredBgmMuted();
-  let unlocked = false;
-  let playRequested = false; // 确保 audio.play() 只被调用一次，杜绝竞态双播放
+  let userToggled = false; // 用户是否手动操作过音乐按钮
 
   const update = () => {
     const playing = !muted && !audio.paused;
@@ -169,104 +174,73 @@ function initBackgroundMusic(root) {
     btn.setAttribute('aria-label', label);
   };
 
-  const doPlay = () => {
-    if (playRequested) return; // 已经请求过播放，不重复调用
-    playRequested = true;
-    unlocked = true;
+  // 尝试播放（仅在未静默且当前暂停时）
+  const tryStartPlay = () => {
+    if (muted) return;
+    if (!audio.paused) return;
     audio.volume = BGM_VOLUME;
-    audio.play().then(() => {
-      update();
-    }).catch(() => {
-      playRequested = false; // 播放失败，重置标志允许后续重试
-      update();
-    });
+    audio.play().then(() => update()).catch(() => update());
   };
 
-  const tryPlay = () => {
-    if (muted) {
-      update();
-      return;
-    }
-    if (!audio.paused) return; // 正在播放时不重复调用 play()
-    doPlay();
-  };
-
-  const unlockOnce = (event) => {
-    if (event && event.target && event.target.closest && event.target.closest('#bgm-toggle')) return;
-    tryPlay();
-    window.removeEventListener('pointerdown', unlockOnce);
-    window.removeEventListener('keydown', unlockOnce);
-  };
-
+  // 按钮点击 —— 用户手动控制，清晰直接
   btn.addEventListener('click', (event) => {
     event.stopPropagation();
-    unlocked = true;
-    if (muted || audio.paused) {
+    userToggled = true;
+
+    if (audio.paused) {
+      // 当前暂停 → 播放
       muted = false;
       setStoredBgmMuted(false);
-      if (playRequested && !audio.paused) {
-        // 已经在播放，不需要重新请求
-      } else {
-        playRequested = false; // 允许重新播放
-        tryPlay();
-      }
+      audio.volume = BGM_VOLUME;
+      audio.play().then(() => update()).catch(() => update());
     } else {
+      // 当前播放 → 暂停
       muted = true;
       setStoredBgmMuted(true);
       audio.pause();
-      audio.currentTime = 0;
     }
     update();
   });
 
+  // 页面隐藏时暂停（省电），但只在用户没手动关闭时恢复
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       audio.pause();
-      playRequested = false;
       update();
+    } else if (!muted && userToggled === false) {
+      // 页面恢复可见时，如果用户从没手动操作过且未静默，尝试恢复
+      tryStartPlay();
     }
-    // 注意：不在页面恢复可见时自动恢复播放，避免用户关闭后又被自动打开
   });
 
-  // 窗口失去焦点时暂停（桌面端切换窗口、最小化等场景）
-  window.addEventListener('blur', () => {
-    audio.pause();
-    playRequested = false;
-  });
-  // 注意：不在 focus 时自动恢复播放，避免用户关闭后又被自动打开
-
-  // 退出软件/关闭页面时确保音乐停止
+  // 退出时停止
   const stopOnExit = () => {
     audio.pause();
     audio.currentTime = 0;
-    playRequested = false;
   };
   window.addEventListener('pagehide', stopOnExit);
   window.addEventListener('beforeunload', stopOnExit);
-  window.addEventListener('unload', stopOnExit);
-  document.addEventListener('freeze', stopOnExit);
-  // 注意：不在 resume 时自动恢复播放，避免用户关闭后又被自动打开
+
   audio.addEventListener('play', update);
   audio.addEventListener('pause', update);
-  audio.addEventListener('volumechange', update);
 
   root.appendChild(btn);
   document.body.appendChild(audio);
   update();
 
-  // 一进来就尝试播放 BGM；如果被浏览器自动播放策略拦截，则保留首次交互兜底
+  // 不再页面加载就自动播放 —— 等待用户首次与地图交互后再尝试
+  // 这样欢迎页的点击不会误触发音乐
   if (!muted) {
-    doPlay();
-    // 如果 doPlay 的 play() 失败，注册兜底监听等用户交互
+    const startOnce = () => {
+      tryStartPlay();
+      window.removeEventListener('pointerdown', startOnce);
+      window.removeEventListener('keydown', startOnce);
+    };
+    // 延迟注册，避免欢迎页的点击立即触发
     setTimeout(() => {
-      if (audio.paused && !muted) {
-        window.addEventListener('pointerdown', unlockOnce, { passive: true });
-        window.addEventListener('keydown', unlockOnce);
-      }
-    }, 500);
-  } else {
-    window.addEventListener('pointerdown', unlockOnce, { passive: true });
-    window.addEventListener('keydown', unlockOnce);
+      window.addEventListener('pointerdown', startOnce, { passive: true, once: true });
+      window.addEventListener('keydown', startOnce, { passive: true, once: true });
+    }, 1500);
   }
 }
 
@@ -378,6 +352,8 @@ function boot() {
     routeRequestId: 0,
   };
   let memoryExperience = null;
+  let friendsExperience = null;
+  let welcomeController = null;
   const authController = createAuthController();
 
   const visibleCount = () =>
@@ -401,7 +377,9 @@ function boot() {
     onStampBook: handleStampBook,
     onRoutePlan: handleRoutePlanButton,
     onMemory: handleMemoryButton,
-    onSettings: null,
+    onFriends: handleFriendsButton,
+    onRecollect: handleRecollectButton,
+    onSettings: () => { if (welcomeController) welcomeController.show(); },
   });
   // 初始化主题强调色 CSS 变量
   document.documentElement.style.setProperty('--theme-accent', OVERVIEW_MODE.accentColor);
@@ -456,6 +434,65 @@ function boot() {
     onClose: handleMemoryClose,
   });
   memoryExperience.init();
+
+  // ===== 好友系统初始化 =====
+  friendsExperience = createFriendsController({
+    root: uiRoot,
+    map: controller.map,
+    auth: authController,
+    showToast,
+    onFriendClick: (lng, lat) => {
+      controller.map.flyTo({ center: [lng, lat], zoom: Math.max(controller.map.getZoom(), 14), duration: 1000 });
+    },
+  });
+  friendsExperience.init();
+
+  // ===== 欢迎页面（注册 / 登录）=====
+  welcomeController = createWelcomeController({
+    auth: authController,
+    onGuest: () => { /* 访客模式：直接进入地图，数据存 localStorage */ },
+    onLogin: async () => {
+      // 登出后会走到这里（signOut后auth.user为null）
+      if (!authController.isLoggedIn()) {
+        updateAuthBtn(false, '');
+      // 登出后清除该用户的所有本地缓存数据
+      // memory.js 的 SIGNED_OUT 监听器已负责清除记忆数据
+      try {
+        localStorage.removeItem('stc_progress');
+      } catch (_) {}
+      clearSync(); // 清除 game.js 的 cloud-sync 配置和用户专属 key
+      clearWantToVisitSync(); // 清除 want-to-visit.js 的用户专属 key
+        window.location.reload();
+        return;
+      }
+      // 正常登录流程
+      if (friendsExperience) friendsExperience.refresh();
+      if (memoryExperience && memoryExperience.refreshTexts) memoryExperience.refreshTexts();
+      // 云端进度同步
+      if (authController.client && authController.user) {
+        await initCloudSync(authController.client, authController.user.id);
+        await initWantToVisitSync(authController.client, authController.user.id);
+        controller.markCompleted(ANCHORS, getCompletedIds());
+        refreshStampBadge();
+      }
+      updateAuthBtn(true, authController.email);
+    },
+  });
+
+  // 等待 auth 初始化完成后设置 UI 状态
+  authController.init().then(async () => {
+    if (authController.isLoggedIn()) {
+      // 已登录（session 恢复）：从云端同步进度
+      if (authController.client && authController.user) {
+        await initCloudSync(authController.client, authController.user.id);
+        await initWantToVisitSync(authController.client, authController.user.id);
+        controller.markCompleted(ANCHORS, getCompletedIds());
+        refreshStampBadge();
+      }
+      updateAuthBtn(true, authController.email);
+    }
+    // 未登录：游客模式，直接进入地图，不弹任何页面
+  });
 
   // ===== 锚点选中 =====
   function handleSelect(anchor) {
@@ -597,6 +634,7 @@ function boot() {
     refreshCompassTexts();
     refreshRoutePlannerTexts();
     if (memoryExperience) memoryExperience.refreshTexts();
+    if (friendsExperience) friendsExperience.refreshTexts();
     // 面包屑标签随语言刷新
     const trail = getBreadcrumbTrail();
     if (trail.length) {
@@ -663,6 +701,15 @@ function boot() {
     controller.clearClueFocus(state.activeTheme);
     setRoutePlannerLocation(getRoutePlannerOrigin());
     openRoutePlanner('free');
+  }
+
+  function handleFriendsButton() {
+    if (!authController.isLoggedIn()) {
+      showToast(getText('friend.login_required'));
+      if (welcomeController) welcomeController.show();
+      return;
+    }
+    if (friendsExperience) friendsExperience.openFriendsPanel();
   }
 
   function handleRoutePlannerAnchorClick(anchor) {
@@ -738,6 +785,11 @@ function boot() {
   let memoryPrevCamera = null;
 
   function handleMemoryButton() {
+    if (!authController.isLoggedIn()) {
+      showToast(getText('auth.login_required'));
+      if (welcomeController) welcomeController.show();
+      return;
+    }
     // 先关闭其他面板
     if (isCompassOpen()) closeCompassPanel();
     if (isRoutePlannerOpen()) closeRoutePlanner();
@@ -840,6 +892,44 @@ function boot() {
       memoryPrevCamera = null;
     } else {
       controller.reset();
+    }
+  }
+
+  function handleRecollectButton() {
+    if (!authController.isLoggedIn()) {
+      showToast(getText('auth.login_required'));
+      if (welcomeController) welcomeController.show();
+      return;
+    }
+    // 关闭其他面板
+    if (isCompassOpen()) closeCompassPanel();
+    if (isRoutePlannerOpen()) closeRoutePlanner();
+    if (isPanelOpen()) handleClose();
+
+    // 保存当前视角，退出时恢复（与「留下记忆」一致）
+    if (controller.map && controller.map.getCenter) {
+      memoryPrevCamera = {
+        center: controller.map.getCenter().toArray(),
+        zoom: controller.map.getZoom(),
+        pitch: controller.map.getPitch(),
+        bearing: controller.map.getBearing(),
+      };
+    }
+
+    // 隐藏文化锚点，聚焦记忆锚点
+    controller.setVisibleThemes(new Set());
+
+    // 打开回忆面板
+    if (memoryExperience && memoryExperience.openRecollectionsPanel) {
+      memoryExperience.openRecollectionsPanel();
+    }
+
+    // 飞行到记忆锚点区域：若有记忆则飞到第一个，否则用默认中心
+    const memories = memoryExperience && memoryExperience.getMemories ? memoryExperience.getMemories() : [];
+    if (memories.length > 0 && memories[0].lat != null && memories[0].lng != null) {
+      flyToMemoryLocation(memories[0].lng, memories[0].lat);
+    } else {
+      flyToMemoryLocation(DEFAULT_LOCATION.center[0], DEFAULT_LOCATION.center[1]);
     }
   }
 
@@ -1060,9 +1150,9 @@ function boot() {
     });
   }
 
-  // 点击地图空白处关闭
+    // 点击地图空白处关闭
   controller.map.on('click', (e) => {
-    const candidateLayers = ['anchor-core', 'anchor-glow', 'memory-core', 'memory-glow'].filter((id) =>
+    const candidateLayers = ['anchor-core', 'anchor-glow', 'memory-core', 'memory-glow', 'friend-memory-core', 'friend-memory-glow'].filter((id) =>
       controller.map.getLayer(id)
     );
     if (candidateLayers.length === 0) return;
@@ -1080,6 +1170,7 @@ function boot() {
       if (isEpisodeOpen()) closeEpisode();
       else if (isStampBookOpen()) closeStampBook();
       else if (memoryExperience && memoryExperience.isOpen()) memoryExperience.closePanel();
+      else if (friendsExperience && friendsExperience.closePanel) friendsExperience.closePanel();
       else if (isRoutePlannerOpen()) closeRoutePlanner();
       else if (isCompassOpen()) closeCompassPanel(); // closeCompassPanel 内部触发 onClose → handleCompassClose
       else if (state.selected) handleClose();

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>记忆模块古风预览</title>
+<link rel="stylesheet" href="../src/styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#cfc6ac;font-family:'Noto Sans SC',sans-serif;}
+  .stage{position:relative;width:430px;height:780px;margin:20px auto;background:#cfc6ac;
+    background-image:url('../public/textures/ink-paper.png');background-size:cover;
+    box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;}
+  #memory-shell{position:absolute;inset:0;z-index:64;pointer-events:none;}
+  #memory-shell.memory-shell-open{pointer-events:auto;}
+  #memory-shell.memory-shell-open .memory-scrim{opacity:.6;pointer-events:auto;}
+  .memory-scrim{position:absolute;inset:0;background:rgba(28,20,10,.42);}
+  #memory-shell.memory-shell-open .memory-panel{opacity:1;transform:translateX(0);pointer-events:auto;}
+  .stage .memory-panel{position:absolute;top:16px;right:16px;bottom:16px;width:auto;left:16px;}
+</style>
+</head>
+<body>
+<!-- 创建面板 -->
+<div class="stage" id="s1">
+  <div id="memory-shell" class="memory-shell-open">
+    <div class="memory-scrim"></div>
+    <aside class="memory-panel" id="memory-panel">
+      <button class="memory-close" type="button">×</button>
+      <div class="memory-panel-head">
+        <span class="memory-panel-seal" aria-hidden="true">忆</span>
+        <h2 class="memory-panel-title">留下一刻</h2>
+      </div>
+      <div class="memory-create-list-entry"><button type="button">我的记忆 (3)</button></div>
+      <div class="memory-create-quota">今日还可留下 4 个记忆</div>
+      <form class="memory-form" id="memory-create-form">
+        <div class="memory-create-media" id="memory-media-area">
+          <div class="memory-create-media-empty" id="memory-media-empty">
+            <span class="ink-cam-icon" aria-hidden="true"></span>
+            <span>拍照 / 相册 / 视频</span>
+          </div>
+          <img class="memory-create-media-preview" id="memory-media-preview" alt="" hidden />
+        </div>
+        <div class="memory-create-media-actions">
+          <button class="memory-create-media-btn" type="button">拍照</button>
+          <button class="memory-create-media-btn" type="button">相册</button>
+          <button class="memory-create-media-btn" type="button">视频</button>
+        </div>
+        <div class="memory-create-voice" id="memory-voice-area">
+          <div class="memory-create-voice-bar">
+            <button class="memory-create-voice-btn" type="button">按住录音</button>
+            <span class="memory-create-voice-timer">0s</span>
+            <span class="memory-create-voice-max">最长 60s</span>
+          </div>
+        </div>
+        <label class="memory-field">
+          <span>此刻感悟</span>
+          <textarea id="memory-note-input" maxlength="200" placeholder="这个瞬间对你意味着什么？"></textarea>
+        </label>
+        <div class="memory-meta-line"><span>22.54123, 113.94671</span></div>
+        <button class="memory-create-publish" type="submit">钉下记忆</button>
+      </form>
+    </aside>
+  </div>
+</div>
+
+<!-- 列表面板 -->
+<div class="stage" id="s2" style="margin-top:24px;">
+  <div id="memory-shell2" class="memory-shell-open">
+    <div class="memory-scrim"></div>
+    <aside class="memory-panel" id="memory-panel2">
+      <button class="memory-close" type="button">×</button>
+      <div class="memory-panel-head">
+        <span class="memory-panel-seal" aria-hidden="true">忆</span>
+        <h2 class="memory-panel-title">我的记忆</h2>
+      </div>
+      <div class="memory-count">共 3 条记忆</div>
+      <div class="memory-list">
+        <button class="memory-list-item" type="button">
+          <img src="../public/anchors/generated/M04.jpg" alt="" />
+          <span class="memory-list-copy"><b>刚来深圳的那个傍晚</b><small>7月3日 18:24 · 莲花山</small></span>
+        </button>
+        <button class="memory-list-item" type="button">
+          <span class="memory-list-thumb-fallback">忆</span>
+          <span class="memory-list-copy"><b>海风里有咸味</b><small>7月2日 09:11 · 大梅沙</small></span>
+        </button>
+        <button class="memory-list-item" type="button">
+          <img src="../public/anchors/generated/M07.jpg" alt="" />
+          <span class="memory-list-copy"><b>和朋友在天台看夜景</b><small>7月1日 21:40 · 福田</small></span>
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+</body>
+</html>

@@ -52,8 +52,8 @@
       rel="stylesheet"
     />
 
-    <link rel="stylesheet" href="./src/styles.css?rev=v2-btn-press-fix-1" />
-    <link rel="stylesheet" href="./src/mobile.css?rev=v2-fix-explore-stamp-1" />
+    <link rel="stylesheet" href="./src/styles.css?rev=v2-account-3" />
+    <link rel="stylesheet" href="./src/mobile.css?rev=v2-mobile-fit-1" />
   </head>
   <body class="bg-compass-bg font-sans text-[#2b2118]">
     <!-- 竖屏旋转引导：仅移动端竖屏时显示 -->
@@ -157,7 +157,6 @@
 
     <!-- 本机腾讯地图密钥配置：该文件被 git 忽略，缺失时会显示服务未配置提示。 -->
     <script src="./public/tencent-map.config.js"></script>
-    <script src="./public/supabase.config.js"></script>
 
     <!-- 音频停止保险层：在页面卸载/隐藏时强制停止所有音频，内联确保不被缓存跳过 -->
     <script>
@@ -177,7 +176,10 @@
       })();
     </script>
 
+    <!-- Supabase 配置（必须在 main.js 之前加载） -->
+    <script src="./public/supabase.config.js?v=supabase-1"></script>
+
     <!-- 应用入口（ESM） -->
-    <script type="module" src="./src/main.js?rev=v2-phase2-mem-1"></script>
+    <script type="module" src="./src/main.js?rev=v2-account-7"></script>
   </body>
 </html>

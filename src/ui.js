@@ -27,6 +27,9 @@ const INK_ICONS = {
   // 指南针 / 规划路线
   compass:
     '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>',
+  // 用户 / 账户
+  user:
+    '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>',
 };
 
 /** HTML 转义 */
@@ -90,7 +93,7 @@ export function updateVisibleCount(n, themeLabel) {
  * V2: renderToolCluster 渲染底部三主按钮（探索附近/留下记忆/路线规划）
  * + 右上角只保留语言选择器（地球仪图标+下拉菜单）。
  */
-export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan, onMemory, onSettings }) {
+export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, onCompass, onStampBook, onRoutePlan, onMemory, onSettings, onFriends, onRecollect }) {
   // ===== 右上角：仅语言选择器 =====
   const el = document.createElement('div');
   el.className = 'tool-cluster';
@@ -123,6 +126,28 @@ export function renderToolCluster(root, { onChangeLang, onLocate, geoSupported, 
     if (onStampBook) onStampBook();
   });
   el.appendChild(stampBtn);
+
+  // 我的回忆按钮
+  const recollectBtn = document.createElement('button');
+  recollectBtn.className = 'tool-btn';
+  recollectBtn.id = 'recollect-btn';
+  recollectBtn.title = getText('recollect.title');
+  recollectBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.heart || '<svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.5 1 4.5 2.5C11.5 6 13 5 15 5c3.5 0 5 4 3.5 7-2.5 4.5-9.5 9-9.5 9z"/></svg>'}</span><span>${esc(getText('recollect.title'))}</span><span class="tool-badge" id="recollect-count"></span>`;
+  recollectBtn.addEventListener('click', () => {
+    if (onRecollect) onRecollect();
+  });
+  el.appendChild(recollectBtn);
+
+  // 登录/账户按钮（右上角）
+  const authBtn = document.createElement('button');
+  authBtn.className = 'tool-btn';
+  authBtn.id = 'auth-btn';
+  authBtn.title = getText('auth.btn_login');
+  authBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.user}</span><span id="auth-btn-label">${esc(getText('auth.btn_login'))}</span>`;
+  authBtn.addEventListener('click', () => {
+    if (onSettings) onSettings();
+  });
+  el.appendChild(authBtn);
 
   root.appendChild(el);
 
@@ -222,8 +247,30 @@ export function clearActiveMainBtn() {
   });
 }
 
+/** 更新右上角登录按钮显示（登录后显示邮箱前缀，未登录显示"登录"）*/
+export function updateAuthBtn(loggedIn, email) {
+  const btn = document.getElementById('auth-btn');
+  const label = document.getElementById('auth-btn-label');
+  if (!btn || !label) return;
+  if (loggedIn && email) {
+    const prefix = email.split('@')[0];
+    btn.title = email;
+    label.textContent = prefix;
+    btn.classList.add('logged-in');
+  } else {
+    btn.title = getText('auth.btn_login');
+    label.textContent = getText('auth.btn_login');
+    btn.classList.remove('logged-in');
+  }
+}
+
 /** 语言切换时刷新顶部工具组按钮文案（三主按钮 + 语言选择器）*/
 export function refreshToolCluster() {
+  // 登录按钮文案
+  const authBtn = document.getElementById('auth-btn');
+  if (authBtn) {
+    authBtn.title = getText('auth.btn_login');
+  }
   // 三主按钮文案
   const exploreBtn = document.getElementById('explore-btn');
   if (exploreBtn) {
@@ -252,6 +299,12 @@ export function refreshToolCluster() {
     const badgeEl = document.getElementById('stamp-count');
     const badgeText = badgeEl ? badgeEl.textContent : '';
     stampBtn.innerHTML = `<span class="tool-ico">${INK_ICONS.book}</span><span>${esc(getText('stamp.btn'))}</span><span class="tool-badge" id="stamp-count">${esc(badgeText)}</span>`;
+  }
+  // 我的回忆按钮文案
+  const recollectBtn = document.getElementById('recollect-btn');
+  if (recollectBtn) {
+    recollectBtn.title = getText('recollect.title');
+    recollectBtn.innerHTML = `<span class="tool-ico"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.5 1 4.5 2.5C11.5 6 13 5 15 5c3.5 0 5 4 3.5 7-2.5 4.5-9.5 9-9.5 9z"/></svg></span><span>${esc(getText('recollect.title'))}</span><span class="tool-badge" id="recollect-count"></span>`;
   }
 }
 

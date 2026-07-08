@@ -2,6 +2,10 @@
 import { getLang, getText, pick } from './i18n.js?rev=audio-sfx-1';
 
 const STORAGE_KEY = 'bayareaCompass.memories';
+let _currentUserId = null;
+function getStorageKey() {
+  return _currentUserId ? `${STORAGE_KEY}:${_currentUserId}` : STORAGE_KEY;
+}
 const DEVICE_ID_KEY = 'bayareaCompass.deviceId';
 const SOURCE_ID = 'memory-source';
 const GLOW_LAYER = 'memory-glow';
@@ -13,7 +17,6 @@ const MAX_NOTE_LENGTH = 200;
 const MAX_IMAGE_WIDTH = 1280;
 const JPEG_QUALITY = 0.75;
 const TARGET_LOCAL_BYTES = 200 * 1024;
-const MAX_DAILY_MEMORIES = 5;
 const MAX_VOICE_SECONDS = 60;
 const MAX_VIDEO_SECONDS = 15;
 
@@ -81,7 +84,7 @@ function normalizeMemory(item) {
 
 function readLocalMemories() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
     if (!Array.isArray(parsed)) return [];
     const valid = parsed.map(normalizeMemory).filter(Boolean);
@@ -108,7 +111,7 @@ function readLocalMemories() {
 }
 
 function writeLocalMemories(memories) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(memories));
+  localStorage.setItem(getStorageKey(), JSON.stringify(memories));
 }
 
 function sortMemories(memories) {
@@ -120,15 +123,6 @@ function getDateKey() {
   const now = new Date();
   const utc8 = new Date(now.getTime() + 8 * 3600 * 1000);
   return utc8.toISOString().slice(0, 10);
-}
-
-function countTodayMemories(memories) {
-  const today = getDateKey();
-  return memories.filter((m) => m.dateKey === today).length;
-}
-
-function getRemainingQuota(memories) {
-  return Math.max(0, MAX_DAILY_MEMORIES - countTodayMemories(memories));
 }
 
 function loadImage(url) {
@@ -213,14 +207,23 @@ function publicUrlToStoragePath(url) {
 }
 
 function toFeatureCollection(memories) {
+  // 按坐标分组，同一位置的记忆依次往右偏移，避免与主锚点重叠
+  const OFFSET_LNG = 0.0008; // 约80米经度偏移
+  const coordMap = new Map();
   return {
     type: 'FeatureCollection',
-    features: memories.map((memory) => ({
-      type: 'Feature',
-      id: memory.id,
-      geometry: { type: 'Point', coordinates: [memory.lng, memory.lat] },
-      properties: { id: memory.id },
-    })),
+    features: memories.map((memory) => {
+      const key = `${memory.lat.toFixed(5)}_${memory.lng.toFixed(5)}`;
+      const idx = coordMap.get(key) || 0;
+      coordMap.set(key, idx + 1);
+      const lngOffset = memory.lng + OFFSET_LNG * (idx + 1);
+      return {
+        type: 'Feature',
+        id: memory.id,
+        geometry: { type: 'Point', coordinates: [lngOffset, memory.lat] },
+        properties: { id: memory.id },
+      };
+    }),
   };
 }
 
@@ -228,7 +231,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   const state = {
     anchor: null,
     auth,
-    authForm: { region: '+86', phone: '', code: '', stage: 'phone', message: '' },
+    authForm: { email: '', password: '', message: '' },
     map,
     memories: sortMemories(readLocalMemories()),
     panel: null,
@@ -263,21 +266,6 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   const client = () => (state.auth && state.auth.client ? state.auth.client : null);
   const user = () => (state.auth && state.auth.user ? state.auth.user : null);
   const loggedIn = () => !!user();
-
-  async function uploadPhoto(memoryId, dataUrl) {
-    const currentUser = user();
-    const supabase = client();
-    if (!currentUser || !supabase) throw new Error('supabase-unavailable');
-    const blob = await dataUrlToBlob(dataUrl);
-    const path = `${currentUser.id}/${memoryId}.jpg`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
-      contentType: 'image/jpeg',
-      upsert: true,
-    });
-    if (error) throw error;
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return { publicUrl: data.publicUrl, storagePath: path };
-  }
 
   async function upsertRemote(memory) {
     const currentUser = user();
@@ -350,18 +338,25 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   async function fetchRemoteMemories() {
     const supabase = client();
-    if (!loggedIn() || !supabase) return [];
+    const currentUser = user();
+    if (!loggedIn() || !supabase || !currentUser) return [];
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id,lat,lng,photo_url,note,linked_anchor_id,created_at,updated_at')
+      .select('id,lat,lng,media_type,photo_url,voice_url,note,date_key,author_id,author_name,linked_anchor_id,created_at,updated_at')
+      .eq('user_id', currentUser.id)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []).map((row) => normalizeMemory({
       id: row.id,
       lat: row.lat,
       lng: row.lng,
+      mediaType: row.media_type,
       photoUrl: row.photo_url,
+      voiceUrl: row.voice_url,
       note: row.note,
+      dateKey: row.date_key,
+      authorId: row.author_id,
+      authorName: row.author_name,
       linkedAnchorId: row.linked_anchor_id,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -375,9 +370,35 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (!currentUser || state.syncing) return;
     if (state.syncedUserId === currentUser.id) return;
     state.syncing = true;
+    // 切换到当前用户的专属 localStorage key
+    _currentUserId = currentUser.id;
     let migratedCount = 0;
     try {
-      const pending = state.memories.filter((memory) => !memory.migrated || memory.pendingSync || isDataUrl(memory.photoUrl));
+      // ── 用户切换检测 ──
+      // 如果之前同步过其他用户，或者本地存有其他已登录用户的记忆锚点，
+      // 必须先清除，防止数据泄露到新账号
+      const previousUserId = state.syncedUserId;
+      if (previousUserId && previousUserId !== currentUser.id) {
+        // 显式用户切换：清空所有本地记忆，仅从云端拉取当前用户的
+        setMemories([]);
+      } else {
+        // 刷新后场景：syncedUserId 为 null 但 localStorage 可能有前用户数据
+        const hasOtherUserMemories = state.memories.some((m) =>
+          m.authorId && !m.authorId.startsWith('guest-') && m.authorId !== currentUser.id
+        );
+        if (hasOtherUserMemories) {
+          // 清除其他用户的数据，仅保留游客记忆和当前用户的
+          setMemories(state.memories.filter((m) =>
+            !m.authorId || m.authorId.startsWith('guest-') || m.authorId === currentUser.id
+          ));
+        }
+      }
+
+      // 仅迁移属于当前用户或游客创建的记忆（绝不迁移其他用户的）
+      const pending = state.memories.filter((memory) =>
+        (!memory.migrated || memory.pendingSync || isDataUrl(memory.photoUrl)) &&
+        (!memory.authorId || memory.authorId.startsWith('guest-') || memory.authorId === currentUser.id)
+      );
       if (pending.length) toast('memory.migrating');
       const migrated = [];
       for (const memory of state.memories) {
@@ -398,6 +419,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       state.syncedUserId = currentUser.id;
       if (migratedCount) toast('memory.migration_done', { n: migratedCount });
     } catch (error) {
+      console.error('[memory] syncAfterLogin failed:', error);
       toast('memory.sync_pending');
       scheduleSyncRetry();
     } finally {
@@ -455,25 +477,24 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       return;
     }
     if (!btn) return;
-    const phone = state.auth && state.auth.phone ? state.auth.phone : '';
-    const label = loggedIn() && phone ? phone.slice(-4).padStart(4, '*') : getText('auth.btn_login');
-    btn.title = loggedIn() ? getText('auth.logged_in_as', { phone }) : getText('auth.btn_login');
+    const email = state.auth && state.auth.email ? state.auth.email : '';
+    const label = loggedIn() && email ? email : getText('auth.btn_login');
+    btn.title = loggedIn() ? getText('auth.logged_in_as', { email }) : getText('auth.btn_login');
     btn.innerHTML = `<span class="tool-ico">${authIcon()}</span><span>${esc(label)}</span>`;
   }
 
-  // ===== 记忆锚点图标：复用主锚点的菱形视觉语言，金色区分 =====
-  const MEMORY_INK = '#2B1C0E';   // 深墨描边（与主锚点一致）
-  const MEMORY_GOLD = '#C9A84C';  // 金色填充（记忆专属色）
-  const MEMORY_GLOW = '#D8B866';  // 金色光晕
+  // ===== 记忆锚点图标：爱心形状 + 朱砂红，与传统菱形锚点完全区分 =====
+  const MEMORY_INK = '#2B1C0E';     // 深墨描边
+  const MEMORY_RED = '#C44A3C';     // 朱砂红填充（记忆专属色）
+  const MEMORY_GLOW = '#D9695A';    // 朱砂光晕
 
   function makeMemoryDiamondIcon(size, fill, stroke) {
-    const c = size / 2;
+    const s = size;
     return (
       'data:image/svg+xml;charset=utf-8,' +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
-          `<path d="M${c} 1 L${size - 1} ${c} L${c} ${size - 1} L1 ${c} Z" fill="#FFFFFF"/>` +
-          `<path d="M${c} 5 L${size - 5} ${c} L${c} ${size - 5} L5 ${c} Z" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>` +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">` +
+          `<path d="M${s/2} ${s-3} C${s*0.12} ${s*0.58} ${s*0.08} ${s*0.28} ${s*0.28} ${s*0.18} C${s*0.42} ${s*0.10} ${s/2} ${s*0.22} ${s/2} ${s*0.34} C${s/2} ${s*0.22} ${s*0.58} ${s*0.10} ${s*0.72} ${s*0.18} C${s*0.92} ${s*0.28} ${s*0.88} ${s*0.58} ${s/2} ${s-3} Z" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>` +
           `</svg>`
       )
     );
@@ -495,7 +516,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     // 烘焙金色菱形图标（与主锚点 diamond-{theme} 完全同构，仅颜色不同）
     try {
       if (!state.map.hasImage('diamond-memory')) {
-        const img = await loadImage(makeMemoryDiamondIcon(32, MEMORY_GOLD, MEMORY_INK));
+        const img = await loadImage(makeMemoryDiamondIcon(32, MEMORY_RED, MEMORY_INK));
         state.map.addImage('diamond-memory', img);
       }
     } catch (e) {
@@ -551,12 +572,12 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         id: CORE_LAYER,
         type: 'circle',
         source: SOURCE_ID,
-        paint: {
-          'circle-color': MEMORY_GOLD,
-          'circle-stroke-color': MEMORY_INK,
-          'circle-stroke-width': 2,
-          'circle-opacity': 0.92,
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8],
+      paint: {
+        'circle-color': MEMORY_RED,
+        'circle-stroke-color': MEMORY_INK,
+        'circle-stroke-width': 2,
+        'circle-opacity': 0.92,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 8],
         },
       });
     }
@@ -648,9 +669,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     const shell = document.getElementById('memory-shell');
     if (shell) {
       shell.className = `memory-shell-open memory-mode-${type}`;
-      // pinned 模式下移除遮罩，让用户看到地图上新出现的锚点
-      if (type === 'pinned') {
+      // create、pinned、recollections 模式下移除遮罩并禁用shell的pointer-events，让用户可以拖动地图
+      if (type === 'create' || type === 'pinned' || type === 'recollections') {
         shell.classList.add('memory-no-scrim');
+        shell.classList.add('memory-shell-transparent');
       }
     }
     renderPanel();
@@ -684,6 +706,11 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   }
 
   function openCreatePanel(data = {}) {
+    // 游客模式下不允许创建记忆，提示登录
+    if (!state.auth || !state.auth.isLoggedIn()) {
+      toast('auth.login_required');
+      return;
+    }
     state.selectedFile = null;
     openPanel('create', data);
   }
@@ -696,6 +723,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     openPanel('list');
   }
 
+  function openRecollectionsPanel() {
+    openPanel('recollections');
+  }
+
   function openAuthPanel() {
     if (!state.auth || !state.auth.configured) return;
     state.authForm.message = '';
@@ -706,8 +737,8 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     return `
       <button class="memory-close" type="button" data-memory-close aria-label="${esc(getText('panel.close'))}">×</button>
       <div class="memory-panel-head">
-        <span class="memory-panel-dot" aria-hidden="true"></span>
-        <h2>${esc(title)}</h2>
+        <span class="memory-panel-seal" aria-hidden="true">忆</span>
+        <h2 class="memory-panel-title">${esc(title)}</h2>
       </div>
       ${body}`;
   }
@@ -726,12 +757,13 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         ${memory.note ? `<p class="memory-pinned-note">${esc(memory.note)}</p>` : ''}
         ${memory.voiceUrl ? `<div class="memory-pinned-voice"><audio controls src="${esc(memory.voiceUrl)}"></audio></div>` : ''}
         <div class="memory-pinned-coord">
-          <span class="memory-pinned-mark" aria-hidden="true">📍</span>
+          <span class="memory-pinned-mark" aria-hidden="true"></span>
           <span>${esc(Number(memory.lat).toFixed(5))}, ${esc(Number(memory.lng).toFixed(5))}</span>
         </div>
         <p class="memory-pinned-hint">${esc(getText('memory.pinned_hint'))}</p>
         <div class="memory-pinned-actions">
           <button class="memory-pinned-another" type="button" id="memory-pinned-another">${esc(getText('memory.pinned_another'))}</button>
+          <button class="memory-pinned-browse" type="button" id="memory-pinned-browse">${esc(getText('memory.pinned_browse'))}</button>
           <button class="memory-pinned-exit" type="button" data-memory-close>${esc(getText('memory.pinned_exit'))}</button>
         </div>
       </div>`);
@@ -740,6 +772,13 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (anotherBtn) {
       anotherBtn.addEventListener('click', () => {
         openCreatePanel({ lat: memory.lat, lng: memory.lng, linkedAnchorId: memory.linkedAnchorId || null });
+      });
+    }
+    // 「继续浏览地图」按钮 → 关闭面板，回到地图浏览
+    const browseBtn = panel.querySelector('#memory-pinned-browse');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', () => {
+        closePanel();
       });
     }
   }
@@ -751,6 +790,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (type === 'create') renderCreatePanel(panel, data);
     if (type === 'detail') renderDetailPanel(panel, data.id);
     if (type === 'list') renderListPanel(panel);
+    if (type === 'recollections') renderRecollectionsPanel(panel);
     if (type === 'auth') renderAuthPanel(panel);
     if (type === 'pinned') renderPinnedPanel(panel, data.memory);
     panel.querySelectorAll('[data-memory-close]').forEach((btn) => btn.addEventListener('click', closePanel));
@@ -758,30 +798,24 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   function renderCreatePanel(panel, data) {
     const anchor = data.linkedAnchorId ? anchorById(data.linkedAnchorId) : null;
-    const remaining = getRemainingQuota(state.memories);
-    const quotaHtml = remaining > 0
-      ? `<div class="memory-create-quota">${esc(getText('memory.remaining_today', { n: remaining }))}</div>`
-      : `<div class="memory-create-quota">${esc(getText('memory.limit_reached'))}</div>`;
-    const disabled = remaining <= 0 ? 'disabled' : '';
 
     panel.innerHTML = panelChrome(getText('memory.create_title'), `
       <div class="memory-create-list-entry">
         <button type="button" id="memory-show-list">${esc(getText('memory.btn'))} (${state.memories.length})</button>
       </div>
-      ${quotaHtml}
       <form class="memory-form" id="memory-create-form">
-        <div class="memory-create-media" id="memory-media-area">
+        <div class="memory-create-media-combined" id="memory-media-area">
           <div class="memory-create-media-empty" id="memory-media-empty">
-            <span class="ink-cam-icon" aria-hidden="true">📷</span>
+            <span class="ink-cam-icon" aria-hidden="true"></span>
             <span>${esc(getText('memory.create_hint'))}</span>
           </div>
           <img class="memory-create-media-preview" id="memory-media-preview" alt="" hidden />
           <video class="memory-create-media-preview" id="memory-video-preview" hidden muted playsinline></video>
-        </div>
-        <div class="memory-create-media-actions">
-          <button class="memory-create-media-btn" type="button" data-media="photo" ${disabled}>${esc(getText('memory.media_photo'))}</button>
-          <button class="memory-create-media-btn" type="button" data-media="album" ${disabled}>${esc(getText('memory.media_album'))}</button>
-          ${loggedIn() ? `<button class="memory-create-media-btn" type="button" data-media="video" ${disabled}>${esc(getText('memory.media_video'))}</button>` : ''}
+          <div class="memory-create-media-actions">
+            <button class="memory-create-media-btn" type="button" data-media="photo">${esc(getText('memory.media_photo'))}</button>
+            <button class="memory-create-media-btn" type="button" data-media="album">${esc(getText('memory.media_album'))}</button>
+            ${loggedIn() ? `<button class="memory-create-media-btn" type="button" data-media="video">${esc(getText('memory.media_video'))}</button>` : ''}
+          </div>
         </div>
         <input type="file" id="memory-photo-input" accept="image/*" capture="environment" hidden />
         <input type="file" id="memory-album-input" accept="image/*" hidden />
@@ -789,7 +823,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
         <div class="memory-create-voice" id="memory-voice-area">
           <div class="memory-create-voice-bar">
-            <button class="memory-create-voice-btn" type="button" id="memory-voice-record" ${disabled}>${esc(getText('memory.voice_hint'))}</button>
+            <button class="memory-create-voice-btn" type="button" id="memory-voice-record">${esc(getText('memory.voice_hint'))}</button>
             <span class="memory-create-voice-timer" id="memory-voice-timer">0s</span>
             <span class="memory-create-voice-max">${esc(getText('memory.voice_max'))}</span>
           </div>
@@ -798,13 +832,13 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
         <label class="memory-field">
           <span>${esc(getText('memory.note_label'))}</span>
-          <textarea id="memory-note-input" maxlength="${MAX_NOTE_LENGTH}" placeholder="${esc(getText('memory.note_placeholder'))}" ${disabled}></textarea>
+          <textarea id="memory-note-input" maxlength="${MAX_NOTE_LENGTH}" placeholder="${esc(getText('memory.note_placeholder'))}"></textarea>
         </label>
         <div class="memory-meta-line">
           <span>${esc(Number(data.lat).toFixed(5))}, ${esc(Number(data.lng).toFixed(5))}</span>
           ${anchor ? `<span>${esc(getText('memory.linked_anchor'))}: ${esc(pick(anchor.name))}</span>` : ''}
         </div>
-        <button class="memory-create-publish" type="submit" ${disabled}>${esc(getText('memory.publish'))}</button>
+        <button class="memory-create-publish" type="submit">${esc(getText('memory.publish'))}</button>
       </form>`);
 
     // 临时状态
@@ -1067,14 +1101,286 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     });
   }
 
+  // ===== 我的回忆面板 =====
+  function renderRecollectionsPanel(panel) {
+    const total = state.memories.length;
+    const photoCount = state.memories.filter(m => m.photoUrl).length;
+    const voiceCount = state.memories.filter(m => m.voiceUrl).length;
+
+    const items = state.memories.map((memory) => {
+      const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+      const anchorName = anchor ? pick(anchor.name) : '';
+      const thumb = memory.photoUrl
+        ? (memory.mediaType === 'video'
+          ? `<div class="recollect-thumb-wrap"><img src="${esc(memory.photoUrl)}" alt="" onerror="this.style.display='none'" /><span class="recollect-video-badge">▶</span></div>`
+          : `<img src="${esc(memory.photoUrl)}" alt="" onerror="this.style.display='none'" />`)
+        : `<span class="memory-list-thumb-fallback">忆</span>`;
+      const voiceTag = memory.voiceUrl
+        ? `<span class="recollect-voice-tag">🎙 ${esc(getText('recollect.has_voice'))}</span>`
+        : '';
+      return `
+        <div class="recollect-item" data-memory-id="${esc(memory.id)}">
+          <div class="recollect-thumb">${thumb}</div>
+          <div class="recollect-body">
+            <p class="recollect-note">${esc(memory.note || getText('memory.note_placeholder'))}</p>
+            <div class="recollect-meta">
+              <span class="recollect-date">${esc(formatDate(memory.createdAt))}</span>
+              ${anchorName ? `<span class="recollect-anchor">📍 ${esc(anchorName)}</span>` : ''}
+              <span class="recollect-coord">${esc(Number(memory.lat).toFixed(4))}, ${esc(Number(memory.lng).toFixed(4))}</span>
+              ${voiceTag}
+            </div>
+          </div>
+          <button class="recollect-share-btn" type="button" data-share-id="${esc(memory.id)}">${esc(getText('recollect.share'))}</button>
+        </div>`;
+    }).join('');
+
+    panel.innerHTML = panelChrome(getText('recollect.title'), `
+      <div class="recollect-summary">
+        <div class="recollect-stat">
+          <span class="recollect-stat-num">${total}</span>
+          <span class="recollect-stat-label">${esc(getText('recollect.total_memories'))}</span>
+        </div>
+        <div class="recollect-stat">
+          <span class="recollect-stat-num">${photoCount}</span>
+          <span class="recollect-stat-label">${esc(getText('recollect.photos'))}</span>
+        </div>
+        <div class="recollect-stat">
+          <span class="recollect-stat-num">${voiceCount}</span>
+          <span class="recollect-stat-label">${esc(getText('recollect.voices'))}</span>
+        </div>
+      </div>
+      <div class="recollect-list">
+        ${total ? items : `<div class="memory-empty">${esc(getText('memory.empty'))}</div>`}
+      </div>
+      ${total ? `
+        <div class="recollect-actions">
+          <button class="recollect-postcard-btn" type="button" id="recollect-postcard">${esc(getText('recollect.make_postcard'))}</button>
+        </div>` : ''}
+    `);
+
+    // 点击条目 → 展开详情
+    panel.querySelectorAll('.recollect-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        if (e.target.closest('.recollect-share-btn')) return;
+        openDetailPanel(item.dataset.memoryId);
+      });
+    });
+
+    // 分享按钮
+    panel.querySelectorAll('.recollect-share-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openShareCard(btn.dataset.shareId);
+      });
+    });
+
+    // 明信片按钮
+    const postcardBtn = panel.querySelector('#recollect-postcard');
+    if (postcardBtn) {
+      postcardBtn.addEventListener('click', () => openPostcardPanel());
+    }
+  }
+
+  // ===== 分享卡片 =====
+  function openShareCard(memoryId) {
+    const memory = state.memories.find(m => m.id === memoryId);
+    if (!memory) return;
+    const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+    const anchorName = anchor ? pick(anchor.name) : getText('recollect.free_explore');
+
+    // AI 生成感悟文案（基于记忆内容 + 关联锚点）
+    const aiQuote = generateAIQuote(memory, anchor);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'recollect-share-overlay';
+    overlay.innerHTML = `
+      <div class="recollect-share-card" id="recollect-share-card">
+        <button class="recollect-share-close" type="button" id="recollect-share-close">×</button>
+        <div class="recollect-share-inner">
+          ${memory.photoUrl ? `<div class="recollect-share-photo" style="background-image:url('${esc(memory.photoUrl)}')"></div>` : '<div class="recollect-share-photo recollect-share-photo-empty"><span>忆</span></div>'}
+          <div class="recollect-share-content">
+            <div class="recollect-share-stamp">${esc(getText('recollect.share_stamp'))}</div>
+            <p class="recollect-share-note">${esc(memory.note || getText('memory.note_placeholder'))}</p>
+            <div class="recollect-share-ai">
+              <span class="recollect-share-ai-label">✦ ${esc(getText('recollect.ai_insight'))}</span>
+              <p class="recollect-share-ai-text">${esc(aiQuote)}</p>
+            </div>
+            <div class="recollect-share-footer">
+              <span class="recollect-share-loc">${esc(anchorName)}</span>
+              <span class="recollect-share-coord">${esc(Number(memory.lat).toFixed(4))}°N, ${esc(Number(memory.lng).toFixed(4))}°E</span>
+              <span class="recollect-share-date">${esc(formatDate(memory.createdAt))}</span>
+            </div>
+          </div>
+        </div>
+        <div class="recollect-share-actions">
+          <button class="recollect-share-download" type="button" id="recollect-share-download">${esc(getText('recollect.download_image'))}</button>
+          <button class="recollect-share-native" type="button" id="recollect-share-native">${esc(getText('recollect.share_now'))}</button>
+        </div>
+      </div>`;
+    state.root.appendChild(overlay);
+
+    overlay.querySelector('#recollect-share-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    overlay.querySelector('#recollect-share-download').addEventListener('click', () => {
+      downloadShareCardAsImage(overlay.querySelector('#recollect-share-card'), `湾区罗盘-记忆-${formatDate(memory.createdAt)}.png`);
+    });
+
+    overlay.querySelector('#recollect-share-native').addEventListener('click', () => {
+      if (navigator.share) {
+        navigator.share({ title: getText('recollect.title'), text: memory.note || getText('recollect.share_stamp'), url: window.location.href });
+      } else {
+        // 降级：复制文字
+        const text = `${memory.note || ''}\n${anchorName}\n${getText('recollect.share_stamp')}`;
+        navigator.clipboard?.writeText(text).then(() => toast('recollect.copied')).catch(() => {});
+      }
+    });
+  }
+
+  // AI 感悟生成（基于记忆内容 + 锚点信息，模板化生成诗意文案）
+  function generateAIQuote(memory, anchor) {
+    const quotes = {
+      zh: [
+        '每一处足迹，都是与这片土地的一次对话。',
+        '记忆如墨，晕染在大湾区的山水之间。',
+        '此刻定格，将成为未来回望时的一盏灯。',
+        '行走的意义，不在终点，在每一次驻足。',
+        '你在这里留下的不只是影像，是一段与城市的缘分。',
+      ],
+      en: [
+        'Every footprint is a conversation with this land.',
+        'Memory flows like ink across the Bay Area\'s landscape.',
+        'This moment, frozen, becomes a lantern for future reflection.',
+        'The meaning of travel lies not in arrival, but in every pause.',
+        'What you leave here is not just an image, but a bond with the city.',
+      ],
+      ja: [
+        '一つ一つの足跡は、この土地との対話です。',
+        '記憶は墨のように、大湾区の山水に染み渡ります。',
+        'この瞬間は、未来の振り返りのための灯となります。',
+        '旅の意味は目的地ではなく、立ち止まる瞬間にあります。',
+      ],
+      ko: [
+        '모든 발자국은 이 땅과의 대화입니다.',
+        '기억은 잉크처럼 만만지구의 산수에 번져갑니다.',
+        '이 순간은 미래의 돌아봄을 위한 등불이 됩니다.',
+      ],
+      ru: [
+        'Каждый след — это разговор с этой землёй.',
+        'Память течёт как чернила по пейзажу Большого залива.',
+        'Этот миг станет фонарём для будущих воспоминаний.',
+      ],
+      es: [
+        'Cada huella es una conversación con esta tierra.',
+        'La memoria fluye como tinta por el paisaje del Gran Bahía.',
+        'Este instante se convertirá en una linterna para el futuro.',
+      ],
+    };
+    const lang = getLang();
+    const pool = quotes[lang] || quotes.zh;
+    // 用 memory.id 的 hash 确保同一条记忆总是生成相同文案
+    const hash = memory.id.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0x7fffffff, 0);
+    return pool[hash % pool.length];
+  }
+
+  // ===== 明信片生成 =====
+  function openPostcardPanel() {
+    const memories = state.memories;
+    if (!memories.length) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'recollect-share-overlay';
+    overlay.innerHTML = `
+      <div class="recollect-postcard" id="recollect-postcard-card">
+        <button class="recollect-share-close" type="button" id="recollect-postcard-close">×</button>
+        <div class="postcard-inner">
+          <div class="postcard-front">
+            <div class="postcard-header">
+              <span class="postcard-brand">${esc(getText('recollect.postcard_title'))}</span>
+              <span class="postcard-stamp">郵</span>
+            </div>
+            <div class="postcard-collage" id="postcard-collage">
+              ${memories.slice(0, 4).map(m => m.photoUrl
+                ? `<div class="postcard-cell" style="background-image:url('${esc(m.photoUrl)}')"></div>`
+                : `<div class="postcard-cell postcard-cell-empty"><span>忆</span></div>`
+              ).join('')}
+            </div>
+            <div class="postcard-summary">
+              <p class="postcard-summary-text">${esc(getText('recollect.postcard_summary', { n: memories.length }))}</p>
+              <p class="postcard-ai-quote" id="postcard-ai-quote">✦ ${esc(generateJourneyQuote(memories))}</p>
+            </div>
+            <div class="postcard-footer">
+              <span class="postcard-date">${esc(formatDate(new Date().toISOString()))}</span>
+              <span class="postcard-brand-mini">湾区罗盘 · Bay Compass</span>
+            </div>
+          </div>
+        </div>
+        <div class="recollect-share-actions">
+          <button class="recollect-share-download" type="button" id="recollect-postcard-download">${esc(getText('recollect.download_image'))}</button>
+        </div>
+      </div>`;
+    state.root.appendChild(overlay);
+
+    overlay.querySelector('#recollect-postcard-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    overlay.querySelector('#recollect-postcard-download').addEventListener('click', () => {
+      downloadShareCardAsImage(overlay.querySelector('#recollect-postcard-card'), '湾区罗盘-明信片.png');
+    });
+  }
+
+  // 旅程总结 AI 文案
+  function generateJourneyQuote(memories) {
+    const n = memories.length;
+    const hasVoice = memories.some(m => m.voiceUrl);
+    const hasAnchor = memories.some(m => m.linkedAnchorId);
+    const templates = {
+      zh: [
+        `这${n}处印记，串联起你与大湾区的一段独属旅程。`,
+        `从第一处驻足到此刻，你已在这片土地留下${n}个故事。`,
+        `${n}个瞬间，${hasVoice ? '有声音的温度' : '有影像的重量'}，${hasAnchor ? '有锚点的指引' : '有自由的脚步'}——这是你的湾区记忆。`,
+      ],
+      en: [
+        `These ${n} marks trace your unique journey across the Greater Bay Area.`,
+        `From first pause to now, you've left ${n} stories on this land.`,
+        `${n} moments, ${hasVoice ? 'warm with voice' : 'weighted with images'}, ${hasAnchor ? 'guided by anchors' : 'free in footsteps'} — your Bay Area memory.`,
+      ],
+    };
+    const lang = getLang();
+    const pool = templates[lang] || templates.zh;
+    return pool[n % pool.length];
+  }
+
+  // 下载卡片为图片（使用 Canvas 截图）
+  function downloadShareCardAsImage(cardEl, filename) {
+    import('https://html2canvas.hertzen.com/dist/html2canvas.min.js').then(({ default: html2canvas }) => {
+      html2canvas(cardEl, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: true }).then(canvas => {
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          toast('recollect.downloaded');
+        });
+      }).catch(() => {
+        // 降级：提示截图
+        toast('recollect.screenshot_hint');
+      });
+    }).catch(() => {
+      toast('recollect.screenshot_hint');
+    });
+  }
+
   function renderAuthPanel(panel) {
     const logged = loggedIn();
-    const phone = state.auth && state.auth.phone ? state.auth.phone : '';
+    const email = state.auth && state.auth.email ? state.auth.email : '';
     const message = state.authForm.message ? `<p class="auth-message">${esc(state.authForm.message)}</p>` : '';
     const body = logged
       ? `
         <div class="auth-benefits">
-          <p>${esc(getText('auth.logged_in_as', { phone }))}</p>
+          <p>${esc(getText('auth.logged_in_as', { email }))}</p>
           <span>${esc(getText('auth.login_benefit_1'))}</span>
           <span>${esc(getText('auth.login_benefit_2'))}</span>
           <span>${esc(getText('auth.login_benefit_3'))}</span>
@@ -1088,19 +1394,15 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
             <span>${esc(getText('auth.login_benefit_3'))}</span>
           </div>
           <label class="memory-field">
-            <span>${esc(getText('auth.phone_label'))}</span>
-            <div class="auth-phone-row">
-              <select id="auth-region">${PHONE_REGIONS.map((region) => `<option value="${region}" ${region === state.authForm.region ? 'selected' : ''}>${region}</option>`).join('')}</select>
-              <input id="auth-phone" inputmode="tel" autocomplete="tel" value="${esc(state.authForm.phone)}" />
-            </div>
+            <span>${esc(getText('auth.email_label'))}</span>
+            <input id="auth-email" type="email" inputmode="email" autocomplete="email" value="${esc(state.authForm.email || '')}" />
           </label>
-          ${state.authForm.stage === 'code' ? `
-            <label class="memory-field">
-              <span>${esc(getText('auth.code_label'))}</span>
-              <input id="auth-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="${esc(state.authForm.code)}" />
-            </label>` : ''}
+          <label class="memory-field">
+            <span>${esc(getText('auth.password_label'))}</span>
+            <input id="auth-password" type="password" autocomplete="current-password" value="${esc(state.authForm.password || '')}" />
+          </label>
           ${message}
-          <button class="memory-primary" type="submit">${esc(getText(state.authForm.stage === 'code' ? 'auth.verify' : 'auth.send_code'))}</button>
+          <button class="memory-primary" type="submit">${esc(getText('auth.signin'))}</button>
         </form>`;
     panel.innerHTML = panelChrome(getText('auth.title'), body);
     const logout = panel.querySelector('#auth-logout-btn');
@@ -1109,8 +1411,15 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
         try {
           await state.auth.signOut();
           state.syncedUserId = null;
+          // 关键：在reload之前显式清除localStorage中的记忆锚点
+          // 防止reload后readLocalMemories读到上一个用户的数据
+          try { localStorage.removeItem(getStorageKey()); } catch (_) {}
+          _currentUserId = null;
+          state.memories = [];
+          updateMapSource();
           updateAuthButton();
           closePanel();
+          window.location.reload();
         } catch (error) {
           toast('auth.code_error');
         }
@@ -1121,23 +1430,14 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (form) {
       form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        state.authForm.region = panel.querySelector('#auth-region').value;
-        state.authForm.phone = panel.querySelector('#auth-phone').value.trim();
-        const phoneFull = normalizePhone(state.authForm.region, state.authForm.phone);
+        state.authForm.email = panel.querySelector('#auth-email').value.trim();
+        state.authForm.password = panel.querySelector('#auth-password').value;
         try {
-          if (state.authForm.stage !== 'code') {
-            await state.auth.sendOtp(phoneFull);
-            state.authForm.stage = 'code';
-            state.authForm.message = getText('auth.code_sent');
-            renderPanel();
-            return;
-          }
-          state.authForm.code = panel.querySelector('#auth-code').value.trim();
-          await state.auth.verifyOtp(phoneFull, state.authForm.code);
+          await state.auth.signIn(state.authForm.email, state.authForm.password);
           await syncAfterLogin();
           closePanel();
         } catch (error) {
-          state.authForm.message = getText('auth.code_error');
+          state.authForm.message = getText('auth.auth_error');
           renderPanel();
         }
       });
@@ -1145,12 +1445,6 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   }
 
   async function createMemory({ lat, lng, linkedAnchorId, note, file, mediaType, voiceBlob }) {
-    // 每日限额检查
-    if (getRemainingQuota(state.memories) <= 0) {
-      toast('memory.limit_reached');
-      return;
-    }
-
     // 媒体校验
     if (!file && !mediaType) {
       toast('memory.media_required');
@@ -1201,7 +1495,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
       updatedAt: now,
       linkedAnchorId,
       authorId: currentUser ? currentUser.id : ensureDeviceId(),
-      authorName: currentUser ? (currentUser.phone || '') : '',
+      authorName: currentUser ? (currentUser.email || '') : '',
     });
     if (loggedIn()) {
       try {
@@ -1324,9 +1618,14 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     if (!state.auth) return;
     state.auth.subscribe((snapshot, event) => {
       updateAuthButton();
-      if (snapshot.session && (event === 'SIGNED_IN' || event === 'READY')) syncAfterLogin();
+      const isLoggedIn = snapshot.session || snapshot.user;
+      if (isLoggedIn && (event === 'SIGNED_IN' || event === 'READY')) syncAfterLogin();
       if (event === 'SIGNED_OUT') {
         state.syncedUserId = null;
+        // 关键：登出时清除该用户的所有记忆锚点，防止下一个用户看到
+        try { localStorage.removeItem(getStorageKey()); } catch (_) {}
+        _currentUserId = null;
+        setMemories([]);
         if (state.panel && state.panel.type === 'auth') renderPanel();
       }
     });
@@ -1341,6 +1640,10 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     closePanel,
     openCreatePanel,
     openListPanel,
+    openRecollectionsPanel,
+    getMemories() {
+      return state.memories;
+    },
     init() {
       ensureDeviceId();
       renderShell();

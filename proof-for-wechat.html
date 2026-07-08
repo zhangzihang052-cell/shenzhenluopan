@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; background: #f5f5f5; padding: 40px; margin: 0; }
+  .proof-card { background: white; border-radius: 12px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .proof-card h2 { font-size: 18px; color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 8px; margin: 0 0 16px 0; }
+  .proof-card h2 .num { background: #4CAF50; color: white; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 8px; }
+  .info-row { display: flex; margin-bottom: 8px; font-size: 14px; }
+  .info-label { color: #888; width: 120px; flex-shrink: 0; }
+  .info-value { color: #333; font-weight: 500; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; overflow-x: auto; margin: 8px 0; }
+  .url { color: #1565C0; word-break: break-all; }
+  .green { color: #4CAF50; }
+  .title { text-align: center; font-size: 24px; font-weight: bold; color: #333; margin-bottom: 32px; }
+  .subtitle { text-align: center; font-size: 14px; color: #888; margin-top: -20px; margin-bottom: 32px; }
+</style>
+</head>
+<body>
+  <div class="title">湾区罗盘 · 微信解封申诉证明材料</div>
+  <div class="subtitle">bay-compass.pages.dev — 大湾区历史文化百科展示项目</div>
+
+  <div class="proof-card">
+    <h2><span class="num">1</span>线上页面验证</h2>
+    <div class="info-row"><span class="info-label">网站地址</span><span class="info-value url">https://bay-compass.pages.dev</span></div>
+    <div class="info-row"><span class="info-label">网站性质</span><span class="info-value">纯前端静态展示，面向 APEC 外宾的大湾区历史文化百科</span></div>
+    <div class="info-row"><span class="info-label">功能模块</span><span class="info-value">3D 交互地图 · 64 处文化锚点 · 6 种语言 · 历史叙事副本</span></div>
+    <div class="info-row"><span class="info-label">交互功能</span><span class="info-value">无用户生成内容 · 无评论 · 无交互式表单</span></div>
+    <div class="info-row"><span class="info-label">HTTP 状态</span><span class="info-value green">✅ 200 OK — 页面正常加载</span></div>
+  </div>
+
+  <div class="proof-card">
+    <h2><span class="num">2</span>Cloudflare Pages 项目归属验证</h2>
+    <pre>⛅️ wrangler 4.108.0
+────────────────────
+┌──────────────┬───────────────────────┬──────────────┬───────────────┐
+│ Project Name │ Project Domains       │ Git Provider │ Last Modified │
+├──────────────┼───────────────────────┼──────────────┼───────────────┤
+│ bay-compass  │ bay-compass.pages.dev │ No           │ 7 minutes ago │
+└──────────────┴───────────────────────┴──────────────┴───────────────┘</pre>
+    <div class="info-row"><span class="info-label">项目名称</span><span class="info-value">bay-compass</span></div>
+    <div class="info-row"><span class="info-label">绑定域名</span><span class="info-value url">bay-compass.pages.dev</span></div>
+    <div class="info-row"><span class="info-label">部署方式</span><span class="info-value">wrangler pages deploy（直接上传，非 Git 连接）</span></div>
+    <div class="info-row"><span class="info-label">文件总数</span><span class="info-value">4,400 个文件已上传部署</span></div>
+  </div>
+
+  <div class="proof-card">
+    <h2><span class="num">3</span>微信验证文件部署验证</h2>
+    <div class="info-row"><span class="info-label">验证文件 URL</span><span class="info-value url">https://bay-compass.pages.dev/faf89d100b117992754859bb37204a2d.txt</span></div>
+    <pre>HTTP/2 200
+content-type: text/plain; charset=utf-8
+server: cloudflare
+cf-ray: a17c48516c2ddd65-HKG
+
+--- 文件内容 ---
+cb18d1361c9c1587ac0e1982420409f53a20d27d</pre>
+    <div class="info-row"><span class="info-label">文件名</span><span class="info-value">faf89d100b117992754859bb37204a2d.txt</span></div>
+    <div class="info-row"><span class="info-label">文件内容</span><span class="info-value">cb18d1361c9c1587ac0e1982420409f53a20d27d</span></div>
+    <div class="info-row"><span class="info-label">HTTP 状态</span><span class="info-value green">✅ 200 OK — 验证文件可正常访问</span></div>
+  </div>
+</body>
+</html>

@@ -3,6 +3,7 @@
 import { ANCHORS } from './data/anchors.js?rev=classification-1';
 import {
   THEMES,
+  THEME_ORDER,
   GLOBAL_VIEW,
   FOCUS_VIEW,
   BAY_AREA_BOUNDS,
@@ -194,7 +195,7 @@ function anchorsToGeoJSON() {
         label: anchorLabelName(a),
         labelTier: anchorLabelTier(a),
         theme: a.theme,
-        color: THEMES[a.theme] ? THEMES[a.theme].color : '#C9A84C',
+        color: THEMES[a.theme] ? THEMES[a.theme].color : '#9a7b32',
         worldImpact: a.worldImpact ? 1 : 0,
       },
     })),
@@ -256,7 +257,7 @@ function simplifyBasemap(map) {
         continue;
       }
 
-      // ⑥ 道路：case(描边) 用淡宣纸色让路“浮”出，fill(路面) 用赭墨勾线
+      // ⑥ 道路：case(描边) 用淡宣纸色让路"浮"出，fill(路面) 用赭墨勾线
       if (type === 'line' && has(id, 'road', 'bridge', 'tunnel', 'transportation')) {
         if (has(id, 'case')) {
           map.setPaintProperty(layer.id, 'line-color', '#EFE6CF');
@@ -426,19 +427,19 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
     add3DBuildings(map);
     initDeck();
 
-    // 为每个主题各烘焙一枚"主题色实心 + 深墨描边"菱形图标，
-    // 确保浅色宣纸底图上清晰可辨，并保留主题色区分（icon-color 仅对 SDF 生效，故不可依赖）
+    // 文化锚点按主题着色：为每个主题烘焙一枚菱形图标，深墨描边确保浅色宣纸底图上清晰可辨。
+    // 记忆/好友锚点由各自模块烘焙，不在此处理。
     try {
       const INK = '#2B1C0E'; // 深墨描边色
-      for (const key of Object.keys(THEMES)) {
+      for (const key of THEME_ORDER) {
         const imgId = `diamond-${key}`;
         if (map.hasImage(imgId)) continue;
         const themeImg = await loadImage(makeDiamondIcon(32, THEMES[key].color, INK));
         map.addImage(imgId, themeImg);
       }
-      // 兜底通用图标（主题缺失时使用）
+      // 兜底通用图标（theme 缺失时使用，金色）
       if (!map.hasImage('diamond-core')) {
-        const fallback = await loadImage(makeDiamondIcon(32, '#C9A84C', INK));
+        const fallback = await loadImage(makeDiamondIcon(32, '#9a7b32', INK));
         map.addImage('diamond-core', fallback);
       }
     } catch (e) {
@@ -487,8 +488,8 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
         type: 'symbol',
         source: SOURCE_ID,
         layout: {
-          // 按主题引用各自烘焙的主题色图标（白晕+实心+深墨描边）；
-          // icon-color 对非 SDF 图标无效，故主题色直接烘焙进图标本身
+          // 按主题引用各自烘焙的菱形图标；
+          // icon-color 对非 SDF 图标无效，故颜色直接烘焙进图标本身
           'icon-image': ['concat', 'diamond-', ['get', 'theme']],
           'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.55, 14, 1.05],
           'icon-allow-overlap': true,
@@ -1165,26 +1166,14 @@ function buildController(ctx) {
     },
 
     /**
-     * 标记已通关锚点：在坐标右上方加一枚朱砂"✓"印章 marker。
+     * 标记已通关锚点（已停用：不再在主地图上添加"✓"印章，保持地图视觉层次简洁）。
+     * 保留接口兼容性，仅清理已有 marker。
      * @param {CulturalAnchor[]} anchors 全部锚点
      * @param {Set<string>|string[]} completedIds 已通关锚点 id
      */
     markCompleted(anchors, completedIds) {
       ctx.getStampMarkers().forEach((m) => m.remove());
-      const ids = completedIds instanceof Set ? completedIds : new Set(completedIds || []);
-      const markers = [];
-      anchors.forEach((a) => {
-        if (!ids.has(a.id)) return;
-        const el = document.createElement('div');
-        el.className = 'stamp-marker';
-        el.textContent = '✓';
-        el.title = (a.name && (a.name.zh || a.name.en)) || a.id;
-        const marker = new maplibregl.Marker({ element: el, anchor: 'bottom', offset: [13, -12] })
-          .setLngLat(a.coordinates)
-          .addTo(map);
-        markers.push(marker);
-      });
-      ctx.setStampMarkers(markers);
+      ctx.setStampMarkers([]);
     },
 
     /**

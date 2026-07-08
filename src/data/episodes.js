@@ -501,13 +501,6 @@ export const EPISODES = {
   // ============ M03 南头古城（古代文化）============
   M03: {
     immersiveMode: 'rpg-dialogue',
-    immersiveEntry: {
-      type: 'glb',
-      model: './public/assets/episodes/nantou-gate.glb',
-      title: { zh: '南头古城 · 千年门户', en: 'Nantou Ancient City · Millennium Gateway' },
-      label: { zh: '副本入口', en: 'Quest Gate' },
-      desc: { zh: '东官郡治所的城门正在展开，珠江口的潮声从远处涌来。', en: 'The gate of Dongguan Prefecture opens as the tide of the Pearl River estuary rises in the distance.' },
-    },
     rpg: {
       background: './public/assets/episodes/nantou/stage-bg.webp?v=m03-rpg-1',
       sceneName: { zh: '南头古城 · 千年门户', en: 'Nantou Ancient City · Millennium Gateway' },

@@ -1,4 +1,6 @@
-// Supabase account wrapper for no-build ESM usage.
+// 邮箱认证模块 —— 湾区罗盘
+// 使用 Supabase Auth 原生邮箱认证，无需 Edge Function 或短信服务
+
 const SUPABASE_ESM_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 function getConfig() {
@@ -16,9 +18,9 @@ export function createAuthController({ onChange } = {}) {
     client: null,
     configured: hasConfig(),
     error: null,
+    initPromise: null,
     ready: false,
-    session: null,
-    subscription: null,
+    user: null,
   };
 
   const emit = (event) => {
@@ -27,115 +29,118 @@ export function createAuthController({ onChange } = {}) {
       configured: state.configured,
       error: state.error,
       ready: state.ready,
-      session: state.session,
+      user: state.user,
+      session: state.user ? { user: state.user } : null,
     };
     if (onChange) onChange(snapshot, event);
     listeners.forEach((fn) => fn(snapshot, event));
   };
 
-  const ensureClient = async () => {
-    if (!state.ready) await api.init();
-    if (!state.client) throw new Error('supabase-unavailable');
-    return state.client;
-  };
-
   const api = {
-    get client() {
-      return state.client;
-    },
-    get configured() {
-      return state.configured;
-    },
-    get ready() {
-      return state.ready;
-    },
-    get session() {
-      return state.session;
-    },
-    get user() {
-      return state.session && state.session.user ? state.session.user : null;
-    },
-    get phone() {
-      const user = api.user;
-      return (user && (user.phone || (user.user_metadata && user.user_metadata.phone))) || '';
-    },
-    isLoggedIn() {
-      return !!api.user;
-    },
-    subscribe(fn) {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
+    get client() { return state.client; },
+    get configured() { return state.configured; },
+    get ready() { return state.ready; },
+    get user() { return state.user; },
+    get session() { return state.user ? { user: state.user } : null; },
+    get email() { return state.user ? state.user.email || '' : ''; },
+    isLoggedIn() { return !!state.user; },
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+
     async init() {
       if (state.ready) return state;
-      state.configured = hasConfig();
-      if (!state.configured) {
-        state.ready = true;
-        emit('GUEST_MODE');
-        return state;
-      }
+      if (state.initPromise) return state.initPromise;
+      state.initPromise = (async () => {
+        state.configured = hasConfig();
+        if (!state.configured) {
+          state.ready = true;
+          emit('GUEST_MODE');
+          return state;
+        }
 
-      try {
-        const { createClient } = await import(SUPABASE_ESM_URL);
-        const cfg = getConfig();
-        state.client = createClient(cfg.url, cfg.anonKey, {
-          auth: {
-            autoRefreshToken: true,
-            detectSessionInUrl: false,
-            persistSession: true,
-          },
-        });
+        try {
+          const { createClient } = await import(SUPABASE_ESM_URL);
+          const cfg = getConfig();
+          state.client = createClient(cfg.url, cfg.anonKey, {
+            auth: {
+              autoRefreshToken: true,
+              detectSessionInUrl: true,
+              persistSession: true,
+            },
+          });
 
-        const { data, error } = await state.client.auth.getSession();
-        if (error) throw error;
-        state.session = data && data.session ? data.session : null;
+          // 恢复已有会话
+          const { data: { session } } = await state.client.auth.getSession();
+          if (session?.user) {
+            state.user = {
+              id: session.user.id,
+              email: session.user.email,
+            };
+          }
 
-        const { data: subData } = state.client.auth.onAuthStateChange((event, session) => {
-          state.session = session || null;
-          emit(event || 'AUTH_CHANGED');
-        });
-        state.subscription = subData && subData.subscription ? subData.subscription : null;
+          // 监听认证状态变化
+          state.client.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+              state.user = { id: session.user.id, email: session.user.email };
+              emit('SIGNED_IN');
+            } else {
+              state.user = null;
+              emit('SIGNED_OUT');
+            }
+          });
+        } catch (e) {
+          state.error = e;
+          console.warn('Supabase client 创建失败:', e);
+        }
+
         state.ready = true;
         emit('READY');
-      } catch (error) {
-        state.client = null;
-        state.configured = false;
-        state.error = error;
-        state.ready = true;
-        emit('AUTH_UNAVAILABLE');
-      }
-      return state;
-    },
-    async sendOtp(phone) {
-      const client = await ensureClient();
-      const { error } = await client.auth.signInWithOtp({ phone });
-      if (error) throw error;
-    },
-    async verifyOtp(phone, token) {
-      const client = await ensureClient();
-      const { data, error } = await client.auth.verifyOtp({
-        phone,
-        token,
-        type: 'sms',
+        return state;
+      })().finally(() => {
+        state.initPromise = null;
       });
-      if (error) throw error;
-      state.session = data && data.session ? data.session : state.session;
-      emit('SIGNED_IN');
-      return state.session;
+      return state.initPromise;
     },
-    async signOut() {
-      if (!state.client) return;
-      const { error } = await state.client.auth.signOut();
+
+    async signUp(email, password) {
+      if (!state.client) throw new Error('认证未初始化');
+      const { data, error } = await state.client.auth.signUp({ email, password });
       if (error) throw error;
-      state.session = null;
-      emit('SIGNED_OUT');
-    },
-    destroy() {
-      if (state.subscription && state.subscription.unsubscribe) {
-        state.subscription.unsubscribe();
+
+      // 某些配置下需要邮箱确认才能登录
+      if (data.user && !data.session) {
+        return { needsConfirm: true, email };
       }
-      listeners.clear();
+
+      if (data.session?.user) {
+        state.user = { id: data.session.user.id, email: data.session.user.email };
+        emit('SIGNED_IN');
+      }
+      return { needsConfirm: false, email };
     },
+
+    async signIn(email, password) {
+      if (!state.client) throw new Error('认证未初始化');
+      const { data, error } = await state.client.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // onAuthStateChange 通常已触发 SIGNED_IN，这里仅在未触发时补充
+      if (data.session?.user && !state.user) {
+        state.user = { id: data.session.user.id, email: data.session.user.email };
+        emit('SIGNED_IN');
+      }
+      return state.user;
+    },
+
+    async signOut() {
+      if (state.client) await state.client.auth.signOut();
+      // 仅在 state.user 尚未被 onAuthStateChange 清除时才手动 emit
+      // 避免 SIGNED_OUT 被触发两次
+      if (state.user) {
+        state.user = null;
+        emit('SIGNED_OUT');
+      }
+    },
+
+    destroy() { listeners.clear(); },
   };
 
   return api;
