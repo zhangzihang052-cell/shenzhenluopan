@@ -2,6 +2,50 @@
 /* 适用于手机横屏 / 平板竖屏 / 窄屏窗口 */
 /* 触发条件：max-width: 820px 且为触控设备，或 max-width: 1024px 且横屏 */
 
+body.mobile-app {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body.mobile-app #map,
+body.mobile-app #theme-overlay,
+body.mobile-app #deck-canvas,
+body.mobile-app #ornament-overlay,
+body.mobile-app #ui-root,
+body.mobile-app .loading-overlay {
+  position: absolute;
+  inset: 0;
+  max-width: none;
+}
+
+body.mobile-app #map,
+body.mobile-app #theme-overlay,
+body.mobile-app #deck-canvas,
+body.mobile-app #ornament-overlay,
+body.mobile-app .loading-overlay {
+  width: 100vw;
+  width: 100dvw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+body.mobile-app #ui-root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 20;
+  pointer-events: none;
+}
+
 @media (max-width: 820px),
        (max-width: 1024px) and (orientation: landscape) and (pointer: coarse) {
 

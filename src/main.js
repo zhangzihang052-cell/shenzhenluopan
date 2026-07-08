@@ -1,5 +1,5 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
-import { createMap, haversineKm } from './map.js?rev=v2-instant-open-1';
+import { createMap, haversineKm } from './map.js?rev=index-mobile-1';
 import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
 import { THEMES, OVERVIEW_MODE, TRAVEL_MODES, DEFAULT_LOCATION } from './data/themes.js?rev=clean-8';
 import { getText, pick } from './i18n.js?rev=account-1';
@@ -362,7 +362,8 @@ function boot() {
       : ANCHORS.filter((a) => a.theme === state.activeTheme).length;
 
   const isMobileAppView = () =>
-    window.matchMedia('(max-width: 820px)').matches;
+    window.matchMedia('(max-width: 820px)').matches ||
+    (document.body.classList.contains('mobile-app') && window.matchMedia('(pointer: coarse)').matches);
 
   // 注入 Haversine 给 UI 的附近计算
   setHaversine(haversineKm);

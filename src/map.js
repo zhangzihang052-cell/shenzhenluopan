@@ -724,7 +724,8 @@ function buildController(ctx) {
   }
 
   function isMobileAppView() {
-    return window.matchMedia('(max-width: 820px)').matches;
+    return window.matchMedia('(max-width: 820px)').matches ||
+      (document.body.classList.contains('mobile-app') && window.matchMedia('(pointer: coarse)').matches);
   }
 
   function pulseUserMarker() {
