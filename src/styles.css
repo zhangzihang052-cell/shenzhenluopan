@@ -9829,17 +9829,17 @@ body.compass-panel-open #geofence-toast.show {
     height: 7px;
   }
 
-  /* —— 对话框：核心修复——占满底部全宽，内容可滚动 —— */
+  /* —— 对话框：底部贴边，高度自适应内容，不浪费空间 —— */
   .rpg-dialogue {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100% !important;
     min-height: auto !important;
-    max-height: 52vh !important;
+    max-height: 38vh !important;
     border-radius: 12px 12px 0 0 !important;
     border: none !important;
-    padding: 22px 14px 12px !important;
+    padding: 18px 12px 8px !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     z-index: 10;
@@ -9849,7 +9849,7 @@ body.compass-panel-open #geofence-toast.show {
     border-radius: 9px;
   }
   .rpg-dialogue-npc {
-    padding-top: 26px !important;
+    padding-top: 20px !important;
   }
   .rpg-dialogue-player {
     left: 0 !important;
@@ -9903,11 +9903,11 @@ body.compass-panel-open #geofence-toast.show {
   /* —— 对话文本：确保不溢出 —— */
   .rpg-dialogue-copy {
     max-width: 100% !important;
-    gap: 3px;
+    gap: 2px;
   }
   .rpg-dialogue-copy p {
-    font-size: 12px;
-    line-height: 1.65;
+    font-size: 11px;
+    line-height: 1.5;
     word-break: break-word;
     overflow-wrap: break-word;
   }
@@ -9930,22 +9930,27 @@ body.compass-panel-open #geofence-toast.show {
     white-space: normal;
   }
 
-  /* —— 选项按钮：单列 —— */
+  /* —— 选项按钮：自适应排列，短选项可双列 —— */
   .rpg-options {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
     max-width: 100% !important;
     gap: 4px;
     margin-top: 5px;
   }
   .rpg-option {
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 4px 6px;
+    font-size: 10px;
+    gap: 5px;
   }
   .rpg-option b {
-    font-size: 10px;
+    font-size: 9px;
+    line-height: 1.3;
+    word-break: break-word;
   }
   .rpg-option span {
-    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
   }
 
   /* —— 操作按钮 —— */
@@ -9963,9 +9968,9 @@ body.compass-panel-open #geofence-toast.show {
   .rpg-clue-panel {
     left: 0 !important;
     right: 0 !important;
-    bottom: 52vh !important;
+    bottom: 38vh !important;
     width: 100% !important;
-    max-height: 28vh;
+    max-height: 24vh;
     overflow: auto;
     border-radius: 0;
     padding: 7px 14px;
@@ -10011,8 +10016,8 @@ body.compass-panel-open #geofence-toast.show {
     line-height: 1.5;
   }
   .rpg-dialogue {
-    max-height: 55vh !important;
-    padding: 18px 10px 8px !important;
+    max-height: 42vh !important;
+    padding: 14px 8px 6px !important;
   }
   .rpg-npc {
     width: 22% !important;
@@ -10025,7 +10030,7 @@ body.compass-panel-open #geofence-toast.show {
    横屏紧凑样式（手游级信息密度）
    置于 styles.css 最末尾 + ID 选择器，确保最高优先级覆盖
    ════════════════════════════════════════════════════════════════ */
-@media (orientation: landscape) and (max-height: 520px) {
+@media (orientation: landscape) and (max-height: 600px) {
   #memory-shell .memory-panel {
     right: 6px !important;
     bottom: max(6px, env(safe-area-inset-bottom)) !important;

@@ -2182,7 +2182,7 @@ body.mobile-app #ui-root {
    覆盖：记忆面板 / 好友面板 / 账号面板 / 信息面板 / 指南针面板
    策略：窄侧栏 + 微型字号 + 极限压缩留白 + 水平按钮排列
    ════════════════════════════════════════════════════════════════ */
-@media (orientation: landscape) and (max-height: 520px) {
+@media (orientation: landscape) and (max-height: 600px) {
 
   /* ═══ 记忆面板 ═══ */
   body.mobile-app .memory-panel,
