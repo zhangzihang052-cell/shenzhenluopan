@@ -770,10 +770,6 @@
     min-width: 320px;
   }
 
-  #rotate-hint {
-    display: none !important;
-  }
-
   #ui-root {
     overflow: hidden;
   }
