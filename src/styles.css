@@ -9718,9 +9718,9 @@ body.compass-panel-open #geofence-toast.show {
 /* ╔══════════════════════════════════════════════════════════════╗
    ║  RPG 剧情副本：手机横屏全面适配（置于文件末尾，确保覆盖桌面端）  ║
    ║  根因：移动端规则必须写在桌面端规则之后才能生效（CSS 层叠）      ║
-   ║  检测策略：pointer:coarse(触控) + max-height(矮屏) + landscape  ║
+   ║  检测策略：max-height(矮屏) + landscape（兼容触控与桌面预览）   ║
    ╚══════════════════════════════════════════════════════════════╝ */
-@media (pointer: coarse) and (max-height: 500px) and (orientation: landscape) {
+@media (max-height: 500px) and (orientation: landscape) {
   /* —— 容器：全屏，去掉圆角和边框 —— */
   .episode-scroll.is-rpg-dialogue {
     width: 100vw !important;
@@ -9836,10 +9836,10 @@ body.compass-panel-open #geofence-toast.show {
     bottom: 0 !important;
     width: 100% !important;
     min-height: auto !important;
-    max-height: 38vh !important;
+    max-height: 45vh !important;
     border-radius: 12px 12px 0 0 !important;
     border: none !important;
-    padding: 18px 12px 8px !important;
+    padding: 16px 12px 8px !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     z-index: 10;
@@ -9968,9 +9968,9 @@ body.compass-panel-open #geofence-toast.show {
   .rpg-clue-panel {
     left: 0 !important;
     right: 0 !important;
-    bottom: 38vh !important;
+    bottom: 45vh !important;
     width: 100% !important;
-    max-height: 24vh;
+    max-height: 22vh;
     overflow: auto;
     border-radius: 0;
     padding: 7px 14px;
@@ -9997,7 +9997,7 @@ body.compass-panel-open #geofence-toast.show {
 }
 
 /* ===== 超矮横屏（iPhone SE 等 max-height ≤ 380px）额外压缩 ===== */
-@media (pointer: coarse) and (max-height: 380px) and (orientation: landscape) {
+@media (max-height: 380px) and (orientation: landscape) {
   .rpg-scene-title {
     font-size: 13px;
   }
