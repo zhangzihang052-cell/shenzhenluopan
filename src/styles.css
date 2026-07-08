@@ -10257,4 +10257,108 @@ body.compass-panel-open #geofence-toast.show {
   .compass-content, .route-planner-content, .nearby-list {
     max-height: calc(100dvh - 80px) !important;
   }
+
+  /* ═══ 认证欢迎面板（welcome.js 渲染，独立于 #memory-shell）═══ */
+  .account-overlay {
+    align-items: flex-end !important;
+    justify-content: flex-end !important;
+    padding: 6px !important;
+    background: rgba(15, 21, 20, 0.58) !important;
+  }
+  .account-content {
+    width: min(300px, 42vw) !important;
+    max-width: min(300px, 42vw) !important;
+    max-height: calc(100dvh - 12px) !important;
+    border-radius: 8px !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+  }
+  .account-card {
+    min-height: auto !important;
+    padding: 10px 12px !important;
+    text-align: left !important;
+  }
+  .account-card::before,
+  .account-card::after {
+    display: none !important;
+  }
+  .account-seal {
+    position: static !important;
+    width: 28px !important;
+    height: 28px !important;
+    margin: 0 0 4px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .account-title {
+    font-size: 14px !important;
+    margin: 0 0 2px !important;
+  }
+  .account-sub {
+    font-size: 9px !important;
+    margin: 0 0 6px !important;
+    line-height: 1.3 !important;
+  }
+  .account-benefits {
+    gap: 2px !important;
+    margin: 0 0 6px !important;
+  }
+  .account-benefits span {
+    font-size: 9px !important;
+    padding: 1px 0 !important;
+  }
+  .account-benefits span::before {
+    width: 8px !important;
+    height: 8px !important;
+    margin-right: 4px !important;
+  }
+  .account-actions {
+    gap: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  .account-btn-primary,
+  .account-btn-guest {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+    border-radius: 5px !important;
+    border-width: 1px !important;
+  }
+  .account-guest-hint {
+    font-size: 8px !important;
+    line-height: 1.3 !important;
+    margin: 0 !important;
+  }
+  .account-close,
+  .account-back {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+    top: 4px !important;
+    right: 4px !important;
+  }
+  .account-back {
+    left: 4px !important;
+    top: 4px !important;
+  }
+  .account-form {
+    gap: 4px !important;
+  }
+  .account-field span {
+    font-size: 9px !important;
+  }
+  .account-field input {
+    min-height: 26px !important;
+    font-size: 11px !important;
+    padding: 3px 6px !important;
+    border-radius: 4px !important;
+    border-width: 1px !important;
+  }
+  .account-hint {
+    font-size: 8px !important;
+    margin: 2px 0 0 !important;
+  }
 }
