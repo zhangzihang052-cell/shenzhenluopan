@@ -4,7 +4,7 @@ import { EPISODES } from './data/episodes.js?rev=audio-sfx-1';
 import { getMascot } from './data/mascots.js?rev=mascot-set-1';
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
 import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
-import { getText, pick } from './i18n.js?rev=audio-sfx-1';
+import { getText, pick } from './i18n.js?rev=memory-ui-polish-1';
 import { fetchCloudData, pushProgressOnly, mergeProgress, setCloudConfig, clearCloudConfig, isCloudReady } from './cloud-sync.js?rev=cloud-1';
 
 const STORAGE_KEY = 'stc_progress';

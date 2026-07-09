@@ -382,6 +382,7 @@ export function createMap({ onSelect, onSelectForeign, onReady }) {
     bearing: GLOBAL_VIEW.bearing,
     attributionControl: false,
     antialias: true,
+    preserveDrawingBuffer: true,
     maxPitch: 75,
   });
 

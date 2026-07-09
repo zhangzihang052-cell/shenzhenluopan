@@ -1,6 +1,6 @@
 // 账户页面模块 —— 湾区罗盘
 // 提供邮箱注册+登录，以及访客模式
-import { getText } from './i18n.js?rev=welcome-6';
+import { getText } from './i18n.js?rev=memory-ui-polish-1';
 
 export function createWelcomeController({ auth, onLogin, onGuest }) {
   const state = {
@@ -25,7 +25,7 @@ export function createWelcomeController({ auth, onLogin, onGuest }) {
   // ---- 首页：登录 or 访客 ----
   function renderHome(content) {
     content.innerHTML = `
-      <div class="account-card">
+      <div class="account-card account-card-welcome">
         <button class="account-close" type="button" data-close>✕</button>
         <div class="account-seal">罗盘</div>
         <h1 class="account-title">${esc(getText('auth.welcome_title'))}</h1>
@@ -64,7 +64,7 @@ export function createWelcomeController({ auth, onLogin, onGuest }) {
     const isSignUp = state.mode === 'signup';
 
     content.innerHTML = `
-      <div class="account-card">
+      <div class="account-card account-card-auth">
         <button class="account-close" type="button" data-close>✕</button>
         <button class="account-back" type="button" id="account-back">←</button>
         <div class="account-seal">罗盘</div>
@@ -173,17 +173,17 @@ export function createWelcomeController({ auth, onLogin, onGuest }) {
   function renderAccount(content) {
     const email = auth.email || '';
     content.innerHTML = `
-      <div class="account-card">
+      <div class="account-card account-card-session">
         <button class="account-close" type="button" data-close>✕</button>
         <div class="account-seal">罗盘</div>
         <h1 class="account-title">${esc(getText('auth.account'))}</h1>
-        <p class="account-sub" style="word-break:break-all">${esc(email)}</p>
+        <p class="account-sub account-email">${esc(email)}</p>
         <div class="account-benefits">
           <span>${esc(getText('auth.login_benefit_1'))}</span>
           <span>${esc(getText('auth.login_benefit_2'))}</span>
           <span>${esc(getText('auth.login_benefit_3'))}</span>
         </div>
-        <div class="account-actions" style="margin-top:24px">
+        <div class="account-actions account-actions-session">
           <button class="account-btn-guest" type="button" id="account-logout">
             ${esc(getText('auth.btn_logout'))}
           </button>

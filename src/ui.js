@@ -2,9 +2,9 @@
 // build: 2026-06-18
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
 import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
-import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=audio-sfx-1';
+import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=memory-ui-polish-1';
 import { hasEpisode } from './data/episodes.js?rev=audio-sfx-1';
-import { isCompleted } from './game.js?rev=v2-mobile-audit-1';
+import { isCompleted } from './game.js?rev=memory-ui-polish-1';
 import { nearbyClues } from './data/nearby-clues.js?rev=v2-mobile-audit-1';
 import {
   addWantToVisit,

@@ -1,14 +1,14 @@
 // 应用主入口 v3：联调地图与 UI（6语言 + 罗盘探索 + 主题路线 + 剧情副本 + 印章册）
-import { createMap, haversineKm } from './map.js?rev=index-mobile-1';
+import { createMap, haversineKm } from './map.js?rev=memory-ui-polish-1';
 import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
 import { THEMES, OVERVIEW_MODE, TRAVEL_MODES, DEFAULT_LOCATION } from './data/themes.js?rev=clean-8';
-import { getText, pick } from './i18n.js?rev=account-1';
+import { getText, pick } from './i18n.js?rev=memory-ui-polish-1';
 import { getEpisode } from './data/episodes.js?rev=audio-sfx-1';
 import { buildItinerary, itineraryCoords, planOSRMRoute } from './route.js?rev=external-preview-1';
 import { createAuthController } from './auth.js?rev=memory-2';
-import { createMemoryController } from './memory.js?rev=memory-5';
-import { createFriendsController } from './friends.js?rev=friends-3';
-import { createWelcomeController } from './welcome.js?rev=welcome-5';
+import { createMemoryController } from './memory.js?rev=memory-ui-polish-1';
+import { createFriendsController } from './friends.js?rev=memory-ui-polish-1';
+import { createWelcomeController } from './welcome.js?rev=memory-ui-polish-1';
 import {
   isTencentConfigured,
   planTencentRoute,
@@ -28,7 +28,7 @@ import {
   handleGeofence,
   initCloudSync,
   clearSync,
-} from './game.js?rev=v2-mobile-audit-1';
+} from './game.js?rev=memory-ui-polish-1';
 import {
   renderHeader,
   refreshHeader,
@@ -83,7 +83,7 @@ import {
   setRoutePlannerLocation,
   clearActiveMainBtn,
   updateAuthBtn,
-} from './ui.js?rev=v2-mobile-audit-1';
+} from './ui.js?rev=memory-ui-polish-1';
 import { initWantToVisitSync, clearWantToVisitSync } from './want-to-visit.js?rev=cloud-1';
 
 /** WebGL 支持检测 */

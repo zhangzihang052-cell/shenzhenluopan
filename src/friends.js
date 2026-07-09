@@ -3,7 +3,7 @@
 // 依赖：auth.js（Supabase client）、memory.js（数据模型）、i18n.js
 // 搜索方式：邮箱
 
-import { getLang, getText, pick } from './i18n.js?rev=friends-3';
+import { getLang, getText, pick } from './i18n.js?rev=memory-ui-polish-1';
 
 const FRIEND_TABLE = 'friendships';
 const PROFILE_TABLE = 'user_profiles';

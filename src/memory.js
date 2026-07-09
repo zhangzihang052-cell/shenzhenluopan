@@ -1,5 +1,5 @@
 // Private memory anchors: local-first storage, optional Supabase sync, and UI/map wiring.
-import { getLang, getText, pick } from './i18n.js?rev=audio-sfx-1';
+import { getLang, getText, pick } from './i18n.js?rev=memory-ui-polish-1';
 
 const STORAGE_KEY = 'bayareaCompass.memories';
 let _currentUserId = null;
@@ -247,6 +247,266 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   };
 
   const anchorById = (id) => anchors.find((anchor) => anchor.id === id);
+
+  const memoryPlaceName = (memory) => {
+    const anchor = memory && memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+    return anchor ? pick(anchor.name) : getText('recollect.free_explore');
+  };
+
+  const memoryCoord = (memory) => `${Number(memory.lat).toFixed(4)}, ${Number(memory.lng).toFixed(4)}`;
+
+  function distanceKm(aLat, aLng, bLat, bLng) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(bLat - aLat);
+    const dLng = toRad(bLng - aLng);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function nearestAnchorForMemory(memory, maxKm = 4.8) {
+    if (!memory) return null;
+    let best = null;
+    let bestKm = Infinity;
+    anchors.forEach((anchor) => {
+      if (!anchor || !Array.isArray(anchor.coordinates)) return;
+      const lng = Number(anchor.coordinates[0]);
+      const lat = Number(anchor.coordinates[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      const km = distanceKm(Number(memory.lat), Number(memory.lng), lat, lng);
+      if (km < bestKm) {
+        bestKm = km;
+        best = anchor;
+      }
+    });
+    return best && bestKm <= maxKm ? best : null;
+  }
+
+  function renderMemoryMedia(memory, frameClass) {
+    if (memory && memory.photoUrl && memory.mediaType === 'video') {
+      return `<div class="${frameClass}"><video src="${esc(memory.photoUrl)}" muted playsinline></video><span class="recollect-video-badge">▶</span></div>`;
+    }
+    if (memory && memory.photoUrl) {
+      return `<div class="${frameClass}"><img src="${esc(memory.photoUrl)}" alt="" /></div>`;
+    }
+    return `<div class="${frameClass} recollect-media-empty"><span>忆</span></div>`;
+  }
+
+  function clampPercent(value, min = 8, max = 92) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function spreadProjectedPoints(points) {
+    const adjusted = points.map((point) => ({ ...point }));
+    for (let i = 1; i < adjusted.length; i += 1) {
+      for (let pass = 0; pass < 4; pass += 1) {
+        const overlaps = adjusted.slice(0, i).some((point) => Math.hypot(point.x - adjusted[i].x, point.y - adjusted[i].y) < 10);
+        if (!overlaps) break;
+        const angle = -Math.PI / 3 + i * 1.28 + pass * 0.82;
+        adjusted[i].x = clampPercent(adjusted[i].x + Math.cos(angle) * 10);
+        adjusted[i].y = clampPercent(adjusted[i].y + Math.sin(angle) * 10, 32, 76);
+      }
+    }
+    return adjusted;
+  }
+
+  function buildJourneyPoints(memories) {
+    const seen = new Set();
+    const ordered = [...memories].sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+    const points = [];
+
+    ordered.forEach((memory) => {
+      const linkedAnchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
+      const inferredAnchor = linkedAnchor ? null : nearestAnchorForMemory(memory);
+      const anchor = linkedAnchor || inferredAnchor;
+      const coord = linkedAnchor && Array.isArray(linkedAnchor.coordinates) ? linkedAnchor.coordinates : [memory.lng, memory.lat];
+      const lng = Number(coord[0]);
+      const lat = Number(coord[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      const key = linkedAnchor ? `anchor:${linkedAnchor.id}` : `memory:${memory.id || `${lat.toFixed(4)}:${lng.toFixed(4)}:${memory.createdAt}`}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      points.push({
+        id: memory.id,
+        anchorId: anchor ? anchor.id : '',
+        name: anchor ? pick(anchor.name) : getText('recollect.free_explore'),
+        lat,
+        lng,
+        isAnchor: !!anchor,
+        isInferred: !!inferredAnchor,
+      });
+    });
+
+    return points.slice(0, 5);
+  }
+
+  function projectJourneyPoints(points) {
+    if (!points.length) return [];
+    if (points.length === 1) return [{ ...points[0], x: 62, y: 54 }];
+
+    const lngs = points.map((point) => point.lng);
+    const lats = points.map((point) => point.lat);
+    const lngMid = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+    const latMid = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const lngSpan = Math.max(Math.max(...lngs) - Math.min(...lngs), 0.02);
+    const latSpan = Math.max(Math.max(...lats) - Math.min(...lats), 0.02);
+    const minLng = lngMid - lngSpan / 2;
+    const minLat = latMid - latSpan / 2;
+
+    return spreadProjectedPoints(points.map((point) => ({
+      ...point,
+      x: clampPercent(10 + ((point.lng - minLng) / lngSpan) * 80),
+      y: clampPercent(80 - ((point.lat - minLat) / latSpan) * 48, 32, 76),
+    })));
+  }
+
+  function captureMapPreview() {
+    try {
+      const canvas = state.map && state.map.getCanvas ? state.map.getCanvas() : null;
+      if (!canvas || !canvas.width || !canvas.height) return '';
+      return canvas.toDataURL('image/jpeg', 0.68);
+    } catch (error) {
+      return '';
+    }
+  }
+
+  function renderJourneyRouteLine(points) {
+    if (points.length < 2) return '';
+    const line = points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+    return `
+      <svg class="postcard-journey-route" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polyline class="postcard-journey-route-shadow" points="${esc(line)}" />
+        <polyline class="postcard-journey-route-line" points="${esc(line)}" />
+      </svg>`;
+  }
+
+  function renderAtlasStops(points) {
+    const shownLabels = new Set();
+    return points.map((point, index) => {
+      const showLabel = !shownLabels.has(point.name);
+      shownLabels.add(point.name);
+      return `
+        <span class="postcard-atlas-stop ${point.isAnchor ? 'is-anchor' : 'is-free'}" style="left:${point.x.toFixed(1)}%;top:${point.y.toFixed(1)}%;">
+          <b>${index + 1}</b>
+          ${showLabel ? `<em>${esc(point.name)}</em>` : ''}
+        </span>
+      `;
+    }).join('');
+  }
+
+  function renderPhotoStamps(memories) {
+    const photos = memories.filter((memory) => memory && memory.photoUrl).slice(0, 3);
+    if (!photos.length) return '';
+    return `
+      <div class="postcard-photo-stamps" aria-label="${esc(getText('recollect.postcard_media'))}">
+        ${photos.map((memory) => `
+          <figure class="postcard-photo-stamp">
+            ${renderMemoryMedia(memory, 'postcard-photo-stamp-media')}
+          </figure>
+        `).join('')}
+      </div>`;
+  }
+
+  function uniqueJourneyNames(points) {
+    const names = [];
+    const seen = new Set();
+    points.forEach((point) => {
+      if (!point.name || point.name === getText('recollect.free_explore')) return;
+      const key = point.anchorId || point.name;
+      if (seen.has(key)) return;
+      seen.add(key);
+      names.push(point.name);
+    });
+    return names;
+  }
+
+  function postcardMetaText(memories, points) {
+    const names = uniqueJourneyNames(points);
+    if (!names.length) return getText('recollect.postcard_journey_free_hint', { memories: memories.length });
+    return getText('recollect.postcard_anchor_meta', {
+      anchors: names.slice(0, 2).join(' · '),
+      memories: memories.length,
+    });
+  }
+
+  function generatePostcardTitle(memories) {
+    const points = buildJourneyPoints(memories);
+    const names = uniqueJourneyNames(points);
+    const n = memories.length;
+    const first = names[0];
+    const last = names[names.length - 1];
+    const lang = getLang();
+
+    if (lang === 'en') {
+      if (names.length > 1) return `From ${first} to ${last}, ${n} moments trace your Bay Area route`;
+      if (names.length === 1) return `${n} moments gathered around ${first}`;
+      return `${n} moments became your own Bay Area route`;
+    }
+    if (lang === 'ja') {
+      if (names.length > 1) return `${first}から${last}へ、${n}つの記憶がつなぐ湾区ルート`;
+      if (names.length === 1) return `${first}のまわりで集めた${n}つの都市の瞬間`;
+      return `${n}つの瞬間が、あなたの湾区探索路になりました`;
+    }
+    if (lang === 'ko') {
+      if (names.length > 1) return `${first}에서 ${last}까지 이어진 ${n}개의 만구 기억`;
+      if (names.length === 1) return `${first} 주변에서 모은 ${n}개의 도시 순간`;
+      return `${n}개의 순간이 나만의 만구 탐험로가 되었습니다`;
+    }
+    if (lang === 'ru') {
+      if (names.length > 1) return `От ${first} к ${last}: ${n} моментов маршрута по заливу`;
+      if (names.length === 1) return `${n} городских моментов вокруг ${first}`;
+      return `${n} моментов сложились в ваш маршрут по заливу`;
+    }
+    if (lang === 'es') {
+      if (names.length > 1) return `De ${first} a ${last}: ${n} momentos de tu ruta por la bahía`;
+      if (names.length === 1) return `${n} momentos urbanos alrededor de ${first}`;
+      return `${n} momentos se convirtieron en tu ruta por la bahía`;
+    }
+    if (names.length > 1) return `从${first}到${last}，收集${n}个湾区瞬间`;
+    if (names.length === 1) return `围绕${first}，收集${n}个城市瞬间`;
+    return `${n}个瞬间，串成你的湾区探索路线`;
+  }
+
+  function renderPostcardAtlas(memories) {
+    const points = projectJourneyPoints(buildJourneyPoints(memories));
+    const mapPreview = captureMapPreview();
+    const mapMedia = mapPreview
+      ? `<img class="postcard-map-shot" src="${esc(mapPreview)}" alt="" />`
+      : '<div class="postcard-journey-fallback" aria-hidden="true"></div>';
+
+    return `
+      <section class="postcard-atlas ${mapPreview ? 'has-map-shot' : ''}">
+        ${mapMedia}
+        <div class="postcard-atlas-wash" aria-hidden="true"></div>
+        <div class="postcard-atlas-head">
+          <span class="postcard-kicker">Bay Compass</span>
+          <h3>${esc(getText('recollect.postcard_journey'))}</h3>
+          <p>${esc(postcardMetaText(memories, points))}</p>
+          <span class="postcard-stamp" aria-hidden="true">湾<br>迹</span>
+        </div>
+        ${renderJourneyRouteLine(points)}
+        ${renderAtlasStops(points)}
+        ${renderPhotoStamps(memories)}
+      </section>`;
+  }
+
+  function mountShareOverlay(overlay) {
+    const close = () => {
+      window.removeEventListener('keydown', onKeydown);
+      overlay.remove();
+    };
+    const onKeydown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+    document.body.appendChild(overlay);
+    overlay.querySelector('.recollect-share-close')?.addEventListener('click', close);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    window.addEventListener('keydown', onKeydown);
+  }
 
   const setMemories = (next) => {
     state.memories = sortMemories(next.map(normalizeMemory).filter(Boolean));
@@ -778,6 +1038,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     const panel = document.getElementById('memory-panel');
     if (!panel || !state.panel) return;
     const { type, data } = state.panel;
+    panel.className = `memory-panel memory-panel-${type}`;
     if (type === 'create') renderCreatePanel(panel, data);
     if (type === 'detail') renderDetailPanel(panel, data.id);
     if (type === 'list') renderListPanel(panel);
@@ -789,19 +1050,40 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
 
   function renderCreatePanel(panel, data) {
     const anchor = data.linkedAnchorId ? anchorById(data.linkedAnchorId) : null;
+    const lat = Number(data.lat);
+    const lng = Number(data.lng);
+    const hasCoord = Number.isFinite(lat) && Number.isFinite(lng);
+    const locationText = anchor
+      ? `${getText('memory.linked_anchor')}: ${pick(anchor.name)}`
+      : hasCoord
+      ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      : getText('memory.create_hint');
+    const metaParts = [];
+    if (hasCoord) metaParts.push(`${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    if (anchor) metaParts.push(`${getText('memory.linked_anchor')}: ${pick(anchor.name)}`);
 
     panel.innerHTML = panelChrome(getText('memory.create_title'), `
-      <div class="memory-create-list-entry">
-        <button type="button" id="memory-show-list">${esc(getText('memory.btn'))} (${state.memories.length})</button>
+      <div class="memory-create-toolbar">
+        <div class="memory-create-list-entry">
+          <button type="button" id="memory-show-list">
+            <span>${esc(getText('memory.btn'))}</span>
+            <b>${state.memories.length}</b>
+          </button>
+        </div>
+        <div class="memory-create-context">
+          <span>${esc(locationText)}</span>
+        </div>
       </div>
       <form class="memory-form" id="memory-create-form">
         <div class="memory-create-media-combined" id="memory-media-area">
-          <div class="memory-create-media-empty" id="memory-media-empty">
-            <span class="ink-cam-icon" aria-hidden="true"></span>
-            <span>${esc(getText('memory.create_hint'))}</span>
+          <div class="memory-create-media-frame">
+            <div class="memory-create-media-empty" id="memory-media-empty">
+              <span class="ink-cam-icon" aria-hidden="true"></span>
+              <span class="memory-media-copy">${esc(getText('memory.create_hint'))}</span>
+            </div>
+            <img class="memory-create-media-preview" id="memory-media-preview" alt="" hidden />
+            <video class="memory-create-media-preview" id="memory-video-preview" hidden muted playsinline></video>
           </div>
-          <img class="memory-create-media-preview" id="memory-media-preview" alt="" hidden />
-          <video class="memory-create-media-preview" id="memory-video-preview" hidden muted playsinline></video>
           <div class="memory-create-media-actions">
             <button class="memory-create-media-btn" type="button" data-media="photo">${esc(getText('memory.media_photo'))}</button>
             <button class="memory-create-media-btn" type="button" data-media="album">${esc(getText('memory.media_album'))}</button>
@@ -825,10 +1107,7 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
           <span>${esc(getText('memory.note_label'))}</span>
           <textarea id="memory-note-input" maxlength="${MAX_NOTE_LENGTH}" placeholder="${esc(getText('memory.note_placeholder'))}"></textarea>
         </label>
-        <div class="memory-meta-line">
-          <span>${esc(Number(data.lat).toFixed(5))}, ${esc(Number(data.lng).toFixed(5))}</span>
-          ${anchor ? `<span>${esc(getText('memory.linked_anchor'))}: ${esc(pick(anchor.name))}</span>` : ''}
-        </div>
+        ${metaParts.length ? `<div class="memory-meta-line">${metaParts.map((part) => `<span>${esc(part)}</span>`).join('')}</div>` : ''}
         <button class="memory-create-publish" type="submit">${esc(getText('memory.publish'))}</button>
       </form>`);
 
@@ -1176,60 +1455,58 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   function openShareCard(memoryId) {
     const memory = state.memories.find(m => m.id === memoryId);
     if (!memory) return;
-    const anchor = memory.linkedAnchorId ? anchorById(memory.linkedAnchorId) : null;
-    const anchorName = anchor ? pick(anchor.name) : getText('recollect.free_explore');
-
-    // AI 生成感悟文案（基于记忆内容 + 关联锚点）
-    const aiQuote = generateAIQuote(memory, anchor);
+    const anchorName = memoryPlaceName(memory);
+    const memoryCaption = generateMemoryCaption(memory);
 
     const overlay = document.createElement('div');
     overlay.className = 'recollect-share-overlay';
     overlay.innerHTML = `
-      <div class="recollect-share-card" id="recollect-share-card">
+      <div class="recollect-share-shell">
         <button class="recollect-share-close" type="button" id="recollect-share-close">×</button>
-        <div class="recollect-share-inner">
-          ${memory.photoUrl ? `<div class="recollect-share-photo" style="background-image:url('${esc(memory.photoUrl)}')"></div>` : '<div class="recollect-share-photo recollect-share-photo-empty"><span>忆</span></div>'}
+        <article class="recollect-share-card" id="recollect-share-card">
+          <div class="recollect-share-brandline">
+            <span>${esc(getText('recollect.share_stamp'))}</span>
+            <span>Bay Compass</span>
+          </div>
+          ${renderMemoryMedia(memory, 'recollect-share-photo')}
           <div class="recollect-share-content">
-            <div class="recollect-share-stamp">${esc(getText('recollect.share_stamp'))}</div>
+            <div class="recollect-share-place">
+              <span>${esc(anchorName)}</span>
+              <time>${esc(formatDate(memory.createdAt))}</time>
+            </div>
             <p class="recollect-share-note">${esc(memory.note || getText('memory.note_placeholder'))}</p>
             <div class="recollect-share-ai">
-              <span class="recollect-share-ai-label">✦ ${esc(getText('recollect.ai_insight'))}</span>
-              <p class="recollect-share-ai-text">${esc(aiQuote)}</p>
+              <span class="recollect-share-ai-label">${esc(getText('recollect.ai_insight'))}</span>
+              <p class="recollect-share-ai-text">${esc(memoryCaption)}</p>
             </div>
             <div class="recollect-share-footer">
-              <span class="recollect-share-loc">${esc(anchorName)}</span>
-              <span class="recollect-share-coord">${esc(Number(memory.lat).toFixed(4))}°N, ${esc(Number(memory.lng).toFixed(4))}°E</span>
-              <span class="recollect-share-date">${esc(formatDate(memory.createdAt))}</span>
+              <span class="recollect-share-coord">${esc(memoryCoord(memory))}</span>
+              <span>${esc(getText('recollect.open_prompt'))}</span>
             </div>
           </div>
-        </div>
+        </article>
         <div class="recollect-share-actions">
           <button class="recollect-share-download" type="button" id="recollect-share-download">${esc(getText('recollect.download_image'))}</button>
           <button class="recollect-share-native" type="button" id="recollect-share-native">${esc(getText('recollect.share_now'))}</button>
         </div>
       </div>`;
-    state.root.appendChild(overlay);
-
-    overlay.querySelector('#recollect-share-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    mountShareOverlay(overlay);
 
     overlay.querySelector('#recollect-share-download').addEventListener('click', () => {
       downloadShareCardAsImage(overlay.querySelector('#recollect-share-card'), `湾区罗盘-记忆-${formatDate(memory.createdAt)}.png`);
     });
 
     overlay.querySelector('#recollect-share-native').addEventListener('click', () => {
-      if (navigator.share) {
-        navigator.share({ title: getText('recollect.title'), text: memory.note || getText('recollect.share_stamp'), url: window.location.href });
-      } else {
-        // 降级：复制文字
-        const text = `${memory.note || ''}\n${anchorName}\n${getText('recollect.share_stamp')}`;
-        navigator.clipboard?.writeText(text).then(() => toast('recollect.copied')).catch(() => {});
-      }
+      const text = `${memory.note || ''}\n${anchorName}\n${getText('recollect.share_stamp')}`;
+      shareCardAsImage(overlay.querySelector('#recollect-share-card'), `湾区罗盘-记忆-${formatDate(memory.createdAt)}.png`, {
+        title: getText('recollect.title'),
+        text,
+        url: window.location.href,
+      });
     });
   }
 
-  // AI 感悟生成（基于记忆内容 + 锚点信息，模板化生成诗意文案）
-  function generateAIQuote(memory, anchor) {
+  function generateMemoryCaption(memory) {
     const quotes = {
       zh: [
         '每一处足迹，都是与这片土地的一次对话。',
@@ -1278,49 +1555,47 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
   function openPostcardPanel() {
     const memories = state.memories;
     if (!memories.length) return;
+    const postcardTitle = generatePostcardTitle(memories);
 
     const overlay = document.createElement('div');
     overlay.className = 'recollect-share-overlay';
     overlay.innerHTML = `
-      <div class="recollect-postcard" id="recollect-postcard-card">
+      <div class="recollect-postcard-shell">
         <button class="recollect-share-close" type="button" id="recollect-postcard-close">×</button>
-        <div class="postcard-inner">
-          <div class="postcard-front">
-            <div class="postcard-header">
-              <span class="postcard-brand">${esc(getText('recollect.postcard_title'))}</span>
-              <span class="postcard-stamp">郵</span>
+        <article class="recollect-postcard" id="recollect-postcard-card">
+          ${renderPostcardAtlas(memories)}
+          <section class="postcard-story">
+            <div>
+              <span>${esc(getText('recollect.postcard_ai_title'))}</span>
+              <p>${esc(postcardTitle)}</p>
             </div>
-            <div class="postcard-collage" id="postcard-collage">
-              ${memories.slice(0, 4).map(m => m.photoUrl
-                ? `<div class="postcard-cell" style="background-image:url('${esc(m.photoUrl)}')"></div>`
-                : `<div class="postcard-cell postcard-cell-empty"><span>忆</span></div>`
-              ).join('')}
-            </div>
-            <div class="postcard-summary">
-              <p class="postcard-summary-text">${esc(getText('recollect.postcard_summary', { n: memories.length }))}</p>
-              <p class="postcard-ai-quote" id="postcard-ai-quote">✦ ${esc(generateJourneyQuote(memories))}</p>
-            </div>
-            <div class="postcard-footer">
-              <span class="postcard-date">${esc(formatDate(new Date().toISOString()))}</span>
-              <span class="postcard-brand-mini">湾区罗盘 · Bay Compass</span>
-            </div>
-          </div>
-        </div>
+          </section>
+          <footer class="postcard-footer">
+            <span class="postcard-date">${esc(formatDate(new Date().toISOString()))}</span>
+            <span class="postcard-brand-mini">湾区罗盘 · Bay Compass</span>
+          </footer>
+        </article>
         <div class="recollect-share-actions">
           <button class="recollect-share-download" type="button" id="recollect-postcard-download">${esc(getText('recollect.download_image'))}</button>
+          <button class="recollect-share-native" type="button" id="recollect-postcard-native">${esc(getText('recollect.share_now'))}</button>
         </div>
       </div>`;
-    state.root.appendChild(overlay);
-
-    overlay.querySelector('#recollect-postcard-close').addEventListener('click', () => overlay.remove());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    mountShareOverlay(overlay);
 
     overlay.querySelector('#recollect-postcard-download').addEventListener('click', () => {
       downloadShareCardAsImage(overlay.querySelector('#recollect-postcard-card'), '湾区罗盘-明信片.png');
     });
+
+    overlay.querySelector('#recollect-postcard-native').addEventListener('click', () => {
+      shareCardAsImage(overlay.querySelector('#recollect-postcard-card'), '湾区罗盘-明信片.png', {
+        title: getText('recollect.postcard_title'),
+        text: `${getText('recollect.postcard_summary', { n: memories.length })}\n${generateJourneyQuote(memories)}`,
+        url: window.location.href,
+      });
+    });
   }
 
-  // 旅程总结 AI 文案
+  // 旅程总结文案
   function generateJourneyQuote(memories) {
     const n = memories.length;
     const hasVoice = memories.some(m => m.voiceUrl);
@@ -1342,25 +1617,67 @@ export function createMemoryController({ root, map, anchors = [], auth, showToas
     return pool[n % pool.length];
   }
 
+  function importHtml2Canvas() {
+    return import('https://html2canvas.hertzen.com/dist/html2canvas.min.js').then(({ default: html2canvas }) => html2canvas);
+  }
+
+  function renderShareCanvas(cardEl) {
+    return importHtml2Canvas().then((html2canvas) =>
+      html2canvas(cardEl, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: true })
+    );
+  }
+
+  function copyShareText(text) {
+    navigator.clipboard?.writeText(text).then(() => toast('recollect.copied')).catch(() => toast('recollect.screenshot_hint'));
+  }
+
+  function fallbackShare(data) {
+    if (navigator.share) {
+      navigator.share(data).catch(() => {});
+    } else {
+      copyShareText([data.text, data.url].filter(Boolean).join('\n'));
+    }
+  }
+
+  function shareCardAsImage(cardEl, filename, data) {
+    renderShareCanvas(cardEl).then((canvas) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          fallbackShare(data);
+          return;
+        }
+        if (typeof File === 'undefined') {
+          fallbackShare(data);
+          return;
+        }
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({ ...data, files: [file] }).catch(() => fallbackShare(data));
+        } else {
+          fallbackShare(data);
+        }
+      });
+    }).catch(() => fallbackShare(data));
+  }
+
   // 下载卡片为图片（使用 Canvas 截图）
   function downloadShareCardAsImage(cardEl, filename) {
-    import('https://html2canvas.hertzen.com/dist/html2canvas.min.js').then(({ default: html2canvas }) => {
-      html2canvas(cardEl, { backgroundColor: null, scale: 2, useCORS: true, allowTaint: true }).then(canvas => {
-        canvas.toBlob(blob => {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = filename;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          toast('recollect.downloaded');
-        });
-      }).catch(() => {
-        // 降级：提示截图
-        toast('recollect.screenshot_hint');
+    renderShareCanvas(cardEl).then(canvas => {
+      canvas.toBlob(blob => {
+        if (!blob) {
+          toast('recollect.screenshot_hint');
+          return;
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast('recollect.downloaded');
       });
     }).catch(() => {
-      toast('recollect.screenshot_hint');
+        toast('recollect.screenshot_hint');
     });
   }
 

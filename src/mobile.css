@@ -2596,7 +2596,12 @@ body.mobile-app #ui-root {
   body.mobile-app .clue-card::after {
     background-image:
       linear-gradient(135deg, rgba(255, 252, 244, 0.96), rgba(232, 222, 196, 0.9)),
-      radial-gradient(circle at 100% 0, color-mix(in srgb, var(--clue-task-accent, #3f7d6e) 16%, transparent), transparent 42%) !important;
+      radial-gradient(circle at 100% 0, color-mix(in srgb, var(--clue-task-accent, #3f7d6e) 16%, transparent), transparent 42%),
+      var(--clue-cover-image),
+      var(--clue-bg-image, url('../public/assets/clues/fallback-cover.webp')),
+      url('../public/assets/clues/fallback-cover.webp') !important;
+    background-position: center, center, center right, center right, center right !important;
+    background-size: cover, cover, cover, cover, cover !important;
     opacity: 1 !important;
     filter: none !important;
   }
