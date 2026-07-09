@@ -1,0 +1,39 @@
+/* ============================================================
+   本地字体声明 — 替代 Google Fonts CDN
+   Ma Shan Zheng (书法标题) + Playfair Display (西文衬线)
+   Inter / Noto Sans 系列保留 CDN，加载失败有系统 fallback
+   ============================================================ */
+
+/* —— Ma Shan Zheng · 马善政毛笔楷书 —— */
+@font-face {
+  font-family: 'Ma Shan Zheng';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: block;
+  src: url('./fonts/MaShanZheng.ttf') format('truetype');
+}
+
+/* —— Playfair Display · 西文衬线 —— */
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/PlayfairDisplay-500.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/PlayfairDisplay-600.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/PlayfairDisplay-italic-500.ttf') format('truetype');
+}

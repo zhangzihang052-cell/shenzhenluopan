@@ -168,7 +168,7 @@ body.mobile-app #ui-root {
       linear-gradient(180deg, rgba(255, 252, 244, 0.44), rgba(236, 226, 203, 0.28)),
       rgba(247, 244, 236, 0.26);
     color: #2b2118;
-    font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+    font-family: 'Ma Shan Zheng', 'KaiTi', serif;
     font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.04em;
@@ -777,7 +777,7 @@ body.mobile-app #ui-root {
   }
 
   #rotate-hint .rotate-hint__text {
-    font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+    font-family: 'Ma Shan Zheng', 'KaiTi', serif;
     font-size: 22px;
     letter-spacing: 0.08em;
     color: #f7f4ec;

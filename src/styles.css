@@ -296,11 +296,11 @@ body {
 
 /* ===== 字体工具类 ===== */
 .font-serif {
-  font-family: 'Playfair Display', 'Noto Serif SC', Georgia, serif;
+  font-family: 'Playfair Display', 'Songti SC', Georgia, serif;
 }
 .font-brush,
 .font-kai {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
 }
 
 /* ===== 顶部渐隐遮罩，提升宣纸底图上的文字可读性 ===== */
@@ -340,7 +340,7 @@ body {
   border-radius: 6px;
   background: linear-gradient(145deg, #d6453f, #b8332e);
   color: #fff;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   box-shadow: 0 2px 10px rgba(224, 82, 77, 0.45),
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.25);
   letter-spacing: 0.05em;
@@ -401,7 +401,7 @@ body.info-panel-open .tool-cluster {
     linear-gradient(180deg, rgba(255, 252, 244, 0.42), rgba(236, 226, 203, 0.26)),
     rgba(247, 244, 236, 0.24);
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   font-weight: 400;
   letter-spacing: 0.05em;
@@ -592,7 +592,7 @@ body.info-panel-open .tool-cluster {
   color: #fff7e6;
   cursor: pointer;
   isolation: isolate;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 30px;
   font-weight: 500;
   letter-spacing: 0.12em;
@@ -663,7 +663,7 @@ body.info-panel-open .tool-cluster {
   border-radius: 7px;
   background: radial-gradient(130% 130% at 38% 28%, #c4483a 0%, #a5301f 68%, #8c1f13 100%);
   color: #fff5ea;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 24px;
   line-height: 1;
   box-shadow:
@@ -737,7 +737,7 @@ body.route-planner-open .main-actions {
   cursor: pointer;
   isolation: isolate;
   overflow: hidden;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -1245,7 +1245,7 @@ body.compass-panel-open .toast.show {
   margin: 0;
   color: #2b2118;
   max-width: 34rem;
-  font-family: 'Playfair Display', 'Noto Serif SC', 'Songti SC', STSong, SimSun, Georgia, serif;
+  font-family: 'Playfair Display', 'Songti SC', STSong, SimSun, Georgia, serif;
   font-size: 17px;
   font-weight: 500;
   letter-spacing: 0;
@@ -1545,7 +1545,7 @@ body.compass-panel-open .toast.show {
   border-radius: 9999px;
   background: radial-gradient(circle at 50% 40%, rgba(178, 58, 46, 0.18), rgba(178, 58, 46, 0.04));
   border: 1.5px solid rgba(178, 58, 46, 0.55);
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 24px;
   color: #b23a2e;
   writing-mode: vertical-rl;
@@ -1574,7 +1574,7 @@ body.compass-panel-open .toast.show {
   }
 }
 .loading-title {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 30px;
   font-weight: 600;
   letter-spacing: 0.2em;
@@ -1795,7 +1795,7 @@ body.compass-panel-open .toast.show {
   margin-bottom: 14px;
 }
 .nearby-title {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 22px;
   color: #6b4f1f;
 }
@@ -1864,7 +1864,7 @@ body.compass-panel-open .toast.show {
   border-radius: 9999px;
 }
 .nearby-name {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 17px;
   color: #2b2118;
   line-height: 1.2;
@@ -1972,7 +1972,7 @@ body.compass-panel-open .toast.show {
   pointer-events: none;
 }
 .panel-stamp span {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 15px;
   line-height: 1.05;
   color: #fff;
@@ -2105,7 +2105,7 @@ body.compass-panel-open .toast.show {
   padding: 20px;
   box-shadow: 0 18px 34px -28px rgba(23, 26, 32, 0.72);
   color: #2b2118;
-  font-family: 'Noto Serif SC', 'Songti SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   opacity: 0;
   transform: translateX(22px);
   transition: opacity 0.22s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
@@ -2389,7 +2389,7 @@ body.compass-panel-open .toast.show {
 }
 .recollect-stat-num {
   display: block;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 24px;
   color: #C44A3C;
   line-height: 1.2;
@@ -2500,7 +2500,7 @@ body.compass-panel-open .toast.show {
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(247, 244, 236, 0.98), rgba(238, 231, 215, 0.98));
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 15px;
   padding: 12px;
   cursor: pointer;
@@ -2735,7 +2735,7 @@ body.compass-panel-open .toast.show {
   border-radius: 4px;
   padding: 4px 8px;
   background: rgba(23, 26, 32, 0.36);
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   line-height: 1;
 }
@@ -2954,7 +2954,7 @@ body.compass-panel-open .toast.show {
   border-radius: 50%;
   background: rgba(247, 244, 236, 0.16);
   color: rgba(247, 244, 236, 0.84);
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 15px;
 }
 .postcard-journey-list {
@@ -4035,7 +4035,7 @@ body.compass-panel-open .toast.show {
   margin-bottom: 14px;
 }
 .geo-title {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 21px;
   color: #6b4f1f;
   margin-bottom: 10px;
@@ -4312,7 +4312,7 @@ body.compass-panel-open .toast.show {
   border: 1px solid rgba(23, 26, 32, 0.16);
   background: linear-gradient(180deg, rgba(247, 244, 236, 0.98), rgba(238, 231, 215, 0.98));
   color: #2b2118;
-  font-family: 'Noto Serif SC', 'Songti SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   padding: 20px;
   box-shadow: 0 18px 34px -28px rgba(23, 26, 32, 0.72);
 }
@@ -4440,7 +4440,7 @@ body.compass-panel-open .toast.show {
   border: 1px solid rgba(23, 26, 32, 0.16);
   background: linear-gradient(180deg, rgba(247, 244, 236, 0.98), rgba(238, 231, 215, 0.98));
   color: #2b2118;
-  font-family: 'Noto Serif SC', 'Songti SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   padding: 20px;
   box-shadow: 0 18px 34px -28px rgba(23, 26, 32, 0.72);
 }
@@ -4454,7 +4454,7 @@ body.compass-panel-open .toast.show {
 .route-planner-title {
   display: block;
   color: #171a20;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 22px;
   font-weight: 500;
   line-height: 1.12;
@@ -4497,7 +4497,7 @@ body.compass-panel-open .toast.show {
   background: transparent;
   color: #6b5d48;
   cursor: pointer;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 15px;
   font-weight: 500;
   transition: background 0.2s ease, color 0.2s ease;
@@ -4535,7 +4535,7 @@ body.compass-panel-open .toast.show {
   margin-top: 0;
   padding: 7px 11px;
   border-radius: 7px;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 14px;
   letter-spacing: 0;
   box-shadow: none;
@@ -4546,7 +4546,7 @@ body.compass-panel-open .toast.show {
   border-radius: 7px;
   background: rgba(255, 252, 244, 0.62);
   color: #6b5d48;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 13px;
 }
 .rt-select-action:disabled {
@@ -4633,7 +4633,7 @@ body.compass-panel-open .toast.show {
   min-width: 0;
   overflow: hidden;
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -4675,7 +4675,7 @@ body.compass-panel-open .toast.show {
 }
 .route-empty-state b {
   color: #171a20;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   font-weight: 500;
 }
@@ -4691,7 +4691,7 @@ body.compass-panel-open .toast.show {
   margin-top: 4px;
   border-color: rgba(178, 58, 46, 0.42);
   color: #8a352c;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 14px;
 }
 .route-recommend-panel {
@@ -4705,7 +4705,7 @@ body.compass-panel-open .toast.show {
 .route-recommend-intro b {
   display: block;
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 20px;
   font-weight: 500;
   line-height: 1.2;
@@ -4752,7 +4752,7 @@ body.compass-panel-open .toast.show {
 }
 .route-recommend-copy b {
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   font-weight: 500;
   line-height: 1.25;
@@ -4780,7 +4780,7 @@ body.compass-panel-open .toast.show {
   background: rgba(255, 252, 244, 0.5);
   color: #6b4f1f;
   cursor: pointer;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', 'KaiTi', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
@@ -5403,7 +5403,7 @@ body.compass-panel-open .toast.show {
   border-radius: 9999px;
 }
 .cn-name {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   color: #2b2118;
   white-space: nowrap;
@@ -5829,7 +5829,7 @@ body.compass-panel-open .toast.show {
   border: 2px solid #b23a2e;
   border-radius: 6px;
   color: #b23a2e;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 20px;
   transform: rotate(-6deg);
 }
@@ -6039,7 +6039,7 @@ body.compass-panel-open .toast.show {
 .rs-body { flex: 1; min-width: 0; }
 .rs-name {
   display: block;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   color: #2b2118;
 }
@@ -6394,7 +6394,7 @@ body.compass-panel-open .toast.show {
   background: rgba(255, 252, 244, 0.5);
   color: #8a7a62;
   font-size: 11px;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
 }
 .ep-dot.active {
   background: var(--ep-accent, #b23a2e);
@@ -6603,7 +6603,7 @@ body.compass-panel-open .toast.show {
   line-height: 1.9;
   color: #3d3122;
   min-height: 80px;
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
 }
 .ep-scene-no {
   font-size: 11px;
@@ -7072,7 +7072,7 @@ body.compass-panel-open .toast.show {
     radial-gradient(circle at 50% 24%, rgba(255, 247, 220, 0.95), rgba(201, 157, 88, 0.42)),
     #6d4426;
   color: #fff6df;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 22px;
   line-height: 1;
   box-shadow: 0 10px 24px -16px rgba(0, 0, 0, 0.72);
@@ -7103,7 +7103,7 @@ body.compass-panel-open .toast.show {
   border-radius: 6px;
   background: rgba(255, 252, 244, 0.66);
   color: #2e6d5f;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
 }
 .rpg-speaker-tab strong {
@@ -7138,7 +7138,7 @@ body.compass-panel-open .toast.show {
 .rpg-dialogue-copy p {
   margin: 0;
   color: #2b2118;
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 17px;
   line-height: 1.85;
   text-wrap: pretty;
@@ -7327,7 +7327,7 @@ body.compass-panel-open .toast.show {
 .rpg-clue-panel p {
   margin: 8px 0 0;
   color: #2b2118;
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 13px;
   line-height: 1.65;
   text-wrap: pretty;
@@ -7365,7 +7365,7 @@ body.compass-panel-open .toast.show {
 .rpg-reward-panel p {
   margin: 10px 0 0;
   color: #3d3122;
-  font-family: 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 15px;
   line-height: 1.8;
   text-align: left;
@@ -7485,7 +7485,7 @@ body.compass-panel-open .toast.show {
   margin-bottom: 8px;
 }
 .ep-insight p {
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 17px;
   line-height: 1.8;
   color: #3d3122;
@@ -7547,7 +7547,7 @@ body.compass-panel-open .toast.show {
   border-radius: 8px;
   background: linear-gradient(145deg, #d6453f, #b8332e);
   color: #fff;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 24px;
   box-shadow: 0 4px 14px rgba(207, 63, 57, 0.5);
 }
@@ -8559,7 +8559,7 @@ body.compass-panel-open #geofence-toast.show {
 .account-btn-primary {
   padding: 14px; border: 1px solid rgba(154, 123, 50, 0.5); border-radius: 10px;
   background: linear-gradient(180deg, #a9883c, #8a6f2b); color: #fff7e6;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif; font-size: 19px; letter-spacing: 0.12em;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif; font-size: 19px; letter-spacing: 0.12em;
   cursor: pointer; transition: background 0.18s;
 }
 .account-btn-primary:hover { background: linear-gradient(180deg, #b8963f, #94772e); }
@@ -8593,10 +8593,10 @@ body.compass-panel-open #geofence-toast.show {
 }
 .account-title {
   font-size: 29px;
-  font-weight: 500;
+  font-weight: 400;
   color: #2b2118;
   margin: 0 0 8px;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   letter-spacing: 0.06em;
 }
 .account-sub {
@@ -8688,7 +8688,7 @@ body.compass-panel-open #geofence-toast.show {
   border-radius: 10px;
   background: linear-gradient(180deg, #a9883c, #8a6f2b);
   color: #fff7e6;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 19px;
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -8797,7 +8797,7 @@ body.compass-panel-open #geofence-toast.show {
   background-blend-mode: normal, soft-light, normal;
   color: #fff4dc;
   box-shadow: 0 8px 18px -6px rgba(120, 24, 12, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 21px;
   letter-spacing: 0;
   transform: rotate(-2deg);
@@ -8828,7 +8828,7 @@ body.compass-panel-open #geofence-toast.show {
   max-width: 430px;
   margin: 0 0 10px;
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 27px;
   font-weight: 500;
   letter-spacing: 0.06em;
@@ -8898,7 +8898,7 @@ body.compass-panel-open #geofence-toast.show {
   border: 1px solid rgba(154, 123, 50, 0.5);
   background: linear-gradient(180deg, #a9883c, #8a6f2b);
   color: #fff7e6;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   letter-spacing: 0.12em;
 }
@@ -9643,7 +9643,7 @@ body.compass-panel-open #geofence-toast.show {
   border-radius: 6px;
   background: linear-gradient(145deg, #d6453f, #b8332e);
   color: #fff5ea;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   line-height: 1;
   box-shadow: 0 3px 10px rgba(178, 58, 46, 0.42);
@@ -9654,7 +9654,7 @@ body.compass-panel-open #geofence-toast.show {
 .memory-panel-head h2 {
   margin: 0;
   color: #2b2118;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 21px;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -9961,7 +9961,7 @@ body.compass-panel-open #geofence-toast.show {
   border-radius: 8px;
   background: linear-gradient(180deg, #2b2118, #171a20);
   color: #f7f4ec;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 18px;
   font-weight: 500;
   letter-spacing: 0.14em;
@@ -10037,7 +10037,7 @@ body.compass-panel-open #geofence-toast.show {
   border-radius: 6px;
   background: rgba(212, 168, 67, 0.16);
   color: #8a7a5c;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 22px;
 }
 .memory-list-copy b {
@@ -10223,7 +10223,7 @@ body.compass-panel-open #geofence-toast.show {
   line-height: 1.65;
   margin: 0;
   padding: 0 4px;
-  font-family: 'Noto Serif SC', 'Ma Shan Zheng', serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
 }
 .memory-pinned-voice {
   width: 100%;
@@ -10287,7 +10287,7 @@ body.compass-panel-open #geofence-toast.show {
   border-radius: 8px;
   background: linear-gradient(180deg, #2b2118, #171a20);
   color: #f7f4ec;
-  font-family: 'Ma Shan Zheng', 'Noto Serif SC', KaiTi, serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 16px;
   letter-spacing: 0.1em;
   cursor: pointer;
@@ -11166,7 +11166,7 @@ body.compass-panel-open #geofence-toast.show {
   background: linear-gradient(145deg, #c6473e, #a92f27);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   color: #fff5ea;
-  font-family: "Ma Shan Zheng", "Noto Serif SC", serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 20px;
   transform: none;
 }
@@ -11176,7 +11176,7 @@ body.compass-panel-open #geofence-toast.show {
   max-width: 520px;
   margin: 0 0 6px;
   color: #171a20;
-  font-family: "Noto Serif SC", "Noto Sans SC", system-ui, sans-serif;
+  font-family: 'Ma Shan Zheng', 'KaiTi', serif;
   font-size: 30px;
   font-weight: 600;
   letter-spacing: 0;
