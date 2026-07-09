@@ -1,5 +1,5 @@
 import { ANCHORS } from './data/anchors.js?rev=external-preview-1';
-import { fetchCloudData, mergeWantToVisit, setCloudConfig as setProgressCloudConfig, isCloudReady, pushWantToVisitOnly } from './cloud-sync.js?rev=cloud-1';
+import { fetchCloudData, mergeWantToVisit, isCloudReady, pushWantToVisitOnly } from './cloud-sync.js?rev=cloud-1';
 
 export const WANT_TO_VISIT_KEY = 'bayareaCompass.wantToVisit';
 let _currentUserId = null;

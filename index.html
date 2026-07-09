@@ -171,7 +171,6 @@
         }
         window.addEventListener('pagehide', killAllAudio);
         window.addEventListener('beforeunload', killAllAudio);
-        window.addEventListener('blur', killAllAudio);
         document.addEventListener('visibilitychange', function() {
           if (document.hidden) killAllAudio();
         });

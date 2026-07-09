@@ -453,19 +453,6 @@ function boot() {
     auth: authController,
     onGuest: () => { /* 访客模式：直接进入地图，数据存 localStorage */ },
     onLogin: async () => {
-      // 登出后会走到这里（signOut后auth.user为null）
-      if (!authController.isLoggedIn()) {
-        updateAuthBtn(false, '');
-      // 登出后清除该用户的所有本地缓存数据
-      // memory.js 的 SIGNED_OUT 监听器已负责清除记忆数据
-      try {
-        localStorage.removeItem('stc_progress');
-      } catch (_) {}
-      clearSync(); // 清除 game.js 的 cloud-sync 配置和用户专属 key
-      clearWantToVisitSync(); // 清除 want-to-visit.js 的用户专属 key
-        window.location.reload();
-        return;
-      }
       // 正常登录流程
       if (friendsExperience) friendsExperience.refresh();
       if (memoryExperience && memoryExperience.refreshTexts) memoryExperience.refreshTexts();
@@ -795,6 +782,7 @@ function boot() {
     if (isCompassOpen()) closeCompassPanel();
     if (isRoutePlannerOpen()) closeRoutePlanner();
     if (isPanelOpen()) handleClose();
+    if (memoryExperience && memoryExperience.isOpen()) memoryExperience.closePanel();
     if (memoryLocating) return;
 
     // 保存当前视角，退出时恢复
@@ -906,8 +894,7 @@ function boot() {
     if (isCompassOpen()) closeCompassPanel();
     if (isRoutePlannerOpen()) closeRoutePlanner();
     if (isPanelOpen()) handleClose();
-
-    // 保存当前视角，退出时恢复（与「留下记忆」一致）
+    if (memoryExperience && memoryExperience.isOpen()) memoryExperience.closePanel();
     if (controller.map && controller.map.getCenter) {
       memoryPrevCamera = {
         center: controller.map.getCenter().toArray(),
