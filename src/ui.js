@@ -2,10 +2,15 @@
 // build: 2026-06-18
 import { THEMES, THEME_ORDER, OVERVIEW_MODE } from './data/themes.js?rev=clean-8';
 import { ANCHORS } from './data/anchors.js?rev=v2-mobile-audit-1';
-import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=memory-ui-polish-1';
-import { hasEpisode } from './data/episodes.js?rev=audio-sfx-1';
-import { isCompleted } from './game.js?rev=memory-ui-polish-1';
+import { getText, pick, getLang, setLang, LANGS, langMeta } from './i18n.js?rev=friend-diary-2';
+import { hasEpisode } from './data/episodes.js?rev=memory-visual-16';
+import { isCompleted, loadProgress } from './game.js?rev=english-font-unify-3';
 import { nearbyClues } from './data/nearby-clues.js?rev=v2-mobile-audit-1';
+import {
+  RECOMMENDED_ROUTES,
+  buildPlannerAnchorItems,
+  buildRouteRecommendations,
+} from './route-recommendations.js?rev=personalized-1';
 import {
   addWantToVisit,
   removeWantToVisit,
@@ -270,6 +275,10 @@ export function refreshToolCluster() {
   const authBtn = document.getElementById('auth-btn');
   if (authBtn) {
     authBtn.title = getText('auth.btn_login');
+    const authLabel = document.getElementById('auth-btn-label');
+    if (authLabel && !authBtn.classList.contains('logged-in')) {
+      authLabel.textContent = getText('auth.btn_login');
+    }
   }
   // 三主按钮文案
   const exploreBtn = document.getElementById('explore-btn');
@@ -730,6 +739,12 @@ function runTypewriter(text) {
     return;
   }
 
+  if (window.matchMedia('(max-width: 640px), (prefers-reduced-motion: reduce)').matches) {
+    typedEl.textContent = full;
+    if (caretEl) caretEl.style.display = 'none';
+    return;
+  }
+
   let i = 0;
   typedEl.textContent = '';
   if (caretEl) caretEl.style.display = '';
@@ -1001,49 +1016,6 @@ function fmtDuration(min) {
 /* ===== 路线规划中心（右上角入口：我的想去 + 自由选择）========= */
 /* ============================================================= */
 
-const ROUTE_PLANNER_RECOMMENDATIONS = [
-  {
-    id: 'wutong-cloud',
-    title: { zh: '梧桐登云步道', en: 'Wutong Cloud-Ascent Trail' },
-    meta: { zh: '罗湖 · 登高看城海', en: 'Luohu · city-and-sea summit' },
-    route: { zh: '梧桐山风景名胜区主入口 → 登云道 → 小梧桐 → 好汉坡 → 大梧桐 → 秀桐道', en: 'Wutong Mountain main entrance → Dengyun Trail → Xiao Wutong → Hero Slope → Da Wutong → Xiutong Road' },
-    reason: { zh: '深圳最经典的登高线之一，山顶能把盐田港、城市天际线与山脊层次一起收入视野。', en: 'A classic Shenzhen climb where port, skyline and ridge views gather in one route.' },
-    navKeyword: '梧桐山风景名胜区主入口 登云道',
-  },
-  {
-    id: 'qiniang-geology',
-    title: { zh: '七娘山主峰科考线', en: 'Qiniang Mountain Research Trail' },
-    meta: { zh: '大鹏 · 火山地质与山海', en: 'Dapeng · volcanic geology and sea views' },
-    route: { zh: '大鹏半岛国家地质公园 → 一号至四号观景平台 → 七娘山主峰观景平台', en: 'Dapeng Peninsula Geopark → viewing platforms 1-4 → Qiniang summit platform' },
-    reason: { zh: '适合把深圳东部的海岸、地质和山脊风景合成一条强记忆路线。', en: 'A memorable eastern-Shenzhen route joining coast, geology and ridgelines.' },
-    navKeyword: '大鹏半岛国家地质公园 七娘山主峰科考线',
-  },
-  {
-    id: 'kunpeng-city-ridge',
-    title: { zh: '鲲鹏径城市山脊段', en: 'Kunpeng Trail Urban Ridge Section' },
-    meta: { zh: '福田/梅林 · 山海连城体验', en: 'Futian/Meilin · mountain-city connector' },
-    route: { zh: '笔架山公园 → 银湖山 → 鲲鹏径节点 → 梅林山', en: 'Bijiashan Park → Yinhu Mountain → Kunpeng Trail node → Meilin Mountain' },
-    reason: { zh: '用半日体验深圳远足径的“城市山脊”，不离城区也能有穿林越岭的节奏。', en: 'A half-day taste of Shenzhen’s urban ridgeline without leaving the city core.' },
-    navKeyword: '笔架山公园 银湖山 梅林山 鲲鹏径',
-  },
-  {
-    id: 'maluan-waterfall',
-    title: { zh: '马峦山山水环线', en: 'Maluan Mountain Landscape Loop' },
-    meta: { zh: '坪山/盐田 · 溪谷郊野', en: 'Pingshan/Yantian · valley countryside' },
-    route: { zh: '梅沙湾公园 → 马峦山郊野公园 → 瀑布溪谷 → 山海观景段', en: 'Meisha Bay Park → Maluan Mountain Country Park → waterfall valley → sea-view section' },
-    reason: { zh: '比城市公园更野趣，又比长距离穿越更容易控制节奏，适合做周末轻徒步。', en: 'Wilder than a city park but easier to pace than a full long-distance crossing.' },
-    navKeyword: '马峦山郊野公园 梅沙湾公园',
-  },
-  {
-    id: 'nanshan-shekou',
-    title: { zh: '大南山蛇口海景线', en: 'Dananshan-Shekou Sea-View Trail' },
-    meta: { zh: '南山 · 轻量登山', en: 'Nanshan · light hill walk' },
-    route: { zh: '大南山登山口 → 山顶观景台 → 蛇口/海上世界周边', en: 'Dananshan trailhead → summit lookout → Shekou / Sea World area' },
-    reason: { zh: '强度友好、交通方便，能把深圳湾、蛇口港与南山科技城区放在同一视线里。', en: 'Accessible and friendly, with views toward Shenzhen Bay, Shekou and Nanshan’s tech district.' },
-    navKeyword: '深圳大南山登山口 蛇口',
-  },
-];
-
 let routePlannerState = {
   activeTab: 'free',
   userPos: null,
@@ -1052,6 +1024,7 @@ let routePlannerState = {
   itinerary: null,
   itineraryTheme: null,
   planning: false,
+  recommendations: [],
   handlers: {},
 };
 
@@ -1096,16 +1069,6 @@ function buildTencentMarkerUrl(anchor) {
   return `https://apis.map.qq.com/uri/v1/marker?${params.toString()}`;
 }
 
-function buildTencentSearchUrl(keyword) {
-  if (!keyword) return '';
-  const params = new URLSearchParams({
-    keyword,
-    region: '深圳',
-    referer: 'shikongluopan',
-  });
-  return `https://apis.map.qq.com/uri/v1/search?${params.toString()}`;
-}
-
 function buildRoutePlannerTencentUrl(itinerary) {
   const stops = itinerary && itinerary.stops ? itinerary.stops.map((stop) => stop.anchor).filter(hasValidCoord) : [];
   if (!stops.length) return '';
@@ -1147,41 +1110,47 @@ function routeAnchorInfo(anchor) {
   };
 }
 
+function routePlannerProfile() {
+  const progress = loadProgress();
+  return {
+    completed: progress && progress.completed ? progress.completed : {},
+    wantedIds: new Set(getWantToVisitAnchors().map((anchor) => anchor.id)),
+  };
+}
+
 function sortedFreeRouteAnchors() {
-  const wantIds = new Set(getWantToVisitAnchors().map((anchor) => anchor.id));
-  const canMeasure = routePlannerState.userPos && _haversine;
-  const [lng, lat] = canMeasure ? routePlannerState.userPos : [null, null];
-  return ANCHORS.map((anchor, index) => {
-    const dist = canMeasure ? _haversine(lng, lat, anchor.coordinates[0], anchor.coordinates[1]) : Number.POSITIVE_INFINITY;
-    return {
-      anchor,
-      dist,
-      index,
-      wanted: wantIds.has(anchor.id),
-    };
-  })
-    .sort((a, b) => {
-      if (a.wanted !== b.wanted) return a.wanted ? -1 : 1;
-      if (Number.isFinite(a.dist) && Number.isFinite(b.dist) && a.dist !== b.dist) return a.dist - b.dist;
-      return a.index - b.index;
-    })
-    .map((item) => ({
-      ...item.anchor,
-      _routePlannerDist: Number.isFinite(item.dist) ? item.dist : undefined,
-      _routePlannerWanted: item.wanted,
-    }));
+  const profile = routePlannerProfile();
+  return buildPlannerAnchorItems({
+    anchors: ANCHORS,
+    completed: profile.completed,
+    wantedIds: profile.wantedIds,
+    userPos: routePlannerState.userPos,
+    distanceBetween: _haversine,
+  }).map((item) => ({
+    ...item.anchor,
+    _routePlannerDist: Number.isFinite(item.dist) ? item.dist : undefined,
+    _routePlannerWanted: item.wanted,
+    _routePlannerCompleted: item.completed,
+    _routePlannerCompletedAt: item.completedAt,
+  }));
 }
 
 function routeAnchorRow(anchor, { source = 'free' } = {}) {
   const info = routeAnchorInfo(anchor);
   const selected = routePlannerState.selectedIds.has(anchor.id);
-  const detail =
-    source === 'free' && Number.isFinite(anchor._routePlannerDist)
-      ? `${anchor._routePlannerWanted ? `${getText('route_planner.want_badge')} · ` : ''}${fmtDist(anchor._routePlannerDist)} · ${info.location || info.title}`
-      : info.location || info.title;
+  const detailParts = [];
+  if (source === 'free' && anchor._routePlannerCompletedAt) {
+    detailParts.push(getText('route_planner.recent_badge'));
+  } else if (source === 'free' && anchor._routePlannerCompleted) {
+    detailParts.push(getText('route_planner.completed_badge'));
+  }
+  if (source === 'free' && anchor._routePlannerWanted) detailParts.push(getText('route_planner.want_badge'));
+  if (source === 'free' && Number.isFinite(anchor._routePlannerDist)) detailParts.push(fmtDist(anchor._routePlannerDist));
+  detailParts.push(info.location || info.title);
+  const detail = detailParts.filter(Boolean).join(' · ');
   return `
-    <article class="route-anchor-row ${selected ? 'selected' : ''}" style="--row-accent:${info.theme.color}" data-anchor-id="${esc(anchor.id)}">
-      <button class="route-anchor-info" data-route-action="view-anchor" data-anchor-id="${esc(anchor.id)}">
+    <article class="route-anchor-row ${selected ? 'selected' : ''} ${anchor._routePlannerCompletedAt ? 'recently-completed' : ''}" style="--row-accent:${info.theme.color}" data-anchor-id="${esc(anchor.id)}">
+      <button type="button" class="route-anchor-info" data-route-action="view-anchor" data-anchor-id="${esc(anchor.id)}">
         <span class="route-anchor-copy">
           <span class="route-anchor-top">
             <span class="route-dot"></span>
@@ -1190,7 +1159,7 @@ function routeAnchorRow(anchor, { source = 'free' } = {}) {
           <span>${esc(detail)}</span>
         </span>
       </button>
-      <button class="route-anchor-select" data-route-action="toggle-select" data-anchor-id="${esc(anchor.id)}" role="checkbox" aria-checked="${selected}" aria-label="${esc(info.name)}">
+      <button type="button" class="route-anchor-select" data-route-action="toggle-select" data-anchor-id="${esc(anchor.id)}" role="checkbox" aria-checked="${selected}" aria-label="${esc(info.name)}">
         ${selected ? '✓' : ''}
       </button>
     </article>`;
@@ -1202,11 +1171,11 @@ function routePlannerTabsHtml() {
     ['recommend', getText('route_planner.recommend_tab')],
   ];
   return `
-    <div class="route-planner-tabs" role="tablist">
+    <div class="route-planner-tabs" role="tablist" aria-label="${esc(getText('route_planner.title'))}">
       ${tabs
         .map(
           ([key, label]) =>
-            `<button class="route-planner-tab ${routePlannerState.activeTab === key ? 'active' : ''}" data-route-tab="${key}" role="tab" aria-selected="${routePlannerState.activeTab === key}">${esc(label)}</button>`
+            `<button type="button" id="route-tab-${key}" class="route-planner-tab ${routePlannerState.activeTab === key ? 'active' : ''}" data-route-tab="${key}" role="tab" aria-controls="route-tabpanel-${key}" aria-selected="${routePlannerState.activeTab === key}" tabindex="${routePlannerState.activeTab === key ? '0' : '-1'}">${esc(label)}</button>`
         )
         .join('')}
     </div>`;
@@ -1218,43 +1187,100 @@ function routePlannerActionBarHtml() {
     <div class="route-plan-bar">
       <span>${esc(getText('route_planner.selected', { count: selectedCount }))}</span>
       <div class="route-plan-actions">
-        <button class="rt-select-action" data-route-action="clear-selection" ${selectedCount ? '' : 'disabled'}>${esc(getText('route.clear_selected'))}</button>
-        <button class="rt-plan-btn route-generate-btn" data-route-action="plan-route" ${selectedCount && !routePlannerState.planning ? '' : 'disabled'}>
+        <button type="button" class="rt-select-action" data-route-action="clear-selection" ${selectedCount ? '' : 'disabled'}>${esc(getText('route.clear_selected'))}</button>
+        <button type="button" class="rt-plan-btn route-generate-btn" data-route-action="plan-route" ${selectedCount && !routePlannerState.planning ? '' : 'disabled'}>
           <span class="cp-label">${esc(getText(routePlannerState.planning ? 'compass.planning' : 'route_planner.plan'))}</span>
         </button>
       </div>
     </div>`;
 }
 
+function recommendationReason(route) {
+  if (route.matchKind === 'recent' && route.matchAnchor) {
+    return getText('route_planner.reason_recent', { name: pick(route.matchAnchor.name) });
+  }
+  if (route.matchKind === 'wanted' && route.matchAnchor) {
+    return getText('route_planner.reason_wanted', { name: pick(route.matchAnchor.name) });
+  }
+  return pick(route.fit);
+}
+
 function renderRecommendationTab() {
+  const profile = routePlannerProfile();
+  const episodeAnchors = ANCHORS.filter((anchor) => hasEpisode(anchor.id));
+  const episodeAnchorById = new Map(episodeAnchors.map((anchor) => [anchor.id, anchor]));
+  const routes = buildRouteRecommendations({
+    anchors: episodeAnchors,
+    completed: profile.completed,
+    wantedIds: profile.wantedIds,
+    distanceBetween: _haversine,
+  });
+  routePlannerState.recommendations = routes;
   return `
-    <section class="route-recommend-panel">
+    <section class="route-recommend-panel" id="route-tabpanel-recommend" role="tabpanel" aria-labelledby="route-tab-recommend">
       <div class="route-recommend-intro">
         <b>${esc(getText('route_planner.recommend_title'))}</b>
         <p>${esc(getText('route_planner.recommend_body'))}</p>
       </div>
       <div class="route-recommend-list">
-        ${ROUTE_PLANNER_RECOMMENDATIONS.map((route) => `
-          <article class="route-recommend-card">
-            <div class="route-recommend-copy">
-              <span>${esc(pick(route.meta))}</span>
-              <b>${esc(pick(route.title))}</b>
-              <p>${esc(pick(route.reason))}</p>
-              <em>${esc(getText('route_planner.recommend_nav'))}：${esc(pick(route.route))}</em>
-            </div>
-            <button class="route-recommend-nav" data-route-action="nav-recommendation" data-recommendation-id="${esc(route.id)}">${esc(getText('route_planner.recommend_open'))}</button>
-          </article>
-        `).join('')}
+        ${routes.map((route) => {
+          const theme = THEMES[route.theme] || OVERVIEW_MODE;
+          const anchors = route.ids.map((id) => episodeAnchorById.get(id)).filter(Boolean);
+          const stops = anchors.map((anchor, index) => {
+            const episodeAction = isCompleted(anchor.id)
+              ? `${getText('episode.completed')} · ${getText('episode.replay')}`
+              : getText('episode.enter');
+            const stopMeta = [pick(anchor.title), episodeAction].filter(Boolean).join(' · ');
+            return `
+              <li>
+                <button type="button" class="route-result-stop route-recommend-stop" data-route-action="enter-episode" data-anchor-id="${esc(anchor.id)}" aria-label="${esc(`${episodeAction}：${pick(anchor.name)}`)}">
+                  <span class="route-result-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
+                  <div><b>${esc(pick(anchor.name))}</b><span>${esc(stopMeta)}</span></div>
+                  <span class="route-result-go" aria-hidden="true">→</span>
+                </button>
+              </li>`;
+          }).join('');
+          return `
+            <article class="route-recommend-card ${route.bestMatch ? 'best-match' : ''}" style="--route-accent:${theme.color}">
+              <header class="route-recommend-head">
+                <div>
+                  ${route.bestMatch ? `<span class="route-match-badge">${esc(getText('route_planner.best_match'))}</span>` : ''}
+                  <span class="route-recommend-meta">${esc(pick(route.meta))}</span>
+                </div>
+                <span class="route-recommend-count">${anchors.length} ${esc(getText('route.stops'))}</span>
+              </header>
+              <div class="route-recommend-copy">
+                <h3>${esc(pick(route.title))}</h3>
+                <p class="route-recommend-lead">${esc(pick(route.desc))}</p>
+              </div>
+              <div class="route-recommend-why">
+                <span>${esc(getText('route_planner.why_this'))}</span>
+                <p>${esc(recommendationReason(route))}</p>
+              </div>
+              <details class="route-recommend-details" ${route.bestMatch ? 'open' : ''}>
+                <summary>${esc(getText('route_planner.route_details', { count: anchors.length }))}</summary>
+                <ol>${stops}</ol>
+              </details>
+              <footer class="route-recommend-footer">
+                <span>${esc(getText(route.modeKey === 'walk' ? 'route_planner.walk_overview' : 'route_planner.drive_overview'))}</span>
+                <button type="button" class="route-recommend-nav" data-route-action="use-recommendation" data-recommendation-id="${esc(route.id)}">
+                  ${esc(getText('route_planner.recommend_use'))}<span aria-hidden="true">→</span>
+                </button>
+              </footer>
+            </article>`;
+        }).join('')}
       </div>
     </section>`;
 }
 
 function renderFreeTab() {
   return `
-    ${routePlannerActionBarHtml()}
-    <div class="route-anchor-list-full">
-      ${sortedFreeRouteAnchors().map((anchor) => routeAnchorRow(anchor, { source: 'free' })).join('')}
-    </div>`;
+    <section id="route-tabpanel-free" role="tabpanel" aria-labelledby="route-tab-free">
+      ${routePlannerActionBarHtml()}
+      <div class="route-anchor-list-full">
+        ${sortedFreeRouteAnchors().map((anchor) => routeAnchorRow(anchor, { source: 'free' })).join('')}
+      </div>
+    </section>`;
 }
 
 function routePlannerResultHtml() {
@@ -1301,7 +1327,7 @@ export function renderRoutePlanner(root, handlers = {}) {
           <span class="route-planner-title">${esc(getText('route_planner.title'))}</span>
           <p>${esc(getText('route_planner.subtitle'))}</p>
         </div>
-        <button class="close-btn" id="route-planner-close" style="position:static;width:30px;height:30px">✕</button>
+        <button type="button" class="close-btn" id="route-planner-close" aria-label="${esc(getText('panel.close'))}">✕</button>
       </div>
       <div class="route-planner-content" id="route-planner-content"></div>
     </div>`;
@@ -1336,10 +1362,10 @@ export function isRoutePlannerOpen() {
 
 export function setRoutePlannerPlanning(loading) {
   routePlannerState.planning = !!loading;
-  const buttons = document.querySelectorAll('#route-planner-panel .route-generate-btn');
+  const buttons = document.querySelectorAll('#route-planner-panel .route-generate-btn, #route-planner-panel .route-recommend-nav');
   buttons.forEach((btn) => {
     btn.classList.toggle('loading', !!loading);
-    btn.disabled = !!loading || activeRouteSelectionIds().length === 0;
+    btn.disabled = !!loading || (btn.classList.contains('route-generate-btn') && activeRouteSelectionIds().length === 0);
   });
   const label = document.querySelector('#route-planner-panel .route-generate-btn .cp-label');
   if (label) label.textContent = getText(loading ? 'compass.planning' : 'route_planner.plan');
@@ -1370,6 +1396,8 @@ export function refreshRoutePlannerTexts() {
       <span class="route-planner-title">${esc(getText('route_planner.title'))}</span>
       <p>${esc(getText('route_planner.subtitle'))}</p>`;
   }
+  const closeButton = panel.querySelector('#route-planner-close');
+  if (closeButton) closeButton.setAttribute('aria-label', getText('panel.close'));
   if (isRoutePlannerOpen()) renderRoutePlannerContent();
 }
 
@@ -1385,10 +1413,21 @@ function renderRoutePlannerContent() {
     ${routePlannerTabsHtml()}
     ${content}`;
 
-  box.querySelectorAll('[data-route-tab]').forEach((btn) => {
+  const tabButtons = Array.from(box.querySelectorAll('[data-route-tab]'));
+  tabButtons.forEach((btn, index) => {
     btn.addEventListener('click', () => {
       routePlannerState.activeTab = btn.dataset.routeTab || 'recommend';
       renderRoutePlannerContent();
+    });
+    btn.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const offset = event.key === 'ArrowRight' ? 1 : -1;
+      const next = tabButtons[(index + offset + tabButtons.length) % tabButtons.length];
+      const nextKey = next.dataset.routeTab || 'recommend';
+      routePlannerState.activeTab = nextKey;
+      renderRoutePlannerContent();
+      document.getElementById(`route-tab-${nextKey}`)?.focus();
     });
   });
 
@@ -1419,11 +1458,30 @@ function renderRoutePlannerContent() {
         }
       } else if (action === 'view-anchor' && anchor && routePlannerState.handlers.onAnchorClick) {
         routePlannerState.handlers.onAnchorClick(anchor);
+      } else if (action === 'enter-episode' && anchor && routePlannerState.handlers.onEnterEpisode) {
+        const returnFocus = btn;
+        routePlannerState.handlers.onEnterEpisode(anchor, {
+          onClose: () => {
+            if (returnFocus.isConnected) returnFocus.focus();
+          },
+        });
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => document.getElementById('episode-close')?.focus());
+        });
       } else if (action === 'nav-itinerary') {
         openMapUrl(buildRoutePlannerTencentUrl(routePlannerState.itinerary));
-      } else if (action === 'nav-recommendation') {
-        const route = ROUTE_PLANNER_RECOMMENDATIONS.find((item) => item.id === btn.dataset.recommendationId);
-        openMapUrl(buildTencentSearchUrl(route && route.navKeyword));
+      } else if (action === 'use-recommendation') {
+        const route = routePlannerState.recommendations.find((item) => item.id === btn.dataset.recommendationId);
+        if (!route || !routePlannerState.handlers.onPlanRoute) return;
+        const ids = route.ids.filter((id) => ANCHORS.some((item) => item.id === id));
+        clearActiveRouteSelection();
+        ids.forEach((id) => setRoutePlannerSelected(id, true));
+        routePlannerState.handlers.onPlanRoute(
+          route.theme || 'all',
+          route.modeKey || 'walk',
+          ids,
+          { source: 'routePlanner', presetId: route.id },
+        );
       } else if (action === 'continue-select') {
         clearRoutePlannerItinerary();
       } else if (action === 'clear-route') {
@@ -1451,36 +1509,9 @@ let compassState = {
   handlers: {},
 };
 
-const RECOMMENDED_ROUTES = [
-  {
-    id: 'sz-speed',
-    icon: '🏙️',
-    theme: 'reform',
-    title: { zh: '深圳改革速度半日线', en: 'Shenzhen Reform Speed Half-Day Route' },
-    desc: { zh: '从国贸到莲花山，再看资本市场与硬件街区。', en: 'From Guomao to Lianhua Mountain, capital markets and hardware streets.' },
-    ids: ['N-EG01', 'M11', 'N-EG02', 'N-SC01'],
-  },
-  {
-    id: 'tech-bay',
-    icon: '🧪',
-    theme: 'science',
-    title: { zh: '南山科技创新线', en: 'Nanshan Tech Innovation Route' },
-    desc: { zh: '腾讯、大疆、蛇口与前海，串起深圳创新走廊。', en: 'Tencent, DJI, Shekou and Qianhai connect Shenzhen’s innovation corridor.' },
-    ids: ['N-SC02', 'N-SC03', 'M06', 'M08'],
-  },
-  {
-    id: 'sea-silk',
-    icon: '🧭',
-    theme: 'navigation',
-    title: { zh: '海上丝路记忆线', en: 'Maritime Silk Road Memory Route' },
-    desc: { zh: '从赤湾祈风到深圳湾，再把视线推向古代海路。', en: 'From Chiwan prayers to Shenzhen Bay and ancient maritime routes.' },
-    ids: ['M01', 'M07', 'M12', 'N-NA01'],
-  },
-];
-
 const configuredCluesByAnchor = new Map(nearbyClues.map((clue) => [clue.anchorId, clue]));
 const CLUE_COVER_FALLBACK = 'public/assets/clues/fallback-cover.webp';
-const CLUE_COVER_VERSION = 'generated-20260701-dji-1';
+const CLUE_COVER_VERSION = 'covers-20260806-full-64';
 const COMPASS_CLUE_LIMIT = 8;
 
 function clampScore(value) {
@@ -2047,6 +2078,7 @@ function renderClueContent(box) {
   box.innerHTML = `
     <section class="clue-brief">
       <p>${esc(getText('clues.subtitle', { count: clueItems.length }))}</p>
+      <span>${esc(getText(compassState.simulated ? 'compass.simulated' : 'compass.real'))}</span>
     </section>
     <div class="nearby-clue-list">${cards}</div>`;
 
@@ -2225,7 +2257,7 @@ function renderFreeExploreContent(box, items) {
       const route = RECOMMENDED_ROUTES.find((item) => item.id === btn.dataset.routeId);
       if (!route || !compassState.handlers.onPlanRoute) return;
       const ids = route.ids.filter((id) => ANCHORS.some((anchor) => anchor.id === id));
-      compassState.handlers.onPlanRoute(route.theme || 'all', compassState.routeMode, ids, { presetId: route.id });
+      compassState.handlers.onPlanRoute(route.theme || 'all', route.modeKey || compassState.routeMode, ids, { presetId: route.id });
     });
   });
   if (compassState.itinerary) {
